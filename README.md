@@ -1,4 +1,4 @@
-![image](./docs/images/Banner.png)
+![image](./docs/images/Report-Screen.png)
 
 # Cloud Exit Assessment
 
