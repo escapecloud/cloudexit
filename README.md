@@ -117,6 +117,10 @@ Azure Example Configuration:
 ![image](./docs/images/Azure_Config.png)
 *Using a configuration file for the required parameters.*
 
+## License
+
+This project is licensed under the [GNU Affero General Public License v3](https://www.gnu.org/licenses/agpl-3.0.html).
+
 ## Contributing
 Contributions are welcome!
 
