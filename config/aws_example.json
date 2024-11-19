@@ -1,0 +1,10 @@
+{
+    "cloudServiceProvider": 2,
+    "exitStrategy": 3,
+    "assessmentType": 1,
+    "providerDetails":{
+      "accessKey":"AKIAXASFHMTLKD6YQLHA",
+      "secretKey":"",
+      "region":"eu-central-1"
+   }
+}

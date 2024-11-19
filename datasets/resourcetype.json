@@ -1,0 +1,4098 @@
+[
+    {
+        "id": "1",
+        "csp": "1",
+        "code": "Microsoft.Maps/accounts",
+        "name": "Azure Maps",
+        "icon": "/assets/icons/azure/iot/10185-icon-service-Azure-Maps-Accounts.png",
+        "status": "t"
+    },
+    {
+        "id": "2",
+        "csp": "1",
+        "code": "Microsoft.Orbital/spacecrafts",
+        "name": "Azure Orbital Ground Station",
+        "icon": "/assets/icons/azure/other/02697-icon-service-Azure-Orbital.png",
+        "status": "t"
+    },
+    {
+        "id": "3",
+        "csp": "1",
+        "code": "Microsoft.AVS/privateClouds",
+        "name": "Azure VMware Solution",
+        "icon": "/assets/icons/azure/other/01219-icon-service-Azure-VMware-Solution.png",
+        "status": "t"
+    },
+    {
+        "id": "4",
+        "csp": "1",
+        "code": "Microsoft.StreamAnalytics/clusters",
+        "name": "Azure Stream Analytics",
+        "icon": "/assets/icons/azure/analytics/00042-icon-service-Stream-Analytics-Jobs.png",
+        "status": "t"
+    },
+    {
+        "id": "5",
+        "csp": "1",
+        "code": "Microsoft.AutonomousSystems",
+        "name": "Autonomous Systems",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "6",
+        "csp": "1",
+        "code": "Microsoft.BotService/botServices",
+        "name": "Azure Bot Service",
+        "icon": "/assets/icons/azure/ai-machine-learning/10165-icon-service-Bot-Services.png",
+        "status": "t"
+    },
+    {
+        "id": "7",
+        "csp": "1",
+        "code": "Microsoft.CognitiveServices/accounts",
+        "name": "Cognitive Services",
+        "icon": "/assets/icons/azure/app-services/10162-icon-service-Cognitive-Services.png",
+        "status": "t"
+    },
+    {
+        "id": "8",
+        "csp": "1",
+        "code": "Microsoft.MachineLearning/Workspaces",
+        "name": "Machine Learning Studio",
+        "icon": "/assets/icons/azure/ai-machine-learning/10167-icon-service-Machine-Learning-Studio-Workspaces.png",
+        "status": "t"
+    },
+    {
+        "id": "9",
+        "csp": "1",
+        "code": "Microsoft.MachineLearningServices/workspaces",
+        "name": "Azure Machine Learning",
+        "icon": "/assets/icons/azure/ai-machine-learning/10166-icon-service-Machine-Learning.png",
+        "status": "t"
+    },
+    {
+        "id": "10",
+        "csp": "1",
+        "code": "Microsoft.Search/searchServices",
+        "name": "Azure Cognitive Search",
+        "icon": "/assets/icons/azure/ai-machine-learning/10044-icon-service-Cognitive-Search.png",
+        "status": "t"
+    },
+    {
+        "id": "11",
+        "csp": "1",
+        "code": "Microsoft.AnalysisServices/servers",
+        "name": "Azure Analysis Services",
+        "icon": "/assets/icons/azure/analytics/10148-icon-service-Analysis-Services.png",
+        "status": "t"
+    },
+    {
+        "id": "12",
+        "csp": "1",
+        "code": "Microsoft.Databricks/workspaces",
+        "name": "Azure Databricks",
+        "icon": "/assets/icons/azure/analytics/10787-icon-service-Azure-Databricks.png",
+        "status": "t"
+    },
+    {
+        "id": "13",
+        "csp": "1",
+        "code": "Microsoft.DataCatalog",
+        "name": "Data Catalog",
+        "icon": "/assets/icons/azure/integration/10216-icon-service-Azure-Data-Catalog.png",
+        "status": "t"
+    },
+    {
+        "id": "14",
+        "csp": "1",
+        "code": "Microsoft.DataFactory/factories",
+        "name": "Data Factory",
+        "icon": "/assets/icons/azure/analytics/10126-icon-service-Data-Factories.png",
+        "status": "t"
+    },
+    {
+        "id": "15",
+        "csp": "1",
+        "code": "Microsoft.DataLakeAnalytics/accounts",
+        "name": "Data Lake Analytics",
+        "icon": "/assets/icons/azure/analytics/10143-icon-service-Data-Lake-Analytics.png",
+        "status": "t"
+    },
+    {
+        "id": "16",
+        "csp": "1",
+        "code": "Microsoft.DataLakeStore/accounts",
+        "name": "Azure Data Lake Storage Gen2",
+        "icon": "/assets/icons/azure/analytics/10150-icon-service-Data-Lake-Store-Gen1.png",
+        "status": "t"
+    },
+    {
+        "id": "17",
+        "csp": "1",
+        "code": "Microsoft.DataShare/accounts",
+        "name": "Azure Data Share",
+        "icon": "/assets/icons/azure/storage/10098-icon-service-Data-Shares.png",
+        "status": "t"
+    },
+    {
+        "id": "18",
+        "csp": "1",
+        "code": "Microsoft.HDInsight/clusters",
+        "name": "HDInsight",
+        "icon": "/assets/icons/azure/analytics/10142-icon-service-HD-Insight-Clusters.png",
+        "status": "t"
+    },
+    {
+        "id": "19",
+        "csp": "1",
+        "code": "Microsoft.Kusto/clusters",
+        "name": "Azure Data Explorer",
+        "icon": "/assets/icons/azure/analytics/10145-icon-service-Azure-Data-Explorer-Clusters.png",
+        "status": "t"
+    },
+    {
+        "id": "20",
+        "csp": "1",
+        "code": "Microsoft.PowerBI/workspaceCollections",
+        "name": "Power BI",
+        "icon": "/assets/icons/azure/analytics/03332-icon-service-Power-BI-Embedded.png",
+        "status": "t"
+    },
+    {
+        "id": "21",
+        "csp": "1",
+        "code": "Microsoft.PowerBIDedicated/capacities",
+        "name": "Power BI Embedded",
+        "icon": "/assets/icons/azure/analytics/03332-icon-service-Power-BI-Embedded.png",
+        "status": "t"
+    },
+    {
+        "id": "22",
+        "csp": "1",
+        "code": "Microsoft.ProjectBabylon",
+        "name": "Azure Data Catalog",
+        "icon": "/assets/icons/azure/integration/10216-icon-service-Azure-Data-Catalog.png",
+        "status": "t"
+    },
+    {
+        "id": "23",
+        "csp": "1",
+        "code": "Microsoft.Purview/accounts",
+        "name": "Microsoft Purview",
+        "icon": "/assets/icons/azure/databases/02517-icon-service-Azure-Purview-Accounts.png",
+        "status": "t"
+    },
+    {
+        "id": "24",
+        "csp": "1",
+        "code": "Microsoft.Synapse/workspaces",
+        "name": "Azure Synapse Analytics",
+        "icon": "/assets/icons/azure/analytics/00606-icon-service-Azure-Synapse-Analytics.png",
+        "status": "t"
+    },
+    {
+        "id": "25",
+        "csp": "1",
+        "code": "Microsoft.Blockchain/blockchainMembers",
+        "name": "Azure Blockchain Service",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "26",
+        "csp": "1",
+        "code": "Microsoft.BlockchainTokens",
+        "name": "Azure Blockchain Tokens",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "27",
+        "csp": "1",
+        "code": "Microsoft.AppPlatform/Spring",
+        "name": "Azure Spring Apps",
+        "icon": "/assets/icons/azure/web/10370-icon-service-Azure-Spring-Apps.png",
+        "status": "t"
+    },
+    {
+        "id": "28",
+        "csp": "1",
+        "code": "Microsoft.Batch/batchAccounts",
+        "name": "Batch",
+        "icon": "/assets/icons/azure/web/10031-icon-service-Batch-Accounts.png",
+        "status": "t"
+    },
+    {
+        "id": "29",
+        "csp": "1",
+        "code": "Microsoft.Compute/virtualMachines",
+        "name": "Virtual Machines",
+        "icon": "/assets/icons/azure/compute/10021-icon-service-Virtual-Machine.png",
+        "status": "t"
+    },
+    {
+        "id": "30",
+        "csp": "1",
+        "code": "Microsoft.Compute/virtualMachineScaleSets",
+        "name": "Virtual Machine Scale Sets",
+        "icon": "/assets/icons/azure/compute/10034-icon-service-VM-Scale-Sets.png",
+        "status": "t"
+    },
+    {
+        "id": "31",
+        "csp": "1",
+        "code": "Microsoft.DesktopVirtualization/hostPools",
+        "name": "Azure Virtual Desktop",
+        "icon": "/assets/icons/azure/other/00327-icon-service-Azure-Virtual-Desktop.png",
+        "status": "t"
+    },
+    {
+        "id": "32",
+        "csp": "1",
+        "code": "Microsoft.DevTestLab/labs",
+        "name": "Azure Lab Services",
+        "icon": "/assets/icons/azure/devops/10265-icon-service-Lab-Services.png",
+        "status": "t"
+    },
+    {
+        "id": "33",
+        "csp": "1",
+        "code": "Microsoft.HanaOnAzure",
+        "name": "SAP HANA on Azure Large Instances",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "34",
+        "csp": "1",
+        "code": "Microsoft.LabServices/labPlans",
+        "name": "Azure Lab Services",
+        "icon": "/assets/icons/azure/devops/10265-icon-service-Lab-Services.png",
+        "status": "t"
+    },
+    {
+        "id": "35",
+        "csp": "1",
+        "code": "Microsoft.Maintenance",
+        "name": "Azure Maintenance",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "36",
+        "csp": "1",
+        "code": "Microsoft.Microservices4Spring",
+        "name": "Azure Spring Apps",
+        "icon": "/assets/icons/azure/web/10370-icon-service-Azure-Spring-Apps.png",
+        "status": "t"
+    },
+    {
+        "id": "37",
+        "csp": "1",
+        "code": "Microsoft.Quantum/workspaces",
+        "name": "Azure Quantum",
+        "icon": "",
+        "status": "t"
+    },
+    {
+        "id": "38",
+        "csp": "1",
+        "code": "Microsoft.ServiceFabric/clusters",
+        "name": "Service Fabric",
+        "icon": "/assets/icons/azure/containers/10036-icon-service-Service-Fabric-Clusters.png",
+        "status": "t"
+    },
+    {
+        "id": "39",
+        "csp": "1",
+        "code": "Microsoft.ServiceFabric/managedClusters",
+        "name": "Service Fabric",
+        "icon": "/assets/icons/azure/containers/10036-icon-service-Service-Fabric-Clusters.png",
+        "status": "t"
+    },
+    {
+        "id": "40",
+        "csp": "1",
+        "code": "Microsoft.VirtualMachineImages/imageTemplates",
+        "name": "Azure Image Builder",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "41",
+        "csp": "1",
+        "code": "Microsoft.VMware",
+        "name": "Azure VMware Solution",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "42",
+        "csp": "1",
+        "code": "Microsoft.VMwareCloudSimple",
+        "name": "Azure VMware Solution by CloudSimple",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "43",
+        "csp": "1",
+        "code": "Microsoft.App/containerApps",
+        "name": "Container Apps",
+        "icon": "/assets/icons/azure/containers/02884-icon-service-Worker-Container-App.png",
+        "status": "t"
+    },
+    {
+        "id": "44",
+        "csp": "1",
+        "code": "Microsoft.App/connectedEnvironments",
+        "name": "Container Apps Environment",
+        "icon": "/assets/icons/azure/containers/02989-icon-service-Container-Apps-Environments.png",
+        "status": "t"
+    },
+    {
+        "id": "45",
+        "csp": "1",
+        "code": "Microsoft.Automation/automationAccounts",
+        "name": "Automation Accounts",
+        "icon": "/assets/icons/azure/management-governance/00022-icon-service-Automation-Accounts.png",
+        "status": "t"
+    },
+    {
+        "id": "46",
+        "csp": "1",
+        "code": "Microsoft.ContainerInstance/containerGroups",
+        "name": "Container Instances",
+        "icon": "/assets/icons/azure/containers/10104-icon-service-Container-Instances.png",
+        "status": "t"
+    },
+    {
+        "id": "47",
+        "csp": "1",
+        "code": "Microsoft.ContainerRegistry/registries",
+        "name": "Container Registry",
+        "icon": "/assets/icons/azure/containers/10105-icon-service-Container-Registries.png",
+        "status": "t"
+    },
+    {
+        "id": "48",
+        "csp": "1",
+        "code": "Microsoft.ContainerService/managedClusters",
+        "name": "Azure Kubernetes Service (AKS)",
+        "icon": "/assets/icons/azure/containers/10023-icon-service-Kubernetes-Services.png",
+        "status": "t"
+    },
+    {
+        "id": "49",
+        "csp": "1",
+        "code": "Microsoft.RedHatOpenShift/openShiftClusters",
+        "name": "Azure Red Hat OpenShift",
+        "icon": "/assets/icons/azure/containers/03331-icon-service-Azure-Red-Hat-OpenShift.png",
+        "status": "t"
+    },
+    {
+        "id": "50",
+        "csp": "1",
+        "code": "Microsoft.AzureData/sqlServerRegistrations",
+        "name": "SQL Server registry",
+        "icon": "/assets/icons/azure/databases/10351-icon-service-SQL-Server-Registries.png",
+        "status": "t"
+    },
+    {
+        "id": "51",
+        "csp": "1",
+        "code": "Microsoft.Cache/redis",
+        "name": "Azure Cache for Redis",
+        "icon": "/assets/icons/azure/databases/10137-icon-service-Cache-Redis.png",
+        "status": "t"
+    },
+    {
+        "id": "52",
+        "csp": "1",
+        "code": "Microsoft.Cache/redisEnterprise",
+        "name": "Azure Cache for Redis",
+        "icon": "/assets/icons/azure/databases/10137-icon-service-Cache-Redis.png",
+        "status": "t"
+    },
+    {
+        "id": "53",
+        "csp": "1",
+        "code": "Microsoft.DBforMariaDB/servers",
+        "name": "Azure Database for MariaDB",
+        "icon": "/assets/icons/azure/databases/10123-icon-service-Azure-Database-MariaDB-Server.png",
+        "status": "t"
+    },
+    {
+        "id": "54",
+        "csp": "1",
+        "code": "Microsoft.DBforMySQL/servers",
+        "name": "Azure Database for MySQL",
+        "icon": "/assets/icons/azure/databases/10122-icon-service-Azure-Database-MySQL-Server.png",
+        "status": "t"
+    },
+    {
+        "id": "55",
+        "csp": "1",
+        "code": "Microsoft.DBforMySQL/flexibleServers",
+        "name": "Azure Database for MySQL",
+        "icon": "/assets/icons/azure/databases/10122-icon-service-Azure-Database-MySQL-Server.png",
+        "status": "t"
+    },
+    {
+        "id": "56",
+        "csp": "1",
+        "code": "Microsoft.DBforPostgreSQL/servers",
+        "name": "Azure Database for PostgreSQL",
+        "icon": "/assets/icons/azure/databases/10131-icon-service-Azure-Database-PostgreSQL-Server.png",
+        "status": "t"
+    },
+    {
+        "id": "57",
+        "csp": "1",
+        "code": "Microsoft.DBforPostgreSQL/flexibleServers",
+        "name": "Azure Database for PostgreSQL",
+        "icon": "/assets/icons/azure/databases/10131-icon-service-Azure-Database-PostgreSQL-Server.png",
+        "status": "t"
+    },
+    {
+        "id": "58",
+        "csp": "1",
+        "code": "Microsoft.DocumentDB",
+        "name": "Azure Cosmos DB",
+        "icon": "/assets/icons/azure/databases/10121-icon-service-Azure-Cosmos-DB.png",
+        "status": "t"
+    },
+    {
+        "id": "59",
+        "csp": "1",
+        "code": "Microsoft.Sql",
+        "name": "Azure SQL Database",
+        "icon": "/assets/icons/azure/databases/10130-icon-service-SQL-Database.png",
+        "status": "t"
+    },
+    {
+        "id": "60",
+        "csp": "1",
+        "code": "Microsoft.Sql/managedInstances",
+        "name": "Azure SQL Managed Instance",
+        "icon": "/assets/icons/azure/databases/10136-icon-service-SQL-Managed-Instance.png",
+        "status": "t"
+    },
+    {
+        "id": "61",
+        "csp": "1",
+        "code": "Microsoft.Sql/servers",
+        "name": "Azure SQL Server",
+        "icon": "/assets/icons/azure/databases/10132-icon-service-SQL-Server.png",
+        "status": "t"
+    },
+    {
+        "id": "62",
+        "csp": "1",
+        "code": "Microsoft.Sql",
+        "name": "Azure Synapse Analytics",
+        "icon": "/assets/icons/azure/databases/00606-icon-service-Azure-Synapse-Analytics.png",
+        "status": "t"
+    },
+    {
+        "id": "63",
+        "csp": "1",
+        "code": "Microsoft.SqlVirtualMachine/sqlVirtualMachines",
+        "name": "SQL Server on Azure Virtual Machines",
+        "icon": "/assets/icons/azure/databases/10124-icon-service-Azure-SQL-VM.png",
+        "status": "t"
+    },
+    {
+        "id": "64",
+        "csp": "1",
+        "code": "Microsoft.SqlVirtualMachine/sqlVirtualMachineGroups",
+        "name": "SQL Server on Azure Virtual Machines",
+        "icon": "/assets/icons/azure/databases/10124-icon-service-Azure-SQL-VM.png",
+        "status": "t"
+    },
+    {
+        "id": "65",
+        "csp": "1",
+        "code": "Microsoft.AppConfiguration/configurationStores",
+        "name": "Azure App Configuration",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "66",
+        "csp": "1",
+        "code": "Microsoft.MixedReality/spatialAnchorsAccounts",
+        "name": "Azure Spatial Anchors - Spatial Anchors",
+        "icon": "/assets/icons/azure/mixed-reality/10352-icon-service-Spatial-Anchor-Accounts.png",
+        "status": "t"
+    },
+    {
+        "id": "67",
+        "csp": "1",
+        "code": "Microsoft.MixedReality/remoteRenderingAccounts",
+        "name": "Azure Spatial Anchors - Remote Rendering",
+        "icon": "/assets/icons/azure/mixed-reality/00698-icon-service-Remote-Rendering.png",
+        "status": "t"
+    },
+    {
+        "id": "68",
+        "csp": "1",
+        "code": "Microsoft.Notebooks",
+        "name": "Azure Notebooks",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "69",
+        "csp": "1",
+        "code": "microsoft.visualstudio",
+        "name": "Azure DevOps",
+        "icon": "",
+        "status": "t"
+    },
+    {
+        "id": "70",
+        "csp": "1",
+        "code": "Microsoft.VSOnline",
+        "name": "Azure DevOps",
+        "icon": "",
+        "status": "t"
+    },
+    {
+        "id": "71",
+        "csp": "1",
+        "code": "Microsoft.AzureArcData",
+        "name": "Azure Arc-enabled data services",
+        "icon": "",
+        "status": "t"
+    },
+    {
+        "id": "72",
+        "csp": "1",
+        "code": "Microsoft.AzureStackHCI",
+        "name": "Azure Stack HCI",
+        "icon": "",
+        "status": "t"
+    },
+    {
+        "id": "73",
+        "csp": "1",
+        "code": "Microsoft.HybridCompute/machines",
+        "name": "Azure Arc-enabled servers",
+        "icon": "/assets/icons/azure/management-governance/01710-icon-service-Arc-Machines.png",
+        "status": "t"
+    },
+    {
+        "id": "74",
+        "csp": "1",
+        "code": "Microsoft.Kubernetes/connectedClusters",
+        "name": "Azure Arc-enabled Kubernetes",
+        "icon": "/assets/icons/azure/other/01088-icon-service-Arc-Kubernetes.png",
+        "status": "t"
+    },
+    {
+        "id": "75",
+        "csp": "1",
+        "code": "Microsoft.AAD/domainServices",
+        "name": "Microsoft Entra Domain Services",
+        "icon": "/assets/icons/azure/identity/10222-icon-service-Azure-AD-Domain-Services.png",
+        "status": "t"
+    },
+    {
+        "id": "76",
+        "csp": "1",
+        "code": "Microsoft.AzureActiveDirectory/b2cDirectories",
+        "name": "Microsoft Entra ID B2C",
+        "icon": "/assets/icons/azure/identity/10228-icon-service-Azure-AD-B2C.png",
+        "status": "t"
+    },
+    {
+        "id": "77",
+        "csp": "1",
+        "code": "Microsoft.ManagedIdentity/userAssignedIdentities",
+        "name": "Managed identities for Azure resources",
+        "icon": "/assets/icons/azure/identity/10227-icon-service-Managed-Identities.png",
+        "status": "t"
+    },
+    {
+        "id": "78",
+        "csp": "1",
+        "code": "Microsoft.ApiManagement/service",
+        "name": "API Management",
+        "icon": "/assets/icons/azure/web/10042-icon-service-API-Management-Services.png",
+        "status": "t"
+    },
+    {
+        "id": "79",
+        "csp": "1",
+        "code": "Microsoft.Communication/communicationServices",
+        "name": "Azure Communication Services",
+        "icon": "/assets/icons/azure/other/00968-icon-service-Azure-Communication-Services.png",
+        "status": "t"
+    },
+    {
+        "id": "80",
+        "csp": "1",
+        "code": "Microsoft.EventGrid/domains",
+        "name": "Event Grid Domain",
+        "icon": "/assets/icons/azure/integration/10215-icon-service-Event-Grid-Domains.png",
+        "status": "t"
+    },
+    {
+        "id": "81",
+        "csp": "1",
+        "code": "Microsoft.EventGrid/eventSubscriptions",
+        "name": "Event Grid Subscriptions",
+        "icon": "/assets/icons/azure/integration/10221-icon-service-Event-Grid-Subscriptions.png",
+        "status": "t"
+    },
+    {
+        "id": "82",
+        "csp": "1",
+        "code": "Microsoft.EventGrid/topics",
+        "name": "Event Grid Topics",
+        "icon": "/assets/icons/azure/integration/10206-icon-service-Event-Grid-Topics.png",
+        "status": "t"
+    },
+    {
+        "id": "83",
+        "csp": "1",
+        "code": "Microsoft.EventHub/namespaces",
+        "name": "Event Hubs",
+        "icon": "/assets/icons/azure/analytics/00039-icon-service-Event-Hubs.png",
+        "status": "t"
+    },
+    {
+        "id": "84",
+        "csp": "1",
+        "code": "Microsoft.EventHub/clusters",
+        "name": "Event Hub Clusters",
+        "icon": "/assets/icons/azure/analytics/10149-icon-service-Event-Hub-Clusters.png",
+        "status": "t"
+    },
+    {
+        "id": "85",
+        "csp": "1",
+        "code": "Microsoft.Logic/workflows",
+        "name": "Logic Apps",
+        "icon": "/assets/icons/azure/integration/02631-icon-service-Logic-Apps.png",
+        "status": "t"
+    },
+    {
+        "id": "86",
+        "csp": "1",
+        "code": "Microsoft.NotificationHubs/namespaces",
+        "name": "Notification Hubs",
+        "icon": "/assets/icons/azure/app-services/10045-icon-service-Notification-Hubs.png",
+        "status": "t"
+    },
+    {
+        "id": "87",
+        "csp": "1",
+        "code": "Microsoft.PowerPlatform/accounts",
+        "name": "Power Platform",
+        "icon": "/assets/icons/azure/analytics/03335-icon-service-Power-Platform.png",
+        "status": "t"
+    },
+    {
+        "id": "88",
+        "csp": "1",
+        "code": "Microsoft.Relay/namespaces",
+        "name": "Azure Relay",
+        "icon": "/assets/icons/azure/integration/10209-icon-service-Relays.png",
+        "status": "t"
+    },
+    {
+        "id": "89",
+        "csp": "1",
+        "code": "Microsoft.ServiceBus/namespaces",
+        "name": "Service Bus",
+        "icon": "/assets/icons/azure/integration/10836-icon-service-Azure-Service-Bus.png",
+        "status": "t"
+    },
+    {
+        "id": "90",
+        "csp": "1",
+        "code": "Microsoft.Devices/IotHubs",
+        "name": "Azure IoT Hub",
+        "icon": "/assets/icons/azure/iot/10182-icon-service-IoT-Hub.png",
+        "status": "t"
+    },
+    {
+        "id": "91",
+        "csp": "1",
+        "code": "Microsoft.Devices/provisioningServices",
+        "name": "Azure IoT Hub Device Provisioning Service",
+        "icon": "/assets/icons/azure/iot/10369-icon-service-Device-Provisioning-Services.png",
+        "status": "t"
+    },
+    {
+        "id": "92",
+        "csp": "1",
+        "code": "Microsoft.DeviceUpdate/accounts",
+        "name": "Device Update for IoT Hub",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "93",
+        "csp": "1",
+        "code": "Microsoft.DigitalTwins/digitalTwinsInstances",
+        "name": "Azure Digital Twins",
+        "icon": "/assets/icons/azure/iot/01030-icon-service-Digital-Twins.png",
+        "status": "t"
+    },
+    {
+        "id": "94",
+        "csp": "1",
+        "code": "Microsoft.IoTCentral/iotApps",
+        "name": "Azure IoT Central",
+        "icon": "/assets/icons/azure/iot/10184-icon-service-IoT-Central-Applications.png",
+        "status": "t"
+    },
+    {
+        "id": "95",
+        "csp": "1",
+        "code": "Microsoft.IoTSpaces",
+        "name": "Azure Digital Twins",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "96",
+        "csp": "1",
+        "code": "Microsoft.TimeSeriesInsights/environments",
+        "name": "Azure Time Series Insights",
+        "icon": "/assets/icons/azure/iot/10181-icon-service-Time-Series-Insights-Environments.png",
+        "status": "t"
+    },
+    {
+        "id": "97",
+        "csp": "1",
+        "code": "Microsoft.WindowsIoT",
+        "name": "Windows 10 IoT Core Services",
+        "icon": "/assets/icons/azure/iot/10203-icon-service-Windows10-Core-Services.png",
+        "status": "t"
+    },
+    {
+        "id": "98",
+        "csp": "1",
+        "code": "Microsoft.Blueprint/blueprints",
+        "name": "Azure Blueprints",
+        "icon": "/assets/icons/azure/management-governance/00006-icon-service-Blueprints.png",
+        "status": "t"
+    },
+    {
+        "id": "99",
+        "csp": "1",
+        "code": "Microsoft.DynamicsLcs",
+        "name": "Lifecycle Services",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "100",
+        "csp": "1",
+        "code": "Microsoft.ManagedServices",
+        "name": "Azure Lighthouse",
+        "icon": "/assets/icons/azure/management-governance/00471-icon-service-Azure-Lighthouse.png",
+        "status": "t"
+    },
+    {
+        "id": "101",
+        "csp": "1",
+        "code": "Microsoft.RecoveryServices/vaults",
+        "name": "Azure Site Recovery",
+        "icon": "/assets/icons/azure/storage/00017-icon-service-Recovery-Services-Vaults.png",
+        "status": "t"
+    },
+    {
+        "id": "102",
+        "csp": "1",
+        "code": "Microsoft.Scheduler/jobCollections",
+        "name": "Scheduler",
+        "icon": "/assets/icons/azure/management-governance/00010-icon-service-Scheduler-Job-Collections.png",
+        "status": "t"
+    },
+    {
+        "id": "103",
+        "csp": "1",
+        "code": "Microsoft.SoftwarePlan",
+        "name": "License",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "104",
+        "csp": "1",
+        "code": "Microsoft.Solutions/applications",
+        "name": "Azure Managed Applications",
+        "icon": "/assets/icons/azure/management-governance/10313-icon-service-Managed-Applications-Center.png",
+        "status": "t"
+    },
+    {
+        "id": "105",
+        "csp": "1",
+        "code": "Microsoft.Media/mediaservices",
+        "name": "Media Services",
+        "icon": "/assets/icons/azure/general/10854-icon-service-Media.png",
+        "status": "t"
+    },
+    {
+        "id": "106",
+        "csp": "1",
+        "code": "Microsoft.DataBox/jobs",
+        "name": "Azure Data Box",
+        "icon": "/assets/icons/azure/migrate/10094-icon-service-Data-Box.png",
+        "status": "t"
+    },
+    {
+        "id": "107",
+        "csp": "1",
+        "code": "Microsoft.DataBoxEdge/dataBoxEdgeDevices",
+        "name": "Azure Stack Edge",
+        "icon": "/assets/icons/azure/migrate/10095-icon-service-Azure-Stack-Edge.png",
+        "status": "t"
+    },
+    {
+        "id": "108",
+        "csp": "1",
+        "code": "Microsoft.AlertsManagement",
+        "name": "Azure Monitor",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "109",
+        "csp": "1",
+        "code": "Microsoft.ChangeAnalysis",
+        "name": "Azure Monitor",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "110",
+        "csp": "1",
+        "code": "Microsoft.Insights/components",
+        "name": "Application Insights",
+        "icon": "/assets/icons/azure/monitor/00012-icon-service-Application-Insights.png",
+        "status": "t"
+    },
+    {
+        "id": "111",
+        "csp": "1",
+        "code": "Microsoft.Intune",
+        "name": "Azure Monitor",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "112",
+        "csp": "1",
+        "code": "Microsoft.OperationalInsights",
+        "name": "Azure Monitor",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "113",
+        "csp": "1",
+        "code": "Microsoft.OperationsManagement",
+        "name": "Azure Monitor",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "114",
+        "csp": "1",
+        "code": "Microsoft.WorkloadMonitor",
+        "name": "Azure Monitor",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "115",
+        "csp": "1",
+        "code": "Microsoft.Cdn/profiles",
+        "name": "Content Delivery Network",
+        "icon": "/assets/icons/azure/app-services/00056-icon-service-CDN-Profiles.png",
+        "status": "t"
+    },
+    {
+        "id": "116",
+        "csp": "1",
+        "code": "Microsoft.ManagedNetwork/managedNetworks",
+        "name": "Virtual networks managed by PaaS services",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "117",
+        "csp": "1",
+        "code": "Microsoft.Network/applicationGateways",
+        "name": "Application Gateway",
+        "icon": "/assets/icons/azure/networking/10076-icon-service-Application-Gateways.png",
+        "status": "t"
+    },
+    {
+        "id": "118",
+        "csp": "1",
+        "code": "Microsoft.Network/bastionHosts",
+        "name": "Bastion",
+        "icon": "/assets/icons/azure/networking/02422-icon-service-Bastions.png",
+        "status": "t"
+    },
+    {
+        "id": "119",
+        "csp": "1",
+        "code": "Microsoft.Network/ddosProtectionPlans",
+        "name": "DDoS Protection",
+        "icon": "/assets/icons/azure/networking/10072-icon-service-DDoS-Protection-Plans.png",
+        "status": "t"
+    },
+    {
+        "id": "120",
+        "csp": "1",
+        "code": "Microsoft.Network/dnsZones",
+        "name": "DNS",
+        "icon": "/assets/icons/azure/networking/10064-icon-service-DNS-Zones.png",
+        "status": "t"
+    },
+    {
+        "id": "121",
+        "csp": "1",
+        "code": "Microsoft.Network/privateDnsZones",
+        "name": "Private DNS",
+        "icon": "/assets/icons/azure/networking/10064-icon-service-DNS-Zones.png",
+        "status": "t"
+    },
+    {
+        "id": "122",
+        "csp": "1",
+        "code": "Microsoft.Network/dnsResolvers",
+        "name": "Private DNS Resolver",
+        "icon": "/assets/icons/azure/networking/02882-icon-service-DNS-Private-Resolver.png",
+        "status": "t"
+    },
+    {
+        "id": "123",
+        "csp": "1",
+        "code": "Microsoft.Network/expressRouteCircuits",
+        "name": "ExpressRoute circuits",
+        "icon": "/assets/icons/azure/networking/10079-icon-service-ExpressRoute-Circuits.png",
+        "status": "t"
+    },
+    {
+        "id": "124",
+        "csp": "1",
+        "code": "Microsoft.Network/azureFirewalls",
+        "name": "Azure Firewall",
+        "icon": "/assets/icons/azure/networking/10084-icon-service-Firewalls.png",
+        "status": "t"
+    },
+    {
+        "id": "125",
+        "csp": "1",
+        "code": "Microsoft.Network/frontDoors",
+        "name": "Front Door Service",
+        "icon": "/assets/icons/azure/networking/10073-icon-service-Front-Door-and-CDN-Profiles.png",
+        "status": "t"
+    },
+    {
+        "id": "126",
+        "csp": "1",
+        "code": "Microsoft.Network/privateLinkServices",
+        "name": "Azure Private Link",
+        "icon": "/assets/icons/azure/networking/02209-icon-service-Private-Link-Services.png",
+        "status": "t"
+    },
+    {
+        "id": "127",
+        "csp": "1",
+        "code": "Microsoft.Network/privateEndpoints",
+        "name": "Private Endpoints",
+        "icon": "/assets/icons/azure/other/02579-icon-service-Private-Endpoints.png",
+        "status": "t"
+    },
+    {
+        "id": "128",
+        "csp": "1",
+        "code": "Microsoft.Network/publicIPAddresses",
+        "name": "Public IP Address",
+        "icon": "/assets/icons/azure/networking/10069-icon-service-Public-IP-Addresses.png",
+        "status": "t"
+    },
+    {
+        "id": "129",
+        "csp": "1",
+        "code": "Microsoft.Network/routeTables",
+        "name": "Route Tables",
+        "icon": "/assets/icons/azure/networking/10082-icon-service-Route-Tables.png",
+        "status": "t"
+    },
+    {
+        "id": "130",
+        "csp": "1",
+        "code": "Microsoft.Network/loadBalancers",
+        "name": "Load Balancer",
+        "icon": "/assets/icons/azure/networking/10062-icon-service-Load-Balancers.png",
+        "status": "t"
+    },
+    {
+        "id": "131",
+        "csp": "1",
+        "code": "Microsoft.Network/networkWatchers",
+        "name": "Network Watcher",
+        "icon": "/assets/icons/azure/networking/10066-icon-service-Network-Watcher.png",
+        "status": "t"
+    },
+    {
+        "id": "132",
+        "csp": "1",
+        "code": "Microsoft.Network/trafficmanagerprofiles",
+        "name": "Traffic Manager",
+        "icon": "/assets/icons/azure/networking/10065-icon-service-Traffic-Manager-Profiles.png",
+        "status": "t"
+    },
+    {
+        "id": "133",
+        "csp": "1",
+        "code": "Microsoft.Network/virtualNetworks",
+        "name": "Virtual Network",
+        "icon": "/assets/icons/azure/networking/10061-icon-service-Virtual-Networks.png",
+        "status": "t"
+    },
+    {
+        "id": "134",
+        "csp": "1",
+        "code": "Microsoft.Network/natGateways",
+        "name": "Virtual Network NAT",
+        "icon": "/assets/icons/azure/networking/10310-icon-service-NAT.png",
+        "status": "t"
+    },
+    {
+        "id": "135",
+        "csp": "1",
+        "code": "Microsoft.Network/networkInterfaces",
+        "name": "Network Interfaces",
+        "icon": "/assets/icons/azure/networking/10080-icon-service-Network-Interfaces.png",
+        "status": "t"
+    },
+    {
+        "id": "136",
+        "csp": "1",
+        "code": "Microsoft.Network/virtualWans",
+        "name": "Virtual WAN",
+        "icon": "/assets/icons/azure/networking/10353-icon-service-Virtual-WANs.png",
+        "status": "t"
+    },
+    {
+        "id": "137",
+        "csp": "1",
+        "code": "Microsoft.Network/virtualNetworkGateways",
+        "name": "Virtual Network Gateway",
+        "icon": "/assets/icons/azure/networking/10063-icon-service-Virtual-Network-Gateways.png",
+        "status": "t"
+    },
+    {
+        "id": "138",
+        "csp": "1",
+        "code": "Microsoft.Peering/peerings",
+        "name": "Peering Service",
+        "icon": "/assets/icons/azure/other/01285-icon-service-Peerings.png",
+        "status": "t"
+    },
+    {
+        "id": "139",
+        "csp": "1",
+        "code": "Microsoft.Attestation/attestationProviders",
+        "name": "Azure Attestation Service",
+        "icon": "/assets/icons/azure/other/10422-icon-service-AzureAttestation.png",
+        "status": "t"
+    },
+    {
+        "id": "140",
+        "csp": "1",
+        "code": "Microsoft.DataProtection/backupVaults",
+        "name": "Data Protection",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "141",
+        "csp": "1",
+        "code": "Microsoft.DataProtection/resourceGuards",
+        "name": "Data Protection",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "142",
+        "csp": "1",
+        "code": "Microsoft.KeyVault/managedHSMs",
+        "name": "Key Vault Managed HSMs",
+        "icon": "/assets/icons/azure/security/10245-icon-service-Key-Vaults.png",
+        "status": "t"
+    },
+    {
+        "id": "143",
+        "csp": "1",
+        "code": "Microsoft.KeyVault/vaults",
+        "name": "Key Vault",
+        "icon": "/assets/icons/azure/security/10245-icon-service-Key-Vaults.png",
+        "status": "t"
+    },
+    {
+        "id": "144",
+        "csp": "1",
+        "code": "Microsoft.SecurityInsights",
+        "name": "Microsoft Sentinel",
+        "icon": "/assets/icons/azure/security/10248-icon-service-Azure-Sentinel.png",
+        "status": "t"
+    },
+    {
+        "id": "145",
+        "csp": "1",
+        "code": "Microsoft.ElasticSan",
+        "name": "Elastic SAN Preview",
+        "icon": "/assets/icons/azure/other/03190-icon-service-Elastic-SAN.png",
+        "status": "t"
+    },
+    {
+        "id": "146",
+        "csp": "1",
+        "code": "Microsoft.HybridData/dataManagers",
+        "name": "StorSimple - Data Managers",
+        "icon": "/assets/icons/azure/storage/10092-icon-service-StorSimple-Data-Managers.png",
+        "status": "t"
+    },
+    {
+        "id": "147",
+        "csp": "1",
+        "code": "Microsoft.NetApp/netAppAccounts",
+        "name": "Azure NetApp Files",
+        "icon": "/assets/icons/azure/storage/10096-icon-service-Azure-NetApp-Files.png",
+        "status": "t"
+    },
+    {
+        "id": "148",
+        "csp": "1",
+        "code": "Microsoft.Storage/storageAccounts",
+        "name": "Storage Account",
+        "icon": "/assets/icons/azure/storage/10086-icon-service-Storage-Accounts.png",
+        "status": "t"
+    },
+    {
+        "id": "149",
+        "csp": "1",
+        "code": "Microsoft.StorageCache/caches",
+        "name": "Azure HPC Cache",
+        "icon": "/assets/icons/azure/storage/00776-icon-service-Azure-HCP-Cache.png",
+        "status": "t"
+    },
+    {
+        "id": "150",
+        "csp": "1",
+        "code": "Microsoft.StorageSync/storageSyncServices",
+        "name": "Storage Sync Servcies",
+        "icon": "/assets/icons/azure/storage/10093-icon-service-Storage-Sync-Services.png",
+        "status": "t"
+    },
+    {
+        "id": "151",
+        "csp": "1",
+        "code": "Microsoft.StorSimple/managers",
+        "name": "StorSimple - Device Managers",
+        "icon": "/assets/icons/azure/storage/10089-icon-service-StorSimple-Device-Managers.png",
+        "status": "t"
+    },
+    {
+        "id": "152",
+        "csp": "1",
+        "code": "Microsoft.CertificateRegistration/certificateOrders",
+        "name": "App Service Certificates",
+        "icon": "/assets/icons/azure/web/00049-icon-service-App-Service-Certificates.png",
+        "status": "t"
+    },
+    {
+        "id": "153",
+        "csp": "1",
+        "code": "Microsoft.DomainRegistration/domains",
+        "name": "App Service Domain Registration",
+        "icon": "/assets/icons/azure/web/00050-icon-service-App-Service-Domains.png",
+        "status": "t"
+    },
+    {
+        "id": "154",
+        "csp": "1",
+        "code": "Microsoft.SignalRService/signalR",
+        "name": "Azure SignalR Service",
+        "icon": "/assets/icons/azure/web/10052-icon-service-SignalR.png",
+        "status": "t"
+    },
+    {
+        "id": "155",
+        "csp": "1",
+        "code": "Microsoft.Web/sites",
+        "name": "App Service",
+        "icon": "/assets/icons/azure/web/10035-icon-service-App-Services.png",
+        "status": "t"
+    },
+    {
+        "id": "156",
+        "csp": "1",
+        "code": "Microsoft.Web/staticSites",
+        "name": "Static Web App",
+        "icon": "/assets/icons/azure/web/01007-icon-service-Static-Apps.png",
+        "status": "t"
+    },
+    {
+        "id": "157",
+        "csp": "1",
+        "code": "Microsoft.Web/hostingEnvironments",
+        "name": "App Service Environment",
+        "icon": "/assets/icons/azure/web/10047-icon-service-App-Service-Environments.png",
+        "status": "t"
+    },
+    {
+        "id": "158",
+        "csp": "1",
+        "code": "Microsoft.Web/serverfarms",
+        "name": "App Service Plan",
+        "icon": "/assets/icons/azure/web/00046-icon-service-App-Service-Plans.png",
+        "status": "t"
+    },
+    {
+        "id": "159",
+        "csp": "1",
+        "code": "Microsoft.HybridNetwork",
+        "name": "Network Function Manager",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "160",
+        "csp": "2",
+        "code": "AWS.accessanalyzer",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "161",
+        "csp": "2",
+        "code": "AWS.account",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "162",
+        "csp": "2",
+        "code": "AWS.acm-pca",
+        "name": "Private Certificate Authority",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/Private-Certificate-Authority.png",
+        "status": "t"
+    },
+    {
+        "id": "163",
+        "csp": "2",
+        "code": "AWS.acm.list_certificates.CertificateSummaryList",
+        "name": "Certificate Manager",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/Certificate-Manager.png",
+        "status": "t"
+    },
+    {
+        "id": "164",
+        "csp": "2",
+        "code": "AWS.alexaforbusiness.list_skills.SkillSummaries",
+        "name": "Alexa For Business",
+        "icon": "/assets/icons/aws/Business-Applications/Alexa-For-Business.png",
+        "status": "f"
+    },
+    {
+        "id": "165",
+        "csp": "2",
+        "code": "AWS.amp",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "166",
+        "csp": "2",
+        "code": "AWS.amplify.list_apps.apps",
+        "name": "Amplify",
+        "icon": "/assets/icons/aws/Front-End-Web-Mobile/Amplify.png",
+        "status": "t"
+    },
+    {
+        "id": "167",
+        "csp": "2",
+        "code": "AWS.amplifybackend",
+        "name": "Amplify",
+        "icon": "/assets/icons/aws/Front-End-Web-Mobile/Amplify.png",
+        "status": "t"
+    },
+    {
+        "id": "168",
+        "csp": "2",
+        "code": "AWS.amplifyuibuilder",
+        "name": "Amplify",
+        "icon": "/assets/icons/aws/Front-End-Web-Mobile/Amplify.png",
+        "status": "t"
+    },
+    {
+        "id": "169",
+        "csp": "2",
+        "code": "AWS.apigateway.get_rest_apis.items",
+        "name": "API Gateway",
+        "icon": "/assets/icons/aws/App-Integration/API-Gateway.png",
+        "status": "t"
+    },
+    {
+        "id": "170",
+        "csp": "2",
+        "code": "AWS.apigatewaymanagementapi",
+        "name": "API Gateway",
+        "icon": "/assets/icons/aws/App-Integration/API-Gateway.png",
+        "status": "t"
+    },
+    {
+        "id": "171",
+        "csp": "2",
+        "code": "AWS.apigatewayv2.get_apis.Items",
+        "name": "API Gateway",
+        "icon": "/assets/icons/aws/App-Integration/API-Gateway.png",
+        "status": "t"
+    },
+    {
+        "id": "172",
+        "csp": "2",
+        "code": "AWS.appconfig.list_applications.Items",
+        "name": "AppConfig",
+        "icon": "/assets/icons/aws/Management-Governance/AppConfig.png",
+        "status": "t"
+    },
+    {
+        "id": "173",
+        "csp": "2",
+        "code": "AWS.appconfigdata",
+        "name": "AppConfig",
+        "icon": "/assets/icons/aws/Management-Governance/AppConfig.png",
+        "status": "t"
+    },
+    {
+        "id": "174",
+        "csp": "2",
+        "code": "AWS.appfabric",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "175",
+        "csp": "2",
+        "code": "AWS.appflow.list_flows.flows",
+        "name": "AppFlow",
+        "icon": "/assets/icons/aws/App-Integration/AppFlow.png",
+        "status": "t"
+    },
+    {
+        "id": "176",
+        "csp": "2",
+        "code": "AWS.appintegrations",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "177",
+        "csp": "2",
+        "code": "AWS.application-autoscaling",
+        "name": "Application Auto Scaling",
+        "icon": "/assets/icons/aws/Compute/Application-Auto-Scaling.png",
+        "status": "t"
+    },
+    {
+        "id": "178",
+        "csp": "2",
+        "code": "AWS.application-insights",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "179",
+        "csp": "2",
+        "code": "AWS.applicationcostprofiler",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "180",
+        "csp": "2",
+        "code": "AWS.appmesh.list_meshes.meshes",
+        "name": "App Mesh",
+        "icon": "/assets/icons/aws/Networking-Content-Delivery/App-Mesh.png",
+        "status": "t"
+    },
+    {
+        "id": "181",
+        "csp": "2",
+        "code": "AWS.apprunner.list_services.ServiceSummaryList",
+        "name": "App Runner",
+        "icon": "/assets/icons/aws/Compute/App-Runner.png",
+        "status": "t"
+    },
+    {
+        "id": "182",
+        "csp": "2",
+        "code": "AWS.appstream.describe_images.Images",
+        "name": "App Stream",
+        "icon": "/assets/icons/aws/End-User-Computing/AppStream.png",
+        "status": "t"
+    },
+    {
+        "id": "183",
+        "csp": "2",
+        "code": "AWS.appsync.list_graphql_apis.graphqlApis",
+        "name": "AppSync",
+        "icon": "/assets/icons/aws/App-Integration/AppSync.png",
+        "status": "t"
+    },
+    {
+        "id": "184",
+        "csp": "2",
+        "code": "AWS.arc-zonal-shift",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "185",
+        "csp": "2",
+        "code": "AWS.athena.list_databases.DatabaseLis",
+        "name": "Athena",
+        "icon": "/assets/icons/aws/Analytics/Athena.png",
+        "status": "t"
+    },
+    {
+        "id": "186",
+        "csp": "2",
+        "code": "AWS.auditmanager.list_assessments.assessmentMetadata",
+        "name": "Audit Manager",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/Audit-Manager.png",
+        "status": "t"
+    },
+    {
+        "id": "187",
+        "csp": "2",
+        "code": "AWS.autoscaling-plans",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "188",
+        "csp": "2",
+        "code": "AWS.autoscaling",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "189",
+        "csp": "2",
+        "code": "AWS.backup-gateway",
+        "name": "Backup",
+        "icon": "/assets/icons/aws/Storage/Backup.png",
+        "status": "t"
+    },
+    {
+        "id": "190",
+        "csp": "2",
+        "code": "AWS.backup.list_backup_plans.BackupPlansList",
+        "name": "Backup",
+        "icon": "/assets/icons/aws/Storage/Backup.png",
+        "status": "t"
+    },
+    {
+        "id": "191",
+        "csp": "2",
+        "code": "AWS.backupstorage",
+        "name": "Backup",
+        "icon": "/assets/icons/aws/Storage/Backup.png",
+        "status": "t"
+    },
+    {
+        "id": "192",
+        "csp": "2",
+        "code": "AWS.batch.describe_job_queues.jobQueues",
+        "name": "Batch",
+        "icon": "/assets/icons/aws/Compute/Batch.png",
+        "status": "t"
+    },
+    {
+        "id": "193",
+        "csp": "2",
+        "code": "AWS.billingconductor",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "194",
+        "csp": "2",
+        "code": "AWS.braket.list_quantum_tasks.quantumTasks",
+        "name": "Braket",
+        "icon": "/assets/icons/aws/Quantum-Technologies/Braket.png",
+        "status": "t"
+    },
+    {
+        "id": "195",
+        "csp": "2",
+        "code": "AWS.budgets",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "196",
+        "csp": "2",
+        "code": "AWS.ce",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "197",
+        "csp": "2",
+        "code": "AWS.chime-sdk-identity",
+        "name": "Chime SDK",
+        "icon": "/assets/icons/aws/Business-Applications/Chime-SDK.png",
+        "status": "t"
+    },
+    {
+        "id": "198",
+        "csp": "2",
+        "code": "AWS.chime-sdk-media-pipelines",
+        "name": "Chime SDK",
+        "icon": "/assets/icons/aws/Business-Applications/Chime-SDK.png",
+        "status": "t"
+    },
+    {
+        "id": "199",
+        "csp": "2",
+        "code": "AWS.chime-sdk-meetings",
+        "name": "Chime SDK",
+        "icon": "/assets/icons/aws/Business-Applications/Chime-SDK.png",
+        "status": "t"
+    },
+    {
+        "id": "200",
+        "csp": "2",
+        "code": "AWS.chime-sdk-messaging",
+        "name": "Chime SDK",
+        "icon": "/assets/icons/aws/Business-Applications/Chime-SDK.png",
+        "status": "t"
+    },
+    {
+        "id": "201",
+        "csp": "2",
+        "code": "AWS.chime-sdk-voice",
+        "name": "Chime SDK",
+        "icon": "/assets/icons/aws/Business-Applications/Chime-SDK.png",
+        "status": "t"
+    },
+    {
+        "id": "202",
+        "csp": "2",
+        "code": "AWS.chime.list_accounts.Accounts",
+        "name": "Chime",
+        "icon": "/assets/icons/aws/Business-Applications/Chime.png",
+        "status": "t"
+    },
+    {
+        "id": "203",
+        "csp": "2",
+        "code": "AWS.cleanrooms",
+        "name": "Clean Rooms",
+        "icon": "/assets/icons/aws/Analytics/Clean-Rooms.png",
+        "status": "t"
+    },
+    {
+        "id": "204",
+        "csp": "2",
+        "code": "AWS.cloud9.list_environments.environmentIds",
+        "name": "Cloud9",
+        "icon": "/assets/icons/aws/Developer-Tools/Cloud9.png",
+        "status": "t"
+    },
+    {
+        "id": "205",
+        "csp": "2",
+        "code": "AWS.cloudcontrol.list_resources.ResourceDescriptions",
+        "name": "Cloud Control",
+        "icon": "/assets/icons/aws/Developer-Tools/Cloud-Control-API.png",
+        "status": "t"
+    },
+    {
+        "id": "206",
+        "csp": "2",
+        "code": "AWS.clouddirectory.list_directories.Directories",
+        "name": "Cloud Directory",
+        "icon": "/assets/icons/aws/Networking-Content-Delivery/Cloud-Directory.png",
+        "status": "t"
+    },
+    {
+        "id": "207",
+        "csp": "2",
+        "code": "AWS.cloudformation.list_stacks.StackSummaries",
+        "name": "CloudFormation",
+        "icon": "/assets/icons/aws/Management-Governance/CloudFormation.png",
+        "status": "t"
+    },
+    {
+        "id": "208",
+        "csp": "2",
+        "code": "AWS.cloudfront.list_distributions.DistributionList.Items",
+        "name": "CloudFront",
+        "icon": "/assets/icons/aws/Networking-Content-Delivery/CloudFront.png",
+        "status": "t"
+    },
+    {
+        "id": "209",
+        "csp": "2",
+        "code": "AWS.cloudhsm.list_hsms.HsmList",
+        "name": "CloudHSM",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/CloudHSM.png",
+        "status": "f"
+    },
+    {
+        "id": "210",
+        "csp": "2",
+        "code": "AWS.cloudhsmv2.describe_clusters.Clusters",
+        "name": "CloudHSM",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/CloudHSM.png",
+        "status": "f"
+    },
+    {
+        "id": "211",
+        "csp": "2",
+        "code": "AWS.cloudsearch.describe_domains.DomainStatusList",
+        "name": "CloudSearch",
+        "icon": "/assets/icons/aws/Analytics/CloudSearch.png",
+        "status": "t"
+    },
+    {
+        "id": "212",
+        "csp": "2",
+        "code": "AWS.cloudsearchdomain",
+        "name": "CloudSearch",
+        "icon": "/assets/icons/aws/Analytics/CloudSearch.png",
+        "status": "t"
+    },
+    {
+        "id": "213",
+        "csp": "2",
+        "code": "AWS.cloudtrail-data",
+        "name": "CloudTrail",
+        "icon": "/assets/icons/aws/Management-Governance/CloudTrail.png",
+        "status": "t"
+    },
+    {
+        "id": "214",
+        "csp": "2",
+        "code": "AWS.cloudtrail.describe_trails.trailList",
+        "name": "CloudTrail",
+        "icon": "/assets/icons/aws/Management-Governance/CloudTrail.png",
+        "status": "t"
+    },
+    {
+        "id": "215",
+        "csp": "2",
+        "code": "AWS.cloudwatch.describe_alarms.MetricAlarms",
+        "name": "CloudWatch",
+        "icon": "/assets/icons/aws/Management-Governance/CloudWatch.png",
+        "status": "t"
+    },
+    {
+        "id": "216",
+        "csp": "2",
+        "code": "AWS.codeartifact.list_repositories.repositories",
+        "name": "CodeArtifact",
+        "icon": "/assets/icons/aws/Developer-Tools/CodeArtifact.png",
+        "status": "t"
+    },
+    {
+        "id": "217",
+        "csp": "2",
+        "code": "AWS.codebuild.list_projects.projects",
+        "name": "CodeBuild",
+        "icon": "/assets/icons/aws/Developer-Tools/CodeBuild.png",
+        "status": "t"
+    },
+    {
+        "id": "218",
+        "csp": "2",
+        "code": "AWS.codecatalyst",
+        "name": "CodeCatalyst",
+        "icon": "/assets/icons/aws/Developer-Tools/CodeCatalyst.png",
+        "status": "t"
+    },
+    {
+        "id": "219",
+        "csp": "2",
+        "code": "AWS.codecommit.list_repositories.repositories",
+        "name": "CodeCommit",
+        "icon": "/assets/icons/aws/Developer-Tools/CodeCommit.png",
+        "status": "t"
+    },
+    {
+        "id": "220",
+        "csp": "2",
+        "code": "AWS.codedeploy.list_applications.applications",
+        "name": "CodeDeploy",
+        "icon": "/assets/icons/aws/Developer-Tools/CodeDeploy.png",
+        "status": "t"
+    },
+    {
+        "id": "221",
+        "csp": "2",
+        "code": "AWS.codeguru-reviewer",
+        "name": "CodeGuru",
+        "icon": "/assets/icons/aws/Machine-Learning/CodeGuru.png",
+        "status": "t"
+    },
+    {
+        "id": "222",
+        "csp": "2",
+        "code": "AWS.codeguru-security",
+        "name": "CodeGuru",
+        "icon": "/assets/icons/aws/Machine-Learning/CodeGuru.png",
+        "status": "t"
+    },
+    {
+        "id": "223",
+        "csp": "2",
+        "code": "AWS.codeguruprofiler",
+        "name": "CodeGuru",
+        "icon": "/assets/icons/aws/Machine-Learning/CodeGuru.png",
+        "status": "t"
+    },
+    {
+        "id": "224",
+        "csp": "2",
+        "code": "AWS.codepipeline.list_pipelines.pipelines",
+        "name": "CodePipeline",
+        "icon": "/assets/icons/aws/Developer-Tools/CodePipeline.png",
+        "status": "t"
+    },
+    {
+        "id": "225",
+        "csp": "2",
+        "code": "AWS.codestar-connections",
+        "name": "CodeStar",
+        "icon": "/assets/icons/aws/Developer-Tools/CodeStar.png",
+        "status": "f"
+    },
+    {
+        "id": "226",
+        "csp": "2",
+        "code": "AWS.codestar-notifications",
+        "name": "CodeStar",
+        "icon": "/assets/icons/aws/Developer-Tools/CodeStar.png",
+        "status": "f"
+    },
+    {
+        "id": "227",
+        "csp": "2",
+        "code": "AWS.codestar.list_projects.projects",
+        "name": "CodeStar",
+        "icon": "/assets/icons/aws/Developer-Tools/CodeStar.png",
+        "status": "f"
+    },
+    {
+        "id": "228",
+        "csp": "2",
+        "code": "AWS.cognito-identity",
+        "name": "Cognito",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/Cognito.png",
+        "status": "t"
+    },
+    {
+        "id": "229",
+        "csp": "2",
+        "code": "AWS.cognito-idp",
+        "name": "Cognito",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/Cognito.png",
+        "status": "t"
+    },
+    {
+        "id": "230",
+        "csp": "2",
+        "code": "AWS.cognito-sync",
+        "name": "Cognito",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/Cognito.png",
+        "status": "t"
+    },
+    {
+        "id": "231",
+        "csp": "2",
+        "code": "AWS.comprehend.list_document_classification_jobs.DocumentClassificationJobPropertiesList",
+        "name": "Comprehend",
+        "icon": "/assets/icons/aws/Machine-Learning/Comprehend.png",
+        "status": "t"
+    },
+    {
+        "id": "232",
+        "csp": "2",
+        "code": "AWS.comprehendmedical.list_entities_detection_v2_jobs.ComprehendMedicalAsyncJobPropertiesList",
+        "name": "Comprehend Medical",
+        "icon": "/assets/icons/aws/Machine-Learning/Comprehend-Medical.png",
+        "status": "t"
+    },
+    {
+        "id": "233",
+        "csp": "2",
+        "code": "AWS.compute-optimizer",
+        "name": "Compute Optimizer",
+        "icon": "/assets/icons/aws/Compute/Compute-Optimizer.png",
+        "status": "f"
+    },
+    {
+        "id": "234",
+        "csp": "2",
+        "code": "AWS.config.describe_config_rules.ConfigRules",
+        "name": "Config",
+        "icon": "/assets/icons/aws/Management-Governance/Config.png",
+        "status": "t"
+    },
+    {
+        "id": "235",
+        "csp": "2",
+        "code": "AWS.connect-contact-lens",
+        "name": "Connect",
+        "icon": "/assets/icons/aws/Business-Applications/Connect.png",
+        "status": "t"
+    },
+    {
+        "id": "236",
+        "csp": "2",
+        "code": "AWS.connect.list_instances.InstanceSummaryList",
+        "name": "Connect",
+        "icon": "/assets/icons/aws/Business-Applications/Connect.png",
+        "status": "t"
+    },
+    {
+        "id": "237",
+        "csp": "2",
+        "code": "AWS.connectcampaigns",
+        "name": "Connect",
+        "icon": "/assets/icons/aws/Business-Applications/Connect.png",
+        "status": "t"
+    },
+    {
+        "id": "238",
+        "csp": "2",
+        "code": "AWS.connectcases",
+        "name": "Connect",
+        "icon": "/assets/icons/aws/Business-Applications/Connect.png",
+        "status": "t"
+    },
+    {
+        "id": "239",
+        "csp": "2",
+        "code": "AWS.connectparticipant",
+        "name": "Connect",
+        "icon": "/assets/icons/aws/Business-Applications/Connect.png",
+        "status": "t"
+    },
+    {
+        "id": "240",
+        "csp": "2",
+        "code": "AWS.controltower",
+        "name": "Control Tower",
+        "icon": "/assets/icons/aws/Management-Governance/Control-Tower.png",
+        "status": "t"
+    },
+    {
+        "id": "241",
+        "csp": "2",
+        "code": "AWS.cur",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "242",
+        "csp": "2",
+        "code": "AWS.customer-profiles",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "243",
+        "csp": "2",
+        "code": "AWS.databrew",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "244",
+        "csp": "2",
+        "code": "AWS.dataexchange.list_data_sets.DataSets",
+        "name": "Data Exchange",
+        "icon": "/assets/icons/aws/Analytics/Data-Exchange.png",
+        "status": "t"
+    },
+    {
+        "id": "245",
+        "csp": "2",
+        "code": "AWS.datapipeline.list_pipelines.pipelineIdList",
+        "name": "Data Pipeline",
+        "icon": "/assets/icons/aws/Analytics/Data-Pipeline.png",
+        "status": "t"
+    },
+    {
+        "id": "246",
+        "csp": "2",
+        "code": "AWS.datasync.list_tasks.Tasks",
+        "name": "DataSync",
+        "icon": "/assets/icons/aws/Migration-Transfer/DataSync.png",
+        "status": "t"
+    },
+    {
+        "id": "247",
+        "csp": "2",
+        "code": "AWS.dax",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "248",
+        "csp": "2",
+        "code": "AWS.detective.list_graphs.GraphList",
+        "name": "Detective",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/Detective.png",
+        "status": "t"
+    },
+    {
+        "id": "249",
+        "csp": "2",
+        "code": "AWS.devicefarm.list_projects.projects",
+        "name": "Device-Farm",
+        "icon": "/assets/icons/aws/Front-End-Web-Mobile/Device-Farm.png",
+        "status": "t"
+    },
+    {
+        "id": "250",
+        "csp": "2",
+        "code": "AWS.devops-guru",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "251",
+        "csp": "2",
+        "code": "AWS.directconnect.describe_connections.connections",
+        "name": "Direct Connect",
+        "icon": "/assets/icons/aws/Networking-Content-Delivery/Direct-Connect.png",
+        "status": "t"
+    },
+    {
+        "id": "252",
+        "csp": "2",
+        "code": "AWS.discovery",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "253",
+        "csp": "2",
+        "code": "AWS.dlm",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "254",
+        "csp": "2",
+        "code": "AWS.dms",
+        "name": "Database Migration Service",
+        "icon": "/assets/icons/aws/Database/Database-Migration-Service.png",
+        "status": "t"
+    },
+    {
+        "id": "255",
+        "csp": "2",
+        "code": "AWS.docdb-elastic",
+        "name": "DocumentDB",
+        "icon": "/assets/icons/aws/Database/DocumentDB.png",
+        "status": "t"
+    },
+    {
+        "id": "256",
+        "csp": "2",
+        "code": "AWS.docdb.describe_db_clusters.DBClusters",
+        "name": "DocumentDB",
+        "icon": "/assets/icons/aws/Database/DocumentDB.png",
+        "status": "t"
+    },
+    {
+        "id": "257",
+        "csp": "2",
+        "code": "AWS.drs.list_recovery_snapshots.RecoverySnapshots",
+        "name": "Elastic Disaster Recovery",
+        "icon": "/assets/icons/aws/Storage/Elastic-Disaster-Recovery.png",
+        "status": "t"
+    },
+    {
+        "id": "258",
+        "csp": "2",
+        "code": "AWS.ds.describe_directories.DirectoryDescriptions",
+        "name": "Directory Service",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/Directory-Service.png",
+        "status": "t"
+    },
+    {
+        "id": "259",
+        "csp": "2",
+        "code": "AWS.dynamodb.list_tables.TableNames",
+        "name": "DynamoDB",
+        "icon": "/assets/icons/aws/Database/DynamoDB.png",
+        "status": "t"
+    },
+    {
+        "id": "260",
+        "csp": "2",
+        "code": "AWS.dynamodbstreams.list_streams.Streams",
+        "name": "DynamoDB",
+        "icon": "/assets/icons/aws/Database/DynamoDB.png",
+        "status": "t"
+    },
+    {
+        "id": "261",
+        "csp": "2",
+        "code": "AWS.ebs.list_snapshots.Snapshots",
+        "name": "Elastic Block Store (EBS)",
+        "icon": "/assets/icons/aws/Storage/Elastic-Block-Store.png",
+        "status": "t"
+    },
+    {
+        "id": "262",
+        "csp": "2",
+        "code": "AWS.ec2-instance-connect",
+        "name": "EC2 (Elastic Compute Cloud)",
+        "icon": "/assets/icons/aws/Compute/EC2.png",
+        "status": "t"
+    },
+    {
+        "id": "263",
+        "csp": "2",
+        "code": "AWS.ec2.describe_instances.Reservations",
+        "name": "EC2 (Elastic Compute Cloud)",
+        "icon": "/assets/icons/aws/Compute/EC2.png",
+        "status": "t"
+    },
+    {
+        "id": "264",
+        "csp": "2",
+        "code": "AWS.ecr-public",
+        "name": "Elastic Container Registry",
+        "icon": "/assets/icons/aws/Containers/Elastic-Container-Registry.png",
+        "status": "t"
+    },
+    {
+        "id": "265",
+        "csp": "2",
+        "code": "AWS.ecr.describe_repositories.repositories",
+        "name": "Elastic Container Registry",
+        "icon": "/assets/icons/aws/Containers/Elastic-Container-Registry.png",
+        "status": "t"
+    },
+    {
+        "id": "266",
+        "csp": "2",
+        "code": "AWS.ecs.list_clusters.clusterArns",
+        "name": "Elastic Container Service",
+        "icon": "/assets/icons/aws/Containers/Elastic-Container-Service.png",
+        "status": "t"
+    },
+    {
+        "id": "267",
+        "csp": "2",
+        "code": "AWS.efs.describe_file_systems.FileSystems",
+        "name": "EFS (Elastic File System)",
+        "icon": "/assets/icons/aws/Storage/EFS.png",
+        "status": "t"
+    },
+    {
+        "id": "268",
+        "csp": "2",
+        "code": "AWS.eks.list_clusters.clusters",
+        "name": "Elastic Kubernetes Service",
+        "icon": "/assets/icons/aws/Containers/Elastic-Kubernetes-Service.png",
+        "status": "t"
+    },
+    {
+        "id": "269",
+        "csp": "2",
+        "code": "AWS.elastic-inference",
+        "name": "Elastic-Inference",
+        "icon": "/assets/icons/aws/Machine-Learning/Elastic-Inference.png",
+        "status": "t"
+    },
+    {
+        "id": "270",
+        "csp": "2",
+        "code": "AWS.elasticache.describe_cache_clusters.CacheClusters",
+        "name": "ElastiCache",
+        "icon": "/assets/icons/aws/Database/ElastiCache.png",
+        "status": "t"
+    },
+    {
+        "id": "271",
+        "csp": "2",
+        "code": "AWS.elasticbeanstalk.describe_applications.Applications",
+        "name": "Elastic Beanstalk",
+        "icon": "/assets/icons/aws/Compute/Elastic-Beanstalk.png",
+        "status": "t"
+    },
+    {
+        "id": "272",
+        "csp": "2",
+        "code": "AWS.elastictranscoder.list_pipelines.Pipelines",
+        "name": "Elastic Transcoder",
+        "icon": "/assets/icons/aws/Media-Services/Elastic-Transcoder.png",
+        "status": "t"
+    },
+    {
+        "id": "273",
+        "csp": "2",
+        "code": "AWS.elb.describe_load_balancers.LoadBalancerDescriptions",
+        "name": "Elastic Load Balancing",
+        "icon": "/assets/icons/aws/Networking-Content-Delivery/Elastic-Load-Balancing.png",
+        "status": "t"
+    },
+    {
+        "id": "274",
+        "csp": "2",
+        "code": "AWS.elbv2.describe_load_balancers.LoadBalancers",
+        "name": "Elastic Load Balancing",
+        "icon": "/assets/icons/aws/Networking-Content-Delivery/Elastic-Load-Balancing.png",
+        "status": "t"
+    },
+    {
+        "id": "275",
+        "csp": "2",
+        "code": "AWS.emr-containers",
+        "name": "EMR",
+        "icon": "/assets/icons/aws/Analytics/EMR.png",
+        "status": "t"
+    },
+    {
+        "id": "276",
+        "csp": "2",
+        "code": "AWS.emr-serverless",
+        "name": "EMR",
+        "icon": "/assets/icons/aws/Analytics/EMR.png",
+        "status": "t"
+    },
+    {
+        "id": "277",
+        "csp": "2",
+        "code": "AWS.emr.list_clusters.Clusters",
+        "name": "EMR",
+        "icon": "/assets/icons/aws/Analytics/EMR.png",
+        "status": "t"
+    },
+    {
+        "id": "278",
+        "csp": "2",
+        "code": "AWS.entityresolution",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "279",
+        "csp": "2",
+        "code": "AWS.es",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "280",
+        "csp": "2",
+        "code": "AWS.events",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "281",
+        "csp": "2",
+        "code": "AWS.evidently",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "282",
+        "csp": "2",
+        "code": "AWS.finspace-data",
+        "name": "FinSpace",
+        "icon": "/assets/icons/aws/Analytics/FinSpace.png",
+        "status": "t"
+    },
+    {
+        "id": "283",
+        "csp": "2",
+        "code": "AWS.finspace",
+        "name": "FinSpace",
+        "icon": "/assets/icons/aws/Analytics/FinSpace.png",
+        "status": "t"
+    },
+    {
+        "id": "284",
+        "csp": "2",
+        "code": "AWS.firehose.list_delivery_streams.DeliveryStreamNames",
+        "name": "Kinesis Firehose",
+        "icon": "/assets/icons/aws/Analytics/Kinesis-Firehose.png",
+        "status": "t"
+    },
+    {
+        "id": "285",
+        "csp": "2",
+        "code": "AWS.fis",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "286",
+        "csp": "2",
+        "code": "AWS.fms",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "287",
+        "csp": "2",
+        "code": "AWS.forecast.list_datasets.Datasets",
+        "name": "Forecast",
+        "icon": "/assets/icons/aws/Machine-Learning/Forecast.png",
+        "status": "t"
+    },
+    {
+        "id": "288",
+        "csp": "2",
+        "code": "AWS.forecastquery",
+        "name": "Forecast",
+        "icon": "/assets/icons/aws/Machine-Learning/Forecast.png",
+        "status": "t"
+    },
+    {
+        "id": "289",
+        "csp": "2",
+        "code": "AWS.frauddetector.get_detectors.detectors",
+        "name": "Fraud Detector",
+        "icon": "/assets/icons/aws/Machine-Learning/Fraud-Detector.png",
+        "status": "t"
+    },
+    {
+        "id": "290",
+        "csp": "2",
+        "code": "AWS.fsx.describe_file_systems.FileSystems",
+        "name": "FSx",
+        "icon": "/assets/icons/aws/Storage/FSx.png",
+        "status": "t"
+    },
+    {
+        "id": "291",
+        "csp": "2",
+        "code": "AWS.gamelift.describe_game_sessions.GameSessions",
+        "name": "GameLift",
+        "icon": "/assets/icons/aws/Games/GameLift.png",
+        "status": "t"
+    },
+    {
+        "id": "292",
+        "csp": "2",
+        "code": "AWS.gamesparks",
+        "name": "GameSparks",
+        "icon": "/assets/icons/aws/Games/GameSparks.png",
+        "status": "t"
+    },
+    {
+        "id": "293",
+        "csp": "2",
+        "code": "AWS.glacier.list_vaults.VaultList",
+        "name": "S3",
+        "icon": "/assets/icons/aws/Storage/Simple-Storage-Service-Glacier.png",
+        "status": "t"
+    },
+    {
+        "id": "294",
+        "csp": "2",
+        "code": "AWS.globalaccelerator.list_accelerators.Accelerators",
+        "name": "Global Accelerator",
+        "icon": "/assets/icons/aws/Networking-Content-Delivery/Global-Accelerator.png",
+        "status": "t"
+    },
+    {
+        "id": "295",
+        "csp": "2",
+        "code": "AWS.glue.get_databases.DatabaseList",
+        "name": "Glue",
+        "icon": "/assets/icons/aws/Analytics/Glue.png",
+        "status": "t"
+    },
+    {
+        "id": "296",
+        "csp": "2",
+        "code": "AWS.grafana",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "297",
+        "csp": "2",
+        "code": "AWS.greengrass.list_groups.Groups",
+        "name": "IoT Greengrass",
+        "icon": "/assets/icons/aws/Internet-of-Things/IoT-Greengrass.png",
+        "status": "t"
+    },
+    {
+        "id": "298",
+        "csp": "2",
+        "code": "AWS.greengrassv2.list_groups.Groups",
+        "name": "IoT Greengrass",
+        "icon": "/assets/icons/aws/Internet-of-Things/IoT-Greengrass.png",
+        "status": "t"
+    },
+    {
+        "id": "299",
+        "csp": "2",
+        "code": "AWS.groundstation.list_satellites.satellites",
+        "name": "Ground Station",
+        "icon": "/assets/icons/aws/Satellite/Ground-Station.png",
+        "status": "t"
+    },
+    {
+        "id": "300",
+        "csp": "2",
+        "code": "AWS.guardduty.list_detectors.DetectorIds",
+        "name": "GuardDuty",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/GuardDuty.png",
+        "status": "t"
+    },
+    {
+        "id": "301",
+        "csp": "2",
+        "code": "AWS.health",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "302",
+        "csp": "2",
+        "code": "AWS.healthlake.list_fhir_datastores.DatastorePropertiesList",
+        "name": "HealthLake",
+        "icon": "/assets/icons/aws/Machine-Learning/HealthLake.png",
+        "status": "t"
+    },
+    {
+        "id": "303",
+        "csp": "2",
+        "code": "AWS.honeycode",
+        "name": "Honeycode",
+        "icon": "/assets/icons/aws/Business-Applications/Honeycode.png",
+        "status": "t"
+    },
+    {
+        "id": "304",
+        "csp": "2",
+        "code": "AWS.iam",
+        "name": "Identity and Access Management",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/Identity-and-Access-Management.png",
+        "status": "t"
+    },
+    {
+        "id": "305",
+        "csp": "2",
+        "code": "AWS.identitystore",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "306",
+        "csp": "2",
+        "code": "AWS.imagebuilder",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "307",
+        "csp": "2",
+        "code": "AWS.importexport",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "308",
+        "csp": "2",
+        "code": "AWS.inspector.list_assessment_runs.assessmentRunArns",
+        "name": "Inspector",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/Inspector.png",
+        "status": "t"
+    },
+    {
+        "id": "309",
+        "csp": "2",
+        "code": "AWS.inspector2.list_assessment_runs.assessmentRunArns",
+        "name": "Inspector",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/Inspector.png",
+        "status": "t"
+    },
+    {
+        "id": "310",
+        "csp": "2",
+        "code": "AWS.internetmonitor",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "311",
+        "csp": "2",
+        "code": "AWS.iot-data",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "312",
+        "csp": "2",
+        "code": "AWS.iot-jobs-data",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "313",
+        "csp": "2",
+        "code": "AWS.iot-roborunner",
+        "name": "IoT-RoboRunner",
+        "icon": "/assets/icons/aws/Internet-of-Things/IoT-RoboRunner.png",
+        "status": "t"
+    },
+    {
+        "id": "314",
+        "csp": "2",
+        "code": "AWS.iot.list_things.things",
+        "name": "IoT-Core",
+        "icon": "/assets/icons/aws/Internet-of-Things/IoT-Core.png",
+        "status": "t"
+    },
+    {
+        "id": "315",
+        "csp": "2",
+        "code": "AWS.iot1click-devices.list_devices.Devices",
+        "name": "IoT-1-Click",
+        "icon": "/assets/icons/aws/Internet-of-Things/IoT-1-Click.png",
+        "status": "t"
+    },
+    {
+        "id": "316",
+        "csp": "2",
+        "code": "AWS.iot1click-projects",
+        "name": "IoT-1-Click",
+        "icon": "/assets/icons/aws/Internet-of-Things/IoT-1-Click.png",
+        "status": "t"
+    },
+    {
+        "id": "317",
+        "csp": "2",
+        "code": "AWS.iotanalytics.list_datasets.datasetSummaries",
+        "name": "IoT-Analytics",
+        "icon": "/assets/icons/aws/Internet-of-Things/IoT-Analytics.png",
+        "status": "t"
+    },
+    {
+        "id": "318",
+        "csp": "2",
+        "code": "AWS.iotdeviceadvisor",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "319",
+        "csp": "2",
+        "code": "AWS.iotevents-data",
+        "name": "IoT-Events",
+        "icon": "/assets/icons/aws/Internet-of-Things/IoT-Events.png",
+        "status": "t"
+    },
+    {
+        "id": "320",
+        "csp": "2",
+        "code": "AWS.iotevents-data.list_detectors.detectorSummaries",
+        "name": "IoT-Events",
+        "icon": "/assets/icons/aws/Internet-of-Things/IoT-Events.png",
+        "status": "t"
+    },
+    {
+        "id": "321",
+        "csp": "2",
+        "code": "AWS.iotfleethub",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "322",
+        "csp": "2",
+        "code": "AWS.iotfleetwise",
+        "name": "IoT-FleetWise",
+        "icon": "/assets/icons/aws/Internet-of-Things/IoT-FleetWise.png",
+        "status": "t"
+    },
+    {
+        "id": "323",
+        "csp": "2",
+        "code": "AWS.iotsecuretunneling",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "324",
+        "csp": "2",
+        "code": "AWS.iotsitewise.list_assets.assetSummaries",
+        "name": "IoT-SiteWise",
+        "icon": "/assets/icons/aws/Internet-of-Things/IoT-SiteWise.png",
+        "status": "t"
+    },
+    {
+        "id": "325",
+        "csp": "2",
+        "code": "AWS.iotthingsgraph",
+        "name": "IoT-Things-Graph",
+        "icon": "/assets/icons/aws/Internet-of-Things/IoT-Things-Graph.png",
+        "status": "t"
+    },
+    {
+        "id": "326",
+        "csp": "2",
+        "code": "AWS.iottwinmaker",
+        "name": "IoT-TwinMaker",
+        "icon": "/assets/icons/aws/Internet-of-Things/IoT-TwinMaker.png",
+        "status": "t"
+    },
+    {
+        "id": "327",
+        "csp": "2",
+        "code": "AWS.iotwireless",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "328",
+        "csp": "2",
+        "code": "AWS.ivs-realtime",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "329",
+        "csp": "2",
+        "code": "AWS.ivs",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "330",
+        "csp": "2",
+        "code": "AWS.ivschat",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "331",
+        "csp": "2",
+        "code": "AWS.kafka.list_clusters.ClusterInfoList",
+        "name": "Amazon Managed Streaming for Apache Kafka",
+        "icon": "/assets/icons/aws/Analytics/Managed-Streaming-for-Apache-Kafka.png",
+        "status": "t"
+    },
+    {
+        "id": "332",
+        "csp": "2",
+        "code": "AWS.kafkaconnect",
+        "name": "Amazon Managed Streaming for Apache Kafka",
+        "icon": "/assets/icons/aws/Analytics/Managed-Streaming-for-Apache-Kafka.png",
+        "status": "t"
+    },
+    {
+        "id": "333",
+        "csp": "2",
+        "code": "AWS.kendra-ranking",
+        "name": "Kendra",
+        "icon": "/assets/icons/aws/Machine-Learning/Kendra.png",
+        "status": "f"
+    },
+    {
+        "id": "334",
+        "csp": "2",
+        "code": "AWS.kendra.list_indices.IndexConfigurationSummaryItems",
+        "name": "Kendra",
+        "icon": "/assets/icons/aws/Machine-Learning/Kendra.png",
+        "status": "t"
+    },
+    {
+        "id": "335",
+        "csp": "2",
+        "code": "AWS.keyspaces",
+        "name": "Keyspaces",
+        "icon": "/assets/icons/aws/Database/Keyspaces.png",
+        "status": "t"
+    },
+    {
+        "id": "336",
+        "csp": "2",
+        "code": "AWS.kinesis-video-archived-media",
+        "name": "Kinesis Video Streams",
+        "icon": "/assets/icons/aws/Analytics/Kinesis-Video-Streams.png",
+        "status": "t"
+    },
+    {
+        "id": "337",
+        "csp": "2",
+        "code": "AWS.kinesis-video-media",
+        "name": "Kinesis Video Streams",
+        "icon": "/assets/icons/aws/Analytics/Kinesis-Video-Streams.png",
+        "status": "t"
+    },
+    {
+        "id": "338",
+        "csp": "2",
+        "code": "AWS.kinesis-video-signaling",
+        "name": "Kinesis Video Streams",
+        "icon": "/assets/icons/aws/Analytics/Kinesis-Video-Streams.png",
+        "status": "t"
+    },
+    {
+        "id": "339",
+        "csp": "2",
+        "code": "AWS.kinesis-video-webrtc-storage",
+        "name": "Kinesis Video Streams",
+        "icon": "/assets/icons/aws/Analytics/Kinesis-Video-Streams.png",
+        "status": "t"
+    },
+    {
+        "id": "340",
+        "csp": "2",
+        "code": "AWS.kinesis.list_streams.StreamNames",
+        "name": "Kinesis",
+        "icon": "/assets/icons/aws/Analytics/Kinesis.png",
+        "status": "t"
+    },
+    {
+        "id": "341",
+        "csp": "2",
+        "code": "AWS.kinesisanalytics.list_applications.ApplicationSummaries",
+        "name": "Kinesis Data Analytics",
+        "icon": "/assets/icons/aws/Analytics/Kinesis-Data-Analytics.png",
+        "status": "t"
+    },
+    {
+        "id": "342",
+        "csp": "2",
+        "code": "AWS.kinesisanalyticsv2.list_applications.ApplicationSummaries",
+        "name": "Kinesis Data Analytics",
+        "icon": "/assets/icons/aws/Analytics/Kinesis-Data-Analytics.png",
+        "status": "t"
+    },
+    {
+        "id": "343",
+        "csp": "2",
+        "code": "AWS.kinesisvideo.list_streams.StreamInfoList",
+        "name": "Kinesis Video Streams",
+        "icon": "/assets/icons/aws/Analytics/Kinesis-Video-Streams.png",
+        "status": "t"
+    },
+    {
+        "id": "344",
+        "csp": "2",
+        "code": "AWS.kms.list_keys.Keys",
+        "name": "Key Management Service",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/Key-Management-Service.png",
+        "status": "t"
+    },
+    {
+        "id": "345",
+        "csp": "2",
+        "code": "AWS.lakeformation.list_resources.ResourceInfoList",
+        "name": "Lake Formation",
+        "icon": "/assets/icons/aws/Analytics/Lake-Formation.png",
+        "status": "t"
+    },
+    {
+        "id": "346",
+        "csp": "2",
+        "code": "AWS.lambda.list_functions.Functions",
+        "name": "Lambda",
+        "icon": "/assets/icons/aws/Compute/Lambda.png",
+        "status": "t"
+    },
+    {
+        "id": "347",
+        "csp": "2",
+        "code": "AWS.lex-models.get_bots.bots",
+        "name": "Lex",
+        "icon": "/assets/icons/aws/Machine-Learning/Lex.png",
+        "status": "t"
+    },
+    {
+        "id": "348",
+        "csp": "2",
+        "code": "AWS.lex-runtime",
+        "name": "Lex",
+        "icon": "/assets/icons/aws/Machine-Learning/Lex.png",
+        "status": "t"
+    },
+    {
+        "id": "349",
+        "csp": "2",
+        "code": "AWS.lexv2-models.list_bots.botSummaries",
+        "name": "Lex",
+        "icon": "/assets/icons/aws/Machine-Learning/Lex.png",
+        "status": "t"
+    },
+    {
+        "id": "350",
+        "csp": "2",
+        "code": "AWS.lexv2-runtime",
+        "name": "Lex",
+        "icon": "/assets/icons/aws/Machine-Learning/Lex.png",
+        "status": "t"
+    },
+    {
+        "id": "351",
+        "csp": "2",
+        "code": "AWS.license-manager-linux-subscriptions",
+        "name": "License Manager",
+        "icon": "/assets/icons/aws/Management-Governance/License-Manager.png",
+        "status": "t"
+    },
+    {
+        "id": "352",
+        "csp": "2",
+        "code": "AWS.license-manager-user-subscriptions",
+        "name": "License Manager",
+        "icon": "/assets/icons/aws/Management-Governance/License-Manager.png",
+        "status": "t"
+    },
+    {
+        "id": "353",
+        "csp": "2",
+        "code": "AWS.license-manager",
+        "name": "License Manager",
+        "icon": "/assets/icons/aws/Management-Governance/License-Manager.png",
+        "status": "t"
+    },
+    {
+        "id": "354",
+        "csp": "2",
+        "code": "AWS.lightsail.get_instances.instances",
+        "name": "Lightsail",
+        "icon": "/assets/icons/aws/Compute/Lightsail.png",
+        "status": "t"
+    },
+    {
+        "id": "355",
+        "csp": "2",
+        "code": "AWS.location",
+        "name": "Location Service",
+        "icon": "/assets/icons/aws/Front-End-Web-Mobile/Location-Service.png",
+        "status": "t"
+    },
+    {
+        "id": "356",
+        "csp": "2",
+        "code": "AWS.logs",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "357",
+        "csp": "2",
+        "code": "AWS.lookoutequipment",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "358",
+        "csp": "2",
+        "code": "AWS.lookoutmetrics",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "359",
+        "csp": "2",
+        "code": "AWS.lookoutvision",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "360",
+        "csp": "2",
+        "code": "AWS.m2",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "361",
+        "csp": "2",
+        "code": "AWS.machinelearning",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "362",
+        "csp": "2",
+        "code": "AWS.macie.list_member_accounts.memberAccounts",
+        "name": "Macie",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/Macie.png",
+        "status": "f"
+    },
+    {
+        "id": "363",
+        "csp": "2",
+        "code": "AWS.macie2.list_members.members",
+        "name": "Macie",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/Macie.png",
+        "status": "t"
+    },
+    {
+        "id": "364",
+        "csp": "2",
+        "code": "AWS.managedblockchain-query",
+        "name": "Managed Blockchain",
+        "icon": "/assets/icons/aws/Blockchain/Managed-Blockchain.png",
+        "status": "f"
+    },
+    {
+        "id": "365",
+        "csp": "2",
+        "code": "AWS.managedblockchain.list_networks.Networks",
+        "name": "Managed Blockchain",
+        "icon": "/assets/icons/aws/Blockchain/Managed-Blockchain.png",
+        "status": "t"
+    },
+    {
+        "id": "366",
+        "csp": "2",
+        "code": "AWS.marketplace-catalog",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "367",
+        "csp": "2",
+        "code": "AWS.marketplace-entitlement",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "368",
+        "csp": "2",
+        "code": "AWS.marketplacecommerceanalytics",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "369",
+        "csp": "2",
+        "code": "AWS.mediaconnect",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "370",
+        "csp": "2",
+        "code": "AWS.mediaconvert",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "371",
+        "csp": "2",
+        "code": "AWS.medialive",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "372",
+        "csp": "2",
+        "code": "AWS.mediapackage-vod",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "373",
+        "csp": "2",
+        "code": "AWS.mediapackage",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "374",
+        "csp": "2",
+        "code": "AWS.mediapackagev2",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "375",
+        "csp": "2",
+        "code": "AWS.mediastore-data",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "376",
+        "csp": "2",
+        "code": "AWS.mediastore",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "377",
+        "csp": "2",
+        "code": "AWS.mediatailor",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "378",
+        "csp": "2",
+        "code": "AWS.medical-imaging",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "379",
+        "csp": "2",
+        "code": "AWS.memorydb.describe_clusters.Clusters",
+        "name": "Amazon MemoryDB for Redis",
+        "icon": "/assets/icons/aws/Database/MemoryDB-for-Redis.png",
+        "status": "t"
+    },
+    {
+        "id": "380",
+        "csp": "2",
+        "code": "AWS.meteringmarketplace",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "381",
+        "csp": "2",
+        "code": "AWS.mgh",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "382",
+        "csp": "2",
+        "code": "AWS.mgn",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "383",
+        "csp": "2",
+        "code": "AWS.migration-hub-refactor-spaces",
+        "name": "Migration Hub",
+        "icon": "/assets/icons/aws/Migration-Transfer/Migration-Hub.png",
+        "status": "t"
+    },
+    {
+        "id": "384",
+        "csp": "2",
+        "code": "AWS.migrationhub-config",
+        "name": "Migration Hub",
+        "icon": "/assets/icons/aws/Migration-Transfer/Migration-Hub.png",
+        "status": "t"
+    },
+    {
+        "id": "385",
+        "csp": "2",
+        "code": "AWS.migrationhuborchestrator",
+        "name": "Migration Hub",
+        "icon": "/assets/icons/aws/Migration-Transfer/Migration-Hub.png",
+        "status": "t"
+    },
+    {
+        "id": "386",
+        "csp": "2",
+        "code": "AWS.migrationhubstrategy",
+        "name": "Migration Hub",
+        "icon": "/assets/icons/aws/Migration-Transfer/Migration-Hub.png",
+        "status": "t"
+    },
+    {
+        "id": "387",
+        "csp": "2",
+        "code": "AWS.mobile",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "388",
+        "csp": "2",
+        "code": "AWS.mq.list_brokers.BrokerSummaries",
+        "name": "Message Queue",
+        "icon": "/assets/icons/aws/App-Integration/MQ.png",
+        "status": "t"
+    },
+    {
+        "id": "389",
+        "csp": "2",
+        "code": "AWS.mturk",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "390",
+        "csp": "2",
+        "code": "AWS.mwaa",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "391",
+        "csp": "2",
+        "code": "AWS.neptune.describe_db_instances.DBInstances",
+        "name": "Neptune",
+        "icon": "/assets/icons/aws/Database/Neptune.png",
+        "status": "t"
+    },
+    {
+        "id": "392",
+        "csp": "2",
+        "code": "AWS.network-firewall.list_firewalls.Firewalls",
+        "name": "Network Firewall",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/Network-Firewall.png",
+        "status": "t"
+    },
+    {
+        "id": "393",
+        "csp": "2",
+        "code": "AWS.networkmanager",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "394",
+        "csp": "2",
+        "code": "AWS.nimble.list_studios.Studios",
+        "name": "Nimble Studio",
+        "icon": "/assets/icons/aws/Media-Services/Nimble-Studio.png",
+        "status": "f"
+    },
+    {
+        "id": "395",
+        "csp": "2",
+        "code": "AWS.oam",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "396",
+        "csp": "2",
+        "code": "AWS.omics",
+        "name": "Omics",
+        "icon": "/assets/icons/aws/Machine-Learning/Omics.png",
+        "status": "t"
+    },
+    {
+        "id": "397",
+        "csp": "2",
+        "code": "AWS.opensearch.list_domain_names.DomainNames",
+        "name": "OpenSearch",
+        "icon": "/assets/icons/aws/Analytics/OpenSearch-Service.png",
+        "status": "t"
+    },
+    {
+        "id": "398",
+        "csp": "2",
+        "code": "AWS.opensearchserverless",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "399",
+        "csp": "2",
+        "code": "AWS.opsworks.describe_stacks.Stacks",
+        "name": "OpsWorks",
+        "icon": "/assets/icons/aws/Management-Governance/OpsWorks.png",
+        "status": "t"
+    },
+    {
+        "id": "400",
+        "csp": "2",
+        "code": "AWS.opsworkscm",
+        "name": "OpsWorks",
+        "icon": "/assets/icons/aws/Management-Governance/OpsWorks.png",
+        "status": "f"
+    },
+    {
+        "id": "401",
+        "csp": "2",
+        "code": "AWS.organizations.list_accounts.Accounts",
+        "name": "Organizations",
+        "icon": "/assets/icons/aws/Management-Governance/Organizations.png",
+        "status": "t"
+    },
+    {
+        "id": "402",
+        "csp": "2",
+        "code": "AWS.osis",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "403",
+        "csp": "2",
+        "code": "AWS.outposts.list_outposts.Outposts",
+        "name": "Outposts",
+        "icon": "/assets/icons/aws/Compute/Outposts-family.png",
+        "status": "t"
+    },
+    {
+        "id": "404",
+        "csp": "2",
+        "code": "AWS.panorama",
+        "name": "Panorama",
+        "icon": "/assets/icons/aws/Machine-Learning/Panorama.png",
+        "status": "t"
+    },
+    {
+        "id": "405",
+        "csp": "2",
+        "code": "AWS.payment-cryptography-data",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "406",
+        "csp": "2",
+        "code": "AWS.payment-cryptography",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "407",
+        "csp": "2",
+        "code": "AWS.personalize-events",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "408",
+        "csp": "2",
+        "code": "AWS.personalize-runtime",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "409",
+        "csp": "2",
+        "code": "AWS.personalize.list_datasets.datasets",
+        "name": "Personalize",
+        "icon": "/assets/icons/aws/Machine-Learning/Personalize.png",
+        "status": "t"
+    },
+    {
+        "id": "410",
+        "csp": "2",
+        "code": "AWS.pi",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "411",
+        "csp": "2",
+        "code": "AWS.pinpoint-email",
+        "name": "Pinpoint",
+        "icon": "/assets/icons/aws/Business-Applications/Pinpoint.png",
+        "status": "f"
+    },
+    {
+        "id": "412",
+        "csp": "2",
+        "code": "AWS.pinpoint-sms-voice-v2",
+        "name": "Pinpoint",
+        "icon": "/assets/icons/aws/Business-Applications/Pinpoint.png",
+        "status": "f"
+    },
+    {
+        "id": "413",
+        "csp": "2",
+        "code": "AWS.pinpoint-sms-voice",
+        "name": "Pinpoint",
+        "icon": "/assets/icons/aws/Business-Applications/Pinpoint.png",
+        "status": "f"
+    },
+    {
+        "id": "414",
+        "csp": "2",
+        "code": "AWS.pinpoint.get_apps.ApplicationsResponse.Applications",
+        "name": "Pinpoint",
+        "icon": "/assets/icons/aws/Business-Applications/Pinpoint.png",
+        "status": "t"
+    },
+    {
+        "id": "415",
+        "csp": "2",
+        "code": "AWS.pipes",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "416",
+        "csp": "2",
+        "code": "AWS.polly.describe_voices.Voices",
+        "name": "Polly",
+        "icon": "/assets/icons/aws/Machine-Learning/Polly.png",
+        "status": "t"
+    },
+    {
+        "id": "417",
+        "csp": "2",
+        "code": "AWS.pricing",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "418",
+        "csp": "2",
+        "code": "AWS.privatenetworks",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "419",
+        "csp": "2",
+        "code": "AWS.proton.list_services.services",
+        "name": "Proton",
+        "icon": "/assets/icons/aws/Management-Governance/Proton.png",
+        "status": "t"
+    },
+    {
+        "id": "420",
+        "csp": "2",
+        "code": "AWS.qldb-session",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "421",
+        "csp": "2",
+        "code": "AWS.qldb",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "422",
+        "csp": "2",
+        "code": "AWS.quicksight.list_dashboards.DashboardSummaryList",
+        "name": "QuickSight",
+        "icon": "/assets/icons/aws/Analytics/QuickSight.png",
+        "status": "t"
+    },
+    {
+        "id": "423",
+        "csp": "2",
+        "code": "AWS.ram",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "424",
+        "csp": "2",
+        "code": "AWS.rbin",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "425",
+        "csp": "2",
+        "code": "AWS.rds-data",
+        "name": "RDS (Relational Database Service)",
+        "icon": "/assets/icons/aws/Database/RDS.png",
+        "status": "t"
+    },
+    {
+        "id": "426",
+        "csp": "2",
+        "code": "AWS.rds.describe_db_instances.DBInstances",
+        "name": "RDS (Relational Database Service)",
+        "icon": "/assets/icons/aws/Database/RDS.png",
+        "status": "t"
+    },
+    {
+        "id": "427",
+        "csp": "2",
+        "code": "AWS.redshift-data",
+        "name": "Redshift",
+        "icon": "/assets/icons/aws/Analytics/Redshift.png",
+        "status": "t"
+    },
+    {
+        "id": "428",
+        "csp": "2",
+        "code": "AWS.redshift-serverless",
+        "name": "Redshift",
+        "icon": "/assets/icons/aws/Analytics/Redshift.png",
+        "status": "t"
+    },
+    {
+        "id": "429",
+        "csp": "2",
+        "code": "AWS.redshift.describe_clusters.Clusters",
+        "name": "Redshift",
+        "icon": "/assets/icons/aws/Analytics/Redshift.png",
+        "status": "t"
+    },
+    {
+        "id": "430",
+        "csp": "2",
+        "code": "AWS.rekognition.list_collections.CollectionIds",
+        "name": "Rekognition",
+        "icon": "/assets/icons/aws/Machine-Learning/Rekognition.png",
+        "status": "t"
+    },
+    {
+        "id": "431",
+        "csp": "2",
+        "code": "AWS.resiliencehub",
+        "name": "Resilience Hub",
+        "icon": "/assets/icons/aws/Management-Governance/Resilience-Hub.png",
+        "status": "t"
+    },
+    {
+        "id": "432",
+        "csp": "2",
+        "code": "AWS.resource-explorer-2",
+        "name": "Resource Explorer",
+        "icon": "/assets/icons/aws/Management-Governance/Resource-Explorer.png",
+        "status": "t"
+    },
+    {
+        "id": "433",
+        "csp": "2",
+        "code": "AWS.resource-groups",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "434",
+        "csp": "2",
+        "code": "AWS.resourcegroupstaggingapi",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "435",
+        "csp": "2",
+        "code": "AWS.robomaker.list_simulation_jobs.simulationJobSummaries",
+        "name": "RoboMaker",
+        "icon": "/assets/icons/aws/Robotics/RoboMaker.png",
+        "status": "t"
+    },
+    {
+        "id": "436",
+        "csp": "2",
+        "code": "AWS.rolesanywhere",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "437",
+        "csp": "2",
+        "code": "AWS.route53-recovery-cluster",
+        "name": "Route 53",
+        "icon": "/assets/icons/aws/Networking-Content-Delivery/Route-53.png",
+        "status": "f"
+    },
+    {
+        "id": "438",
+        "csp": "2",
+        "code": "AWS.route53-recovery-control-config",
+        "name": "Route 53",
+        "icon": "/assets/icons/aws/Networking-Content-Delivery/Route-53.png",
+        "status": "f"
+    },
+    {
+        "id": "439",
+        "csp": "2",
+        "code": "AWS.route53-recovery-readiness",
+        "name": "Route 53",
+        "icon": "/assets/icons/aws/Networking-Content-Delivery/Route-53.png",
+        "status": "f"
+    },
+    {
+        "id": "440",
+        "csp": "2",
+        "code": "AWS.route53.list_hosted_zones.HostedZones",
+        "name": "Route 53",
+        "icon": "/assets/icons/aws/Networking-Content-Delivery/Route-53.png",
+        "status": "t"
+    },
+    {
+        "id": "441",
+        "csp": "2",
+        "code": "AWS.route53domains",
+        "name": "Route 53",
+        "icon": "/assets/icons/aws/Networking-Content-Delivery/Route-53.png",
+        "status": "f"
+    },
+    {
+        "id": "442",
+        "csp": "2",
+        "code": "AWS.route53resolver",
+        "name": "Route 53",
+        "icon": "/assets/icons/aws/Networking-Content-Delivery/Route-53.png",
+        "status": "f"
+    },
+    {
+        "id": "443",
+        "csp": "2",
+        "code": "AWS.rum",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "444",
+        "csp": "2",
+        "code": "AWS.s3.list_buckets.Buckets",
+        "name": "S3 (Simple Storage Service)",
+        "icon": "/assets/icons/aws/Storage/Simple-Storage-Service.png",
+        "status": "t"
+    },
+    {
+        "id": "445",
+        "csp": "2",
+        "code": "AWS.s3control",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "446",
+        "csp": "2",
+        "code": "AWS.s3outposts.list_endpoints.Endpoints",
+        "name": "S3 on Outposts",
+        "icon": "/assets/icons/aws/Storage/S3-on-Outposts.png",
+        "status": "t"
+    },
+    {
+        "id": "447",
+        "csp": "2",
+        "code": "AWS.sagemaker-a2i-runtime",
+        "name": "SageMaker",
+        "icon": "/assets/icons/aws/Machine-Learning/SageMaker.png",
+        "status": "f"
+    },
+    {
+        "id": "448",
+        "csp": "2",
+        "code": "AWS.sagemaker-edge",
+        "name": "SageMaker",
+        "icon": "/assets/icons/aws/Machine-Learning/SageMaker.png",
+        "status": "f"
+    },
+    {
+        "id": "449",
+        "csp": "2",
+        "code": "AWS.sagemaker-featurestore-runtime",
+        "name": "SageMaker",
+        "icon": "/assets/icons/aws/Machine-Learning/SageMaker.png",
+        "status": "f"
+    },
+    {
+        "id": "450",
+        "csp": "2",
+        "code": "AWS.sagemaker-geospatial",
+        "name": "SageMaker",
+        "icon": "/assets/icons/aws/Machine-Learning/SageMaker.png",
+        "status": "f"
+    },
+    {
+        "id": "451",
+        "csp": "2",
+        "code": "AWS.sagemaker-metrics",
+        "name": "SageMaker",
+        "icon": "/assets/icons/aws/Machine-Learning/SageMaker.png",
+        "status": "f"
+    },
+    {
+        "id": "452",
+        "csp": "2",
+        "code": "AWS.sagemaker-runtime",
+        "name": "SageMaker",
+        "icon": "/assets/icons/aws/Machine-Learning/SageMaker.png",
+        "status": "f"
+    },
+    {
+        "id": "453",
+        "csp": "2",
+        "code": "AWS.sagemaker.list_notebook_instances.NotebookInstances",
+        "name": "SageMaker",
+        "icon": "/assets/icons/aws/Machine-Learning/SageMaker.png",
+        "status": "t"
+    },
+    {
+        "id": "454",
+        "csp": "2",
+        "code": "AWS.savingsplans",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "455",
+        "csp": "2",
+        "code": "AWS.scheduler",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "456",
+        "csp": "2",
+        "code": "AWS.schemas",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "457",
+        "csp": "2",
+        "code": "AWS.sdb",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "458",
+        "csp": "2",
+        "code": "AWS.secretsmanager.list_secrets.SecretList",
+        "name": "Secrets Manager",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/Secrets-Manager.png",
+        "status": "t"
+    },
+    {
+        "id": "459",
+        "csp": "2",
+        "code": "AWS.securityhub.get_findings.Findings",
+        "name": "Security Hub",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/Security-Hub.png",
+        "status": "t"
+    },
+    {
+        "id": "460",
+        "csp": "2",
+        "code": "AWS.securitylake",
+        "name": "Security Lake",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/Security-Lake.png",
+        "status": "t"
+    },
+    {
+        "id": "461",
+        "csp": "2",
+        "code": "AWS.serverlessrepo.list_applications.Applications",
+        "name": "Serverless Application Repository",
+        "icon": "/assets/icons/aws/Compute/Serverless-Application-Repository.png",
+        "status": "t"
+    },
+    {
+        "id": "462",
+        "csp": "2",
+        "code": "AWS.service-quotas",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "463",
+        "csp": "2",
+        "code": "AWS.servicecatalog-appregistry",
+        "name": "Service Catalog",
+        "icon": "/assets/icons/aws/Management-Governance/Service-Catalog.png",
+        "status": "t"
+    },
+    {
+        "id": "464",
+        "csp": "2",
+        "code": "AWS.servicecatalog.search_products.ProductViewSummaries",
+        "name": "Service Catalog",
+        "icon": "/assets/icons/aws/Management-Governance/Service-Catalog.png",
+        "status": "t"
+    },
+    {
+        "id": "465",
+        "csp": "2",
+        "code": "AWS.servicediscovery",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "466",
+        "csp": "2",
+        "code": "AWS.ses.list_identities.Identities",
+        "name": "Simple Email Service",
+        "icon": "/assets/icons/aws/Business-Applications/Simple-Email-Service.png",
+        "status": "t"
+    },
+    {
+        "id": "467",
+        "csp": "2",
+        "code": "AWS.sesv2.list_email_identities.EmailIdentities",
+        "name": "Simple Email Service",
+        "icon": "/assets/icons/aws/Business-Applications/Simple-Email-Service.png",
+        "status": "t"
+    },
+    {
+        "id": "468",
+        "csp": "2",
+        "code": "AWS.shield.list_protections.Protections",
+        "name": "Shield",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/Shield.png",
+        "status": "t"
+    },
+    {
+        "id": "469",
+        "csp": "2",
+        "code": "AWS.signer.list_signing_jobs.jobs",
+        "name": "Signer",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/Signer.png",
+        "status": "t"
+    },
+    {
+        "id": "470",
+        "csp": "2",
+        "code": "AWS.simspaceweaver",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "471",
+        "csp": "2",
+        "code": "AWS.sms-voice",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "472",
+        "csp": "2",
+        "code": "AWS.sms",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "473",
+        "csp": "2",
+        "code": "AWS.snow-device-management.list_devices.Devices",
+        "name": "Snowball",
+        "icon": "/assets/icons/aws/Storage/Snowball.png",
+        "status": "t"
+    },
+    {
+        "id": "474",
+        "csp": "2",
+        "code": "AWS.snowball.list_jobs.JobListEntries",
+        "name": "Snowball",
+        "icon": "/assets/icons/aws/Storage/Snowball.png",
+        "status": "t"
+    },
+    {
+        "id": "475",
+        "csp": "2",
+        "code": "AWS.sns.list_topics.Topics",
+        "name": "Simple Notification Service (SNS)",
+        "icon": "/assets/icons/aws/App-Integration/Simple-Notification-Service.png",
+        "status": "t"
+    },
+    {
+        "id": "476",
+        "csp": "2",
+        "code": "AWS.sqs.list_queues.QueueUrls",
+        "name": "Simple Queue Service (SQS)",
+        "icon": "/assets/icons/aws/App-Integration/Simple-Queue-Service.png",
+        "status": "t"
+    },
+    {
+        "id": "477",
+        "csp": "2",
+        "code": "AWS.ssm-contacts",
+        "name": "Systems Manager",
+        "icon": "/assets/icons/aws/Management-Governance/Systems-Manager.png",
+        "status": "t"
+    },
+    {
+        "id": "478",
+        "csp": "2",
+        "code": "AWS.ssm-incidents",
+        "name": "Systems Manager",
+        "icon": "/assets/icons/aws/Management-Governance/Systems-Manager.png",
+        "status": "t"
+    },
+    {
+        "id": "479",
+        "csp": "2",
+        "code": "AWS.ssm-sap",
+        "name": "Systems Manager",
+        "icon": "/assets/icons/aws/Management-Governance/Systems-Manager.png",
+        "status": "t"
+    },
+    {
+        "id": "480",
+        "csp": "2",
+        "code": "AWS.ssm",
+        "name": "Systems Manager",
+        "icon": "/assets/icons/aws/Management-Governance/Systems-Manager.png",
+        "status": "t"
+    },
+    {
+        "id": "481",
+        "csp": "2",
+        "code": "AWS.sso-admin",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "482",
+        "csp": "2",
+        "code": "AWS.sso-oidc",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "483",
+        "csp": "2",
+        "code": "AWS.sso",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "484",
+        "csp": "2",
+        "code": "AWS.stepfunctions.list_state_machines.stateMachines",
+        "name": "Step Functions",
+        "icon": "/assets/icons/aws/App-Integration/Step-Functions.png",
+        "status": "t"
+    },
+    {
+        "id": "485",
+        "csp": "2",
+        "code": "AWS.storagegateway.list_gateways.Gateways",
+        "name": "Storage Gateway",
+        "icon": "/assets/icons/aws/Storage/Storage-Gateway.png",
+        "status": "t"
+    },
+    {
+        "id": "486",
+        "csp": "2",
+        "code": "AWS.sts",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "487",
+        "csp": "2",
+        "code": "AWS.support-app",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "488",
+        "csp": "2",
+        "code": "AWS.support",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "489",
+        "csp": "2",
+        "code": "AWS.swf",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "490",
+        "csp": "2",
+        "code": "AWS.synthetics",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "491",
+        "csp": "2",
+        "code": "AWS.textract.list_document_analysis_jobs.JobList",
+        "name": "Textract",
+        "icon": "/assets/icons/aws/Machine-Learning/Textract.png",
+        "status": "t"
+    },
+    {
+        "id": "492",
+        "csp": "2",
+        "code": "AWS.timestream-query",
+        "name": "Timestream",
+        "icon": "/assets/icons/aws/Database/Timestream.png",
+        "status": "t"
+    },
+    {
+        "id": "493",
+        "csp": "2",
+        "code": "AWS.timestream-write",
+        "name": "Timestream",
+        "icon": "/assets/icons/aws/Database/Timestream.png",
+        "status": "t"
+    },
+    {
+        "id": "494",
+        "csp": "2",
+        "code": "AWS.tnb",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "495",
+        "csp": "2",
+        "code": "AWS.transcribe.list_transcription_jobs.TranscriptionJobSummaries",
+        "name": "Transcribe",
+        "icon": "/assets/icons/aws/Machine-Learning/Transcribe.png",
+        "status": "t"
+    },
+    {
+        "id": "496",
+        "csp": "2",
+        "code": "AWS.transfer.list_servers.Servers",
+        "name": "Transfer",
+        "icon": "/assets/icons/aws/Migration-Transfer/Transfer-Family.png",
+        "status": "t"
+    },
+    {
+        "id": "497",
+        "csp": "2",
+        "code": "AWS.translate.list_text_translation_jobs.TextTranslationJobPropertiesList",
+        "name": "Translate",
+        "icon": "/assets/icons/aws/Machine-Learning/Translate.png",
+        "status": "t"
+    },
+    {
+        "id": "498",
+        "csp": "2",
+        "code": "AWS.verifiedpermissions",
+        "name": "Verified Permissions",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/Verified-Permissions.png",
+        "status": "t"
+    },
+    {
+        "id": "499",
+        "csp": "2",
+        "code": "AWS.voice-id",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "500",
+        "csp": "2",
+        "code": "AWS.vpc-lattice",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "501",
+        "csp": "2",
+        "code": "AWS.waf-regional.list_web_acls.WebACLs",
+        "name": "Web Application Firewall",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/WAF.png",
+        "status": "t"
+    },
+    {
+        "id": "502",
+        "csp": "2",
+        "code": "AWS.waf.list_web_acls.WebACLs",
+        "name": "Web Application Firewall",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/WAF.png",
+        "status": "t"
+    },
+    {
+        "id": "503",
+        "csp": "2",
+        "code": "AWS.wafv2.list_web_acls.WebACLs",
+        "name": "Web Application Firewall",
+        "icon": "/assets/icons/aws/Security-Identity-Compliance/WAF.png",
+        "status": "t"
+    },
+    {
+        "id": "504",
+        "csp": "2",
+        "code": "AWS.wellarchitected",
+        "name": "Well Architected Tool",
+        "icon": "/assets/icons/aws/Management-Governance/Well-Architected-Tool.png",
+        "status": "f"
+    },
+    {
+        "id": "505",
+        "csp": "2",
+        "code": "AWS.wisdom",
+        "name": "",
+        "icon": "",
+        "status": "f"
+    },
+    {
+        "id": "506",
+        "csp": "2",
+        "code": "AWS.workdocs.describe_users.Users",
+        "name": "WorkDocs",
+        "icon": "/assets/icons/aws/Business-Applications/WorkDocs.png",
+        "status": "t"
+    },
+    {
+        "id": "507",
+        "csp": "2",
+        "code": "AWS.worklink.list_fleets.FleetSummaryList",
+        "name": "WorkLink",
+        "icon": "/assets/icons/aws/End-User-Computing/WorkLink.png",
+        "status": "f"
+    },
+    {
+        "id": "508",
+        "csp": "2",
+        "code": "AWS.workmail.list_organizations.OrganizationSummaries",
+        "name": "WorkMail",
+        "icon": "/assets/icons/aws/Business-Applications/WorkMail.png",
+        "status": "t"
+    },
+    {
+        "id": "509",
+        "csp": "2",
+        "code": "AWS.workmailmessageflow",
+        "name": "WorkMail",
+        "icon": "/assets/icons/aws/Business-Applications/WorkMail.png",
+        "status": "t"
+    },
+    {
+        "id": "510",
+        "csp": "2",
+        "code": "AWS.workspaces-web",
+        "name": "WorkSpaces",
+        "icon": "/assets/icons/aws/End-User-Computing/WorkSpaces-Family.png",
+        "status": "f"
+    },
+    {
+        "id": "511",
+        "csp": "2",
+        "code": "AWS.workspaces.describe_workspaces.Workspaces",
+        "name": "WorkSpaces",
+        "icon": "/assets/icons/aws/End-User-Computing/WorkSpaces-Family.png",
+        "status": "t"
+    },
+    {
+        "id": "512",
+        "csp": "2",
+        "code": "AWS.xray.get_trace_summaries.TraceSummaries",
+        "name": "X-Ray",
+        "icon": "/assets/icons/aws/Developer-Tools/X-Ray.png",
+        "status": "f"
+    }
+]

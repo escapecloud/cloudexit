@@ -1,0 +1,50 @@
+[
+    {
+        "id": "1",
+        "name": "Limited number of alternative technologies available",
+        "description": "There are fewer than three alternative technologies available for these resource types, indicating a bottleneck in the transition that complies with the exit strategy.",
+        "severity": "medium"
+    },
+    {
+        "id": "2",
+        "name": "No alternative technologies available",
+        "description": "The unavailability of alternative technological solutions for these types of resources significantly jeopardizes any efforts to transition away from the cloud.",
+        "severity": "high"
+    },
+    {
+        "id": "3",
+        "name": "Limited number of alternative technologies offer Enterprise Support",
+        "description": "The scarcity of alternative technologies providing enterprise support presents a significant challenge, potentially hindering the ability of organizations to find suitable and reliable solutions for their enterprise-level needs.",
+        "severity": "low"
+    },
+    {
+        "id": "4",
+        "name": "No alternative technologies offer Enterprise Support",
+        "description": "The complete lack of alternative technologies that offer enterprise support poses a critical risk, severely limiting the options for organizations in need of specialized, enterprise-level solutions and support, and potentially impacting operational efficiency and scalability.",
+        "severity": "medium"
+    },
+    {
+        "id": "5",
+        "name": "The size of resource inventory indicates complicated cloud exit",
+        "description": "The size of the resource inventory suggests a medium level of complexity in planning and executing the cloud exit transition. (>15 resources)",
+        "severity": "medium"
+    },
+    {
+        "id": "6",
+        "name": "The size of resource inventory indicates complicated cloud exit",
+        "description": "The size of the resource inventory suggests a higher level of complexity in planning and executing the cloud exit transition. (>30 resources)",
+        "severity": "high"
+    },
+    {
+        "id": "7",
+        "name": "The number of resource types can increase the complexity of the cloud exit",
+        "description": "The diversity of the resource inventory (number of resource types) suggests a medium level of complexity in planning and executing the cloud exit transition. (>15 resource types)",
+        "severity": "medium"
+    },
+    {
+        "id": "8",
+        "name": "The number of resource types can increase the complexity of the cloud exit",
+        "description": "The diversity of the resource inventory (number of resource types) suggests a higher level of complexity in planning and executing the cloud exit transition. (>30 resource types)",
+        "severity": "high"
+    }
+]

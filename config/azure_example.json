@@ -1,0 +1,12 @@
+{
+    "cloudServiceProvider": 1,
+    "exitStrategy": 3,
+    "assessmentType": 1,
+    "providerDetails":{
+      "clientId":"57344955-1579-4058-8604-5bb8724002de",
+      "clientSecret":"",
+      "tenantId":"38997009-9dad-42b2-b187-53f1cb71560e",
+      "subscriptionId":"",
+      "resourceGroupName:":""
+   }
+}

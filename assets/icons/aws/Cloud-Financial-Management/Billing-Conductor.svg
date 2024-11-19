@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="80px" height="80px" viewBox="0 0 80 80" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Icon-Architecture/64/Arch_AWS-Billing-Conductor_64</title>
+    <defs>
+        <linearGradient x1="0%" y1="100%" x2="100%" y2="0%" id="linearGradient-1">
+            <stop stop-color="#1B660F" offset="0%"></stop>
+            <stop stop-color="#6CAE3E" offset="100%"></stop>
+        </linearGradient>
+    </defs>
+    <g id="Icon-Architecture/64/Arch_AWS-Billing-Conductor_64" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Rectangle" fill="url(#linearGradient-1)">
+            <rect x="0" y="0" width="80" height="80"></rect>
+        </g>
+        <g id="Icon-Service/64/AWS-Billing-Conductor_64" transform="translate(8.000000, 8.000000)" fill="#FFFFFF">
+            <path d="M6,43 L17,43 L17,41 L6,41 L6,43 Z M9,37 L17,37 L17,35 L9,35 L9,37 Z M5,31 L17,31 L17,29 L5,29 L5,31 Z M38,46 L43,46 L43,44 L38,44 L38,46 Z M31,46 L36,46 L36,44 L31,44 L31,46 Z M24,46 L29,46 L29,44 L24,44 L24,46 Z M38,41 L43,41 L43,39 L38,39 L38,41 Z M31,41 L36,41 L36,39 L31,39 L31,41 Z M24,41 L29,41 L29,39 L24,39 L24,41 Z M26,32 L41,32 L41,29 L26,29 L26,32 Z M42,27 L25,27 C24.447,27 24,27.448 24,28 L24,33 C24,33.552 24.447,34 25,34 L42,34 C42.553,34 43,33.552 43,33 L43,28 C43,27.448 42.553,27 42,27 L42,27 Z M21,50 L46,50 L46,24 L21,24 L21,50 Z M47,52 C47.553,52 48,51.552 48,51 L48,23 C48,22.448 47.553,22 47,22 L20,22 C19.447,22 19,22.448 19,23 L19,51 C19,51.552 19.447,52 20,52 L47,52 Z M43,7.273 L51.43,15 L43,15 L43,7.273 Z M54.676,15.263 L42.676,4.263 C42.491,4.094 42.25,4 42,4 L13,4 C12.447,4 12,4.448 12,5 L12,27 L14,27 L14,6 L41,6 L41,16 C41,16.552 41.447,17 42,17 L53,17 L53,58 L14,58 L14,45 L12,45 L12,59 C12,59.552 12.447,60 13,60 L54,60 C54.553,60 55,59.552 55,59 L55,16 C55,15.72 54.883,15.452 54.676,15.263 L54.676,15.263 Z" id="Fill-1"></path>
+        </g>
+    </g>
+</svg>

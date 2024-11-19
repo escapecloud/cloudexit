@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <!-- Meta tag -->
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <!-- Favicon & Title -->
+        <link rel="icon" type="image/png" sizes="16x16" href="assets/img/logo/favicon.png" />
+        <title>EscapeCloud OSS - Cloud Exit Assessment Report</title>
+        <!-- CSS only -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+        <link rel="stylesheet" type="text/css" href="assets/css/style.css" />
+        <!-- Import JS -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+        <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@visactor/vchart/build/index.min.js"></script>
+    </head>
+    <body>
+
+        <header>
+            <div class="top-head">
+                <h4>
+                  <img src="assets/img/logo/logo.png" width="30" alt="EscapeCloud" />
+                  EscapeCloud OSS - Cloud Exit Assessment Report
+                </h4>
+            </div>
+        </header>
+        <div class="main-wrpper">
+            <div class="chart-wrp">
+                <div class="row">
+                    <div class="col-md-4 col-sm-12">
+                      <div class="chart-info-box">
+                          <ul>
+                              <li>
+                                  <span>
+                                    {% if cloud_service_provider == 1 %}
+                                        <img src="assets/img/csp/azure.svg" alt="Microsoft Azure" />
+                                    {% elif cloud_service_provider == 2 %}
+                                        <img src="assets/img/csp/aws.svg" alt="AWS" />
+                                    {% endif %}
+                                  </span>
+                                  <div>
+                                      <h4>Cloud Service Provider</h4>
+                                      <h3>
+                                        {% if cloud_service_provider == 1 %}
+                                            Microsoft Azure
+                                        {% elif cloud_service_provider == 2 %}
+                                            Amazon Web Services
+                                        {% endif %}
+                                      </h3>
+                                  </div>
+                              </li>
+                              <li>
+                                  <span><i class="bi bi-sign-turn-slight-right"></i></span>
+                                  <div>
+                                      <h4>Exit Strategy</h4>
+                                      <h3>
+                                        {% if exit_strategy == 1 %}
+                                          Repatriation to On-Premises
+                                        {% elif exit_strategy == 3 %}
+                                          Migration to Alternate Cloud
+                                        {% endif %}
+                                      </h3>
+                                  </div>
+                              </li>
+                              <li>
+                                  <span><i class="bi bi-box"></i></span>
+                                  <div>
+                                      <h4>Assessment Type</h4>
+                                      <h3>
+                                        {% if assessment_type == 1 %}
+                                          Basic
+                                        {% elif assessment_type == 2 %}
+                                          Basic+
+                                        {% endif %}
+                                      </h3>
+                                  </div>
+                              </li>
+                              <li>
+                                  <span><i class="bi bi-clock"></i></span>
+                                  <div>
+                                      <h4>TimeStamp</h4>
+                                      <h3>
+                                        {{ assessment_ts }}
+                                      </h3>
+                                  </div>
+                              </li>
+                          </ul>
+                      </div>
+                    </div>
+                    <div class="col-md-4 col-sm-12">
+                      <div class="chart-box-small">
+                        <div class="box-title">
+                          <h4>Risks</h4>
+                            {% set total_risks = high_risk_count + medium_risk_count + low_risk_count %}
+                            {% if total_risks > 0 %}
+                              <h3>{{ total_risks }}</h3>
+                            {% endif %}
+                        </div>
+
+                        {% if total_risks == 0 %}
+                        <div class="box-body-empty">
+                          <div class="not-foundbxinner">
+                            <i class="bi bi-pie-chart-fill"></i>
+                            <p>No data available.</p>
+                          </div>
+                        </div>
+                        {% else %}
+                        <div class="box-body">
+                          <canvas id="risksChart" width="400" height="350"></canvas>
+                        </div>
+                        {% endif %}
+                      </div>
+                    </div>
+                    <div class="col-md-4 col-sm-12">
+                      <div class="chart-box-small">
+                        <div class="box-title">
+                          <h4>Costs (last 6 months)</h4>
+                          {% if total_cost > 0 %}
+                            <h3>{{ currency_symbol }}{{ total_cost }}</h3>
+                          {% endif %}
+                        </div>
+                        {% if total_cost == 0 %}
+                        <div class="box-body-empty">
+                            <div class="not-foundbxinner">
+                                <i class="bi bi-bar-chart-fill"></i>
+                                <p>No data available.</p>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="box-body">
+                            <canvas id="costsChart" width="400" height="350"></canvas>
+                        </div>
+                        {% endif %}
+                      </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="evaluation-wrp">
+                <div class="titlebar">
+                    <h2>Risks</h2>
+                    <div class="dropdown">
+                        <button class="dropdown-toggle" type="button" id="dropdownMenuButtonSeverity" data-bs-toggle="dropdown" aria-expanded="false">All Severities <i class="ms-1 bi bi-chevron-down"></i></button>
+                        <ul class="dropdown-menu" aria-labelledby="dropdownMenuButtonSeverity">
+                            <li><a class="dropdown-item" href="#" data-severity="all">All Severities</a></li>
+                            <li><a class="dropdown-item" href="#" data-severity="high">High</a></li>
+                            <li><a class="dropdown-item" href="#" data-severity="medium">Medium</a></li>
+                            <li><a class="dropdown-item" href="#" data-severity="low">Low</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="evaluation-block">
+                    <div class="thead-txt">
+                        <ul>
+                            <li>#</li>
+                            <li>Risk</li>
+                            <li>Impacted Resources</li>
+                            <li>Severity</li>
+                        </ul>
+                    </div>
+                    <div class="accordion" id="accordionRisks">
+                      {% if risks %}
+                            {% for risk in risks %}
+                            <div class="accordion-item severity-item" data-severity="{{ risk.severity }}">
+                                <h2 class="accordion-header" id="headingfaq{{ loop.index }}">
+                                    <button class="accordion-button {% if not loop.first %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapsefaq{{ loop.index }}" aria-expanded="{% if loop.first %}true{% else %}false{% endif %}" aria-controls="collapsefaq{{ loop.index }}">
+                                        <li><b>{{ loop.index }}</b></li>
+                                        <li><span class="arrow-box"><i class="bi bi-chevron-down"></i></span> </li>
+                                        <li>{{ risk.name }}</li>
+                                        <li>
+                                          {% if risk.impacted_resources_count == None %}
+                                              -
+                                          {% else %}
+                                              {{ risk.impacted_resources_count }}
+                                          {% endif %}
+                                        </li>
+                                        <li><span class="severity-label label-{{ risk.severity }}">{{ risk.severity | capitalize }}</span></li>
+                                    </button>
+                                </h2>
+                                <div id="collapsefaq{{ loop.index }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}" aria-labelledby="headingfaq{{ loop.index }}" data-bs-parent="#accordionExample">
+                                    <div class="accordion-body">
+                                        <div class="description">
+                                            <p>
+                                                <span>Description</span>
+                                                {{ risk.description }}
+                                            </p>
+                                            <p>
+                                              {% if risk.impacted_resources_count %}
+                                                  <p>
+                                                      <span>Impacted Resources</span>
+                                                      {{ risk.impacted_resources | join(', ') }}
+                                                  </p>
+                                              {% endif %}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                          {% else %}
+                          <div class="accordion-item">
+                              <div class="accordion-header">
+                                  <div class="accordion-body">
+                                      There is no data.
+                                  </div>
+                              </div>
+                          </div>
+                          {% endif %}
+                      </div>
+                </div>
+                <div class="evaluation-btn">
+                </div>
+            </div>
+
+            <div class="resource-wrp">
+                <div class="titlebar">
+                    <h2>Resource Inventory ({{ total_resources }})</h2>
+                </div>
+
+                <div class="resource-block">
+                    <div class="row">
+                      {% if total_resources > 0 %}
+                        {% for resource_type in resource_inventory %}
+                          <div class="col-md-3 col-sm-12 service-model-item" data-service-model="{{ resource_type.resource_type | trim }}">
+                            <div class="resource-box">
+                              <img src="{{ resource_type.icon | trim }}" alt="{{ resource_type.name | trim }}">
+                              <h3>{{ resource_type.name | trim }}</h3>
+                              <h5>
+                                {{ resource_type.count }} Resource{% if resource_type.count != 1 %}s{% endif %} Available
+                              </h5>
+                            </div>
+                          </div>
+                        {% endfor %}
+                      {% else %}
+                        <div class="col-12 text-center">
+                            <i class="bi bi-gear" style="font-size: 64px;"></i>
+                            <p>No resources have been discovered during the assessment; the Resource Inventory is empty.</p>
+                        </div>
+                      {% endif %}
+                    </div>
+                </div>
+                <div class="evaluation-btn">
+                </div>
+            </div>
+
+            <div class="technologies-wrp">
+                <div class="titlebar">
+                    <h2>Alternative Technologies</h2>
+
+                    <div class="btn-group">
+                        <button class="btn-secondary dropdown-toggle" type="button" id="dropdownMenuButtonAlternativeTechnology" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                            Filters <i class="bi bi-funnel"></i>
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="dropdownMenuButtonAlternativeTechnology">
+                            <div class="drop-header">
+                                <h3>Filters</h3>
+                            </div>
+                            <div class="drop-body">
+                                <div class="form-group mb-3">
+                                    <select class="form-select" id="resourceTypeSelect">
+                                        <option value="all" selected>Select Resource Type</option>
+                                        {% for resource_type in resource_inventory %}
+                                            <option value="{{ resource_type.resource_type | trim }}">{{ resource_type.name | trim }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <li>
+                                    <div class="form-toggle-switch mb-3">
+                                        <h6>Open Source</h6>
+                                        <input type="checkbox" id="openSourceSwitch" />
+                                        <label for="openSourceSwitch"></label>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="form-toggle-switch mb-3">
+                                        <h6>Enterprise Support</h6>
+                                        <input type="checkbox" id="enterpriseSupportSwitch" />
+                                        <label for="enterpriseSupportSwitch"></label>
+                                    </div>
+                                </li>
+                            </div>
+                            <div class="drop-footer">
+                                <button type="button" class="btn-secondary" id="clearFilters">Clear Filters</button>
+                                <button type="button" class="btn-primary" id="applyFilters">Apply</button>
+                            </div>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="technologies-block">
+                    <div class="row" id="tech-items">
+                        {% if alternative_technologies %}
+                            {% for alt_tech in alternative_technologies %}
+                            <div class="col-md-6 col-sm-12 tech-item"
+                                 data-resource-type="{{ alt_tech.resource_type_id }}"
+                                 data-open-source="{{ alt_tech.open_source|lower }}"
+                                 data-enterprise-support="{{ alt_tech.support_plan|lower }}"
+                                 data-visible="false">
+                                <div class="technologies-box">
+                                    <div class="box-icon">
+                                        <img src="assets/icons/misc/no_image.png" width="16" alt="{{ alt_tech.product_name }}" />
+                                    </div>
+                                    <h6>{{ alt_tech.product_name }}</h6>
+                                    <p>{{ alt_tech.product_description }}</p>
+                                    <ul>
+                                        <li>
+                                            <span>
+                                                {% if alt_tech.open_source %}
+                                                    <i style="color: #008000; font-size: 16px;" class="bi bi-check-lg"></i>
+                                                {% else %}
+                                                    <i style="color: #FF0000; font-size: 16px;" class="bi bi-x"></i>
+                                                {% endif %}
+                                            </span> Open Source
+                                        </li>
+                                        <li>
+                                            <span>
+                                                {% if alt_tech.support_plan %}
+                                                    <i style="color: #008000; font-size: 16px;" class="bi bi-check-lg"></i>
+                                                {% else %}
+                                                    <i style="color: #FF0000; font-size: 16px;" class="bi bi-x"></i>
+                                                {% endif %}
+                                            </span> Enterprise Support
+                                        </li>
+                                        <li><span>
+                                            <i class="bi bi-globe"></i></span>
+                                            <a href="{{ alt_tech.product_url }}" target="_blank">{{ alt_tech.product_url }}</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="col-12 text-center">
+                                <i class="bi bi-gear" style="font-size: 64px;"></i>
+                                <p>No Alternative Technologies available for the selected Resource type.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="evaluation-btn">
+                  <a href="#" id="viewMore">View More</a>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- script -->
+        <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Handle clicks for the Severity and Service Model Dropdowns
+            setupDropdownInteractions('#dropdownMenuButtonSeverity', 'data-severity');
+            setupDropdownInteractions('#dropdownMenuButtonServiceModel', 'data-service-model');
+
+            function setupDropdownInteractions(dropdownButtonId, dataAttribute) {
+                document.querySelectorAll(dropdownButtonId + ' + .dropdown-menu .dropdown-item').forEach(function(item) {
+                    item.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const selectedText = this.textContent.trim();
+                        const dropdownButton = document.querySelector(dropdownButtonId);
+                        dropdownButton.innerHTML = `${selectedText} <i class="ms-1 bi bi-chevron-down"></i>`;
+                        const selectedValue = this.getAttribute(dataAttribute === 'data-severity' ? 'data-severity' : 'data-service-model');
+                        filterItemsByAttribute(dataAttribute === 'data-severity' ? '.accordion-item' : '.col-md-3', dataAttribute, selectedValue);
+                    });
+                });
+            }
+
+            function filterItemsByAttribute(selector, attribute, value) {
+                const items = document.querySelectorAll(selector);
+                items.forEach(item => {
+                    if (value === 'all') {
+                        item.style.display = '';
+                    } else {
+                        if (item.getAttribute(attribute) === value) {
+                            item.style.display = '';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    }
+                });
+            }
+
+            // Handle clicks for the Alternative Technology Filters
+            document.getElementById('applyFilters').addEventListener('click', function() {
+                const selectedResourceType = document.getElementById('resourceTypeSelect').value;
+                const openSource = document.getElementById('openSourceSwitch').checked ? 'true' : 'false';
+                const enterpriseSupport = document.getElementById('enterpriseSupportSwitch').checked ? 'true' : 'false';
+
+                filterAlternativeTechnologies(selectedResourceType, openSource, enterpriseSupport);
+            });
+
+            document.getElementById('clearFilters').addEventListener('click', function() {
+                document.getElementById('resourceTypeSelect').value = 'all';
+                document.getElementById('openSourceSwitch').checked = false;
+                document.getElementById('enterpriseSupportSwitch').checked = false;
+
+                filterAlternativeTechnologies('all', 'false', 'false');
+            });
+
+            function filterAlternativeTechnologies(resourceType, openSource, enterpriseSupport) {
+                const items = document.querySelectorAll('.col-md-6');
+                let filteredCount = 0;
+                items.forEach(item => {
+                    const itemResourceType = item.getAttribute('data-resource-type');
+                    const itemOpenSource = item.getAttribute('data-open-source');
+                    const itemEnterpriseSupport = item.getAttribute('data-enterprise-support');
+
+                    const matchesResourceType = resourceType === 'all' || itemResourceType === resourceType;
+                    const matchesOpenSource = openSource === 'false' || itemOpenSource === openSource;
+                    const matchesEnterpriseSupport = enterpriseSupport === 'false' || itemEnterpriseSupport === enterpriseSupport;
+
+                    if (matchesResourceType && matchesOpenSource && matchesEnterpriseSupport) {
+                        item.style.display = '';
+                        item.setAttribute('data-visible', 'true');
+                        filteredCount++;
+                    } else {
+                        item.style.display = 'none';
+                        item.setAttribute('data-visible', 'false');
+                    }
+                });
+
+                resetViewMoreButtonVisibility(filteredCount);
+            }
+
+            // Handle "View More" functionality
+            const viewMoreBtn = document.getElementById('viewMore');
+            const techItems = document.querySelectorAll('.col-md-6');
+            let itemsToShow = 10;
+
+            function showItems(count) {
+                let shown = 0;
+                techItems.forEach((item, index) => {
+                    if (shown < count) {
+                        item.style.display = '';
+                        item.setAttribute('data-visible', 'true');
+                        shown++;
+                    } else {
+                        item.style.display = 'none';
+                        item.setAttribute('data-visible', 'false');
+                    }
+                });
+            }
+
+            viewMoreBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                itemsToShow += 10;
+                showItems(itemsToShow);
+            });
+
+            // Initial load
+            showItems(itemsToShow);
+
+            function resetViewMoreButtonVisibility(filteredCount) {
+                viewMoreBtn.style.display = (filteredCount > itemsToShow) ? '' : 'none';
+            }
+        });
+        </script>
+        {% if total_resources > 0 %}
+        <script>
+              // Risks
+              var ctx2 = document.getElementById('risksChart').getContext('2d');
+                var riskChart = new Chart(ctx2, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['High', 'Medium', 'Low'],
+                        datasets: [{
+                            label: 'Risk(s)',
+                            data: [{{ high_risk_count }}, {{ medium_risk_count }}, {{ low_risk_count }}],
+                            backgroundColor: [
+                                'rgba(153, 27, 27, 1)',
+                                'rgba(255, 174, 31, 1)',
+                                'rgba(83, 155, 255, 1)'
+                            ],
+                            borderColor: [
+                                'rgba(153, 27, 27, 1)',
+                                'rgba(255, 174, 31, 1)',
+                                'rgba(83, 155, 255, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '60%',
+                        plugins: {
+                          legend: {
+                            position: 'bottom',
+                            labels: {
+                              boxWidth: 20,
+                              padding: 15
+                            }
+                          }
+                        }
+                    }
+                });
+        </script>
+        {% endif %}
+        {% if total_cost > 0 %}
+        <script>
+            function initializeCostsChart() {
+                var months = JSON.parse('{{ months_json|safe }}');
+                var costs = JSON.parse('{{ costs_json|safe }}');
+                var currencySymbol = "{{ currency_symbol|safe }}";
+
+                var ctx3 = document.getElementById('costsChart').getContext('2d');
+                var costsChart = new Chart(ctx3, {
+                    type: 'bar',
+                    data: {
+                        labels: months,
+                        datasets: [{
+                            label: `Costs (${currencySymbol})`,
+                            data: costs,
+                            backgroundColor: 'rgba(5, 81, 96, 0.4)',
+                            borderColor: 'rgba(5, 81, 96, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: `Amount (${currencySymbol})`
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: false,
+                                    text: 'Month'
+                                }
+                            }
+                        },
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        maintainAspectRatio: false
+                    }
+                });
+            }
+            document.addEventListener('DOMContentLoaded', initializeCostsChart);
+        </script>
+        {% endif %}
+        <!-- End script -->
+    </body>
+</html>

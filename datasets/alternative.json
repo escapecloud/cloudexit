@@ -1,0 +1,6122 @@
+[
+    {
+        "id": "1",
+        "resource_type": "1",
+        "alternative_technology": "1",
+        "strategy_type": "3"
+    },
+    {
+        "id": "2",
+        "resource_type": "1",
+        "alternative_technology": "2",
+        "strategy_type": "3"
+    },
+    {
+        "id": "3",
+        "resource_type": "1",
+        "alternative_technology": "3",
+        "strategy_type": "3"
+    },
+    {
+        "id": "4",
+        "resource_type": "1",
+        "alternative_technology": "4",
+        "strategy_type": "1"
+    },
+    {
+        "id": "5",
+        "resource_type": "1",
+        "alternative_technology": "5",
+        "strategy_type": "1"
+    },
+    {
+        "id": "6",
+        "resource_type": "1",
+        "alternative_technology": "6",
+        "strategy_type": "3"
+    },
+    {
+        "id": "7",
+        "resource_type": "1",
+        "alternative_technology": "8",
+        "strategy_type": "3"
+    },
+    {
+        "id": "8",
+        "resource_type": "1",
+        "alternative_technology": "9",
+        "strategy_type": "3"
+    },
+    {
+        "id": "9",
+        "resource_type": "1",
+        "alternative_technology": "10",
+        "strategy_type": "1"
+    },
+    {
+        "id": "10",
+        "resource_type": "2",
+        "alternative_technology": "11",
+        "strategy_type": "3"
+    },
+    {
+        "id": "11",
+        "resource_type": "2",
+        "alternative_technology": "12",
+        "strategy_type": "3"
+    },
+    {
+        "id": "12",
+        "resource_type": "2",
+        "alternative_technology": "13",
+        "strategy_type": "1"
+    },
+    {
+        "id": "13",
+        "resource_type": "2",
+        "alternative_technology": "14",
+        "strategy_type": "1"
+    },
+    {
+        "id": "14",
+        "resource_type": "2",
+        "alternative_technology": "15",
+        "strategy_type": "1"
+    },
+    {
+        "id": "15",
+        "resource_type": "2",
+        "alternative_technology": "16",
+        "strategy_type": "1"
+    },
+    {
+        "id": "16",
+        "resource_type": "2",
+        "alternative_technology": "17",
+        "strategy_type": "1"
+    },
+    {
+        "id": "17",
+        "resource_type": "2",
+        "alternative_technology": "18",
+        "strategy_type": "1"
+    },
+    {
+        "id": "18",
+        "resource_type": "2",
+        "alternative_technology": "19",
+        "strategy_type": "1"
+    },
+    {
+        "id": "19",
+        "resource_type": "2",
+        "alternative_technology": "20",
+        "strategy_type": "1"
+    },
+    {
+        "id": "20",
+        "resource_type": "3",
+        "alternative_technology": "21",
+        "strategy_type": "3"
+    },
+    {
+        "id": "21",
+        "resource_type": "3",
+        "alternative_technology": "22",
+        "strategy_type": "3"
+    },
+    {
+        "id": "22",
+        "resource_type": "3",
+        "alternative_technology": "23",
+        "strategy_type": "3"
+    },
+    {
+        "id": "23",
+        "resource_type": "3",
+        "alternative_technology": "24",
+        "strategy_type": "3"
+    },
+    {
+        "id": "24",
+        "resource_type": "3",
+        "alternative_technology": "26",
+        "strategy_type": "3"
+    },
+    {
+        "id": "25",
+        "resource_type": "4",
+        "alternative_technology": "31",
+        "strategy_type": "3"
+    },
+    {
+        "id": "26",
+        "resource_type": "4",
+        "alternative_technology": "32",
+        "strategy_type": "3"
+    },
+    {
+        "id": "27",
+        "resource_type": "4",
+        "alternative_technology": "34",
+        "strategy_type": "3"
+    },
+    {
+        "id": "28",
+        "resource_type": "4",
+        "alternative_technology": "37",
+        "strategy_type": "3"
+    },
+    {
+        "id": "29",
+        "resource_type": "5",
+        "alternative_technology": "41",
+        "strategy_type": "3"
+    },
+    {
+        "id": "30",
+        "resource_type": "5",
+        "alternative_technology": "42",
+        "strategy_type": "3"
+    },
+    {
+        "id": "31",
+        "resource_type": "5",
+        "alternative_technology": "43",
+        "strategy_type": "3"
+    },
+    {
+        "id": "32",
+        "resource_type": "5",
+        "alternative_technology": "47",
+        "strategy_type": "3"
+    },
+    {
+        "id": "33",
+        "resource_type": "6",
+        "alternative_technology": "51",
+        "strategy_type": "3"
+    },
+    {
+        "id": "34",
+        "resource_type": "6",
+        "alternative_technology": "52",
+        "strategy_type": "3"
+    },
+    {
+        "id": "35",
+        "resource_type": "6",
+        "alternative_technology": "53",
+        "strategy_type": "3"
+    },
+    {
+        "id": "36",
+        "resource_type": "7",
+        "alternative_technology": "61",
+        "strategy_type": "3"
+    },
+    {
+        "id": "37",
+        "resource_type": "7",
+        "alternative_technology": "62",
+        "strategy_type": "3"
+    },
+    {
+        "id": "38",
+        "resource_type": "7",
+        "alternative_technology": "63",
+        "strategy_type": "3"
+    },
+    {
+        "id": "39",
+        "resource_type": "7",
+        "alternative_technology": "66",
+        "strategy_type": "3"
+    },
+    {
+        "id": "40",
+        "resource_type": "8",
+        "alternative_technology": "71",
+        "strategy_type": "3"
+    },
+    {
+        "id": "41",
+        "resource_type": "8",
+        "alternative_technology": "62",
+        "strategy_type": "3"
+    },
+    {
+        "id": "42",
+        "resource_type": "8",
+        "alternative_technology": "43",
+        "strategy_type": "3"
+    },
+    {
+        "id": "43",
+        "resource_type": "9",
+        "alternative_technology": "62",
+        "strategy_type": "3"
+    },
+    {
+        "id": "44",
+        "resource_type": "9",
+        "alternative_technology": "79",
+        "strategy_type": "3"
+    },
+    {
+        "id": "45",
+        "resource_type": "9",
+        "alternative_technology": "43",
+        "strategy_type": "3"
+    },
+    {
+        "id": "46",
+        "resource_type": "10",
+        "alternative_technology": "86",
+        "strategy_type": "3"
+    },
+    {
+        "id": "47",
+        "resource_type": "11",
+        "alternative_technology": "94",
+        "strategy_type": "3"
+    },
+    {
+        "id": "48",
+        "resource_type": "11",
+        "alternative_technology": "95",
+        "strategy_type": "3"
+    },
+    {
+        "id": "49",
+        "resource_type": "11",
+        "alternative_technology": "97",
+        "strategy_type": "3"
+    },
+    {
+        "id": "50",
+        "resource_type": "12",
+        "alternative_technology": "104",
+        "strategy_type": "3"
+    },
+    {
+        "id": "51",
+        "resource_type": "12",
+        "alternative_technology": "105",
+        "strategy_type": "3"
+    },
+    {
+        "id": "52",
+        "resource_type": "12",
+        "alternative_technology": "107",
+        "strategy_type": "3"
+    },
+    {
+        "id": "53",
+        "resource_type": "13",
+        "alternative_technology": "114",
+        "strategy_type": "3"
+    },
+    {
+        "id": "54",
+        "resource_type": "14",
+        "alternative_technology": "105",
+        "strategy_type": "3"
+    },
+    {
+        "id": "55",
+        "resource_type": "14",
+        "alternative_technology": "126",
+        "strategy_type": "3"
+    },
+    {
+        "id": "56",
+        "resource_type": "14",
+        "alternative_technology": "127",
+        "strategy_type": "3"
+    },
+    {
+        "id": "57",
+        "resource_type": "14",
+        "alternative_technology": "32",
+        "strategy_type": "3"
+    },
+    {
+        "id": "58",
+        "resource_type": "15",
+        "alternative_technology": "131",
+        "strategy_type": "3"
+    },
+    {
+        "id": "59",
+        "resource_type": "15",
+        "alternative_technology": "104",
+        "strategy_type": "3"
+    },
+    {
+        "id": "60",
+        "resource_type": "15",
+        "alternative_technology": "134",
+        "strategy_type": "3"
+    },
+    {
+        "id": "61",
+        "resource_type": "16",
+        "alternative_technology": "136",
+        "strategy_type": "3"
+    },
+    {
+        "id": "62",
+        "resource_type": "16",
+        "alternative_technology": "137",
+        "strategy_type": "3"
+    },
+    {
+        "id": "63",
+        "resource_type": "16",
+        "alternative_technology": "138",
+        "strategy_type": "3"
+    },
+    {
+        "id": "64",
+        "resource_type": "16",
+        "alternative_technology": "141",
+        "strategy_type": "1"
+    },
+    {
+        "id": "65",
+        "resource_type": "16",
+        "alternative_technology": "142",
+        "strategy_type": "3"
+    },
+    {
+        "id": "66",
+        "resource_type": "17",
+        "alternative_technology": "146",
+        "strategy_type": "3"
+    },
+    {
+        "id": "67",
+        "resource_type": "17",
+        "alternative_technology": "104",
+        "strategy_type": "3"
+    },
+    {
+        "id": "68",
+        "resource_type": "17",
+        "alternative_technology": "147",
+        "strategy_type": "3"
+    },
+    {
+        "id": "69",
+        "resource_type": "17",
+        "alternative_technology": "149",
+        "strategy_type": "3"
+    },
+    {
+        "id": "70",
+        "resource_type": "17",
+        "alternative_technology": "94",
+        "strategy_type": "3"
+    },
+    {
+        "id": "71",
+        "resource_type": "17",
+        "alternative_technology": "150",
+        "strategy_type": "3"
+    },
+    {
+        "id": "72",
+        "resource_type": "17",
+        "alternative_technology": "151",
+        "strategy_type": "3"
+    },
+    {
+        "id": "73",
+        "resource_type": "18",
+        "alternative_technology": "131",
+        "strategy_type": "3"
+    },
+    {
+        "id": "74",
+        "resource_type": "18",
+        "alternative_technology": "1591",
+        "strategy_type": "3"
+    },
+    {
+        "id": "75",
+        "resource_type": "18",
+        "alternative_technology": "1593",
+        "strategy_type": "3"
+    },
+    {
+        "id": "76",
+        "resource_type": "18",
+        "alternative_technology": "33",
+        "strategy_type": "1"
+    },
+    {
+        "id": "77",
+        "resource_type": "18",
+        "alternative_technology": "1772",
+        "strategy_type": "1"
+    },
+    {
+        "id": "78",
+        "resource_type": "19",
+        "alternative_technology": "163",
+        "strategy_type": "3"
+    },
+    {
+        "id": "79",
+        "resource_type": "19",
+        "alternative_technology": "164",
+        "strategy_type": "1"
+    },
+    {
+        "id": "80",
+        "resource_type": "19",
+        "alternative_technology": "165",
+        "strategy_type": "1"
+    },
+    {
+        "id": "81",
+        "resource_type": "19",
+        "alternative_technology": "166",
+        "strategy_type": "1"
+    },
+    {
+        "id": "82",
+        "resource_type": "19",
+        "alternative_technology": "167",
+        "strategy_type": "1"
+    },
+    {
+        "id": "83",
+        "resource_type": "19",
+        "alternative_technology": "168",
+        "strategy_type": "1"
+    },
+    {
+        "id": "84",
+        "resource_type": "19",
+        "alternative_technology": "171",
+        "strategy_type": "1"
+    },
+    {
+        "id": "85",
+        "resource_type": "20",
+        "alternative_technology": "174",
+        "strategy_type": "1"
+    },
+    {
+        "id": "86",
+        "resource_type": "20",
+        "alternative_technology": "176",
+        "strategy_type": "3"
+    },
+    {
+        "id": "87",
+        "resource_type": "20",
+        "alternative_technology": "177",
+        "strategy_type": "3"
+    },
+    {
+        "id": "88",
+        "resource_type": "20",
+        "alternative_technology": "179",
+        "strategy_type": "3"
+    },
+    {
+        "id": "89",
+        "resource_type": "21",
+        "alternative_technology": "186",
+        "strategy_type": "3"
+    },
+    {
+        "id": "90",
+        "resource_type": "21",
+        "alternative_technology": "189",
+        "strategy_type": "3"
+    },
+    {
+        "id": "91",
+        "resource_type": "22",
+        "alternative_technology": "114",
+        "strategy_type": "3"
+    },
+    {
+        "id": "92",
+        "resource_type": "22",
+        "alternative_technology": "115",
+        "strategy_type": "1"
+    },
+    {
+        "id": "93",
+        "resource_type": "22",
+        "alternative_technology": "119",
+        "strategy_type": "3"
+    },
+    {
+        "id": "94",
+        "resource_type": "22",
+        "alternative_technology": "120",
+        "strategy_type": "1"
+    },
+    {
+        "id": "95",
+        "resource_type": "23",
+        "alternative_technology": "114",
+        "strategy_type": "3"
+    },
+    {
+        "id": "96",
+        "resource_type": "23",
+        "alternative_technology": "115",
+        "strategy_type": "1"
+    },
+    {
+        "id": "97",
+        "resource_type": "23",
+        "alternative_technology": "194",
+        "strategy_type": "3"
+    },
+    {
+        "id": "98",
+        "resource_type": "23",
+        "alternative_technology": "120",
+        "strategy_type": "1"
+    },
+    {
+        "id": "99",
+        "resource_type": "24",
+        "alternative_technology": "95",
+        "strategy_type": "3"
+    },
+    {
+        "id": "100",
+        "resource_type": "24",
+        "alternative_technology": "94",
+        "strategy_type": "3"
+    },
+    {
+        "id": "101",
+        "resource_type": "24",
+        "alternative_technology": "195",
+        "strategy_type": "3"
+    },
+    {
+        "id": "102",
+        "resource_type": "24",
+        "alternative_technology": "196",
+        "strategy_type": "3"
+    },
+    {
+        "id": "103",
+        "resource_type": "24",
+        "alternative_technology": "197",
+        "strategy_type": "3"
+    },
+    {
+        "id": "104",
+        "resource_type": "24",
+        "alternative_technology": "100",
+        "strategy_type": "3"
+    },
+    {
+        "id": "105",
+        "resource_type": "24",
+        "alternative_technology": "99",
+        "strategy_type": "3"
+    },
+    {
+        "id": "106",
+        "resource_type": "24",
+        "alternative_technology": "198",
+        "strategy_type": "3"
+    },
+    {
+        "id": "107",
+        "resource_type": "24",
+        "alternative_technology": "102",
+        "strategy_type": "3"
+    },
+    {
+        "id": "108",
+        "resource_type": "25",
+        "alternative_technology": "199",
+        "strategy_type": "3"
+    },
+    {
+        "id": "109",
+        "resource_type": "26",
+        "alternative_technology": "210",
+        "strategy_type": "3"
+    },
+    {
+        "id": "110",
+        "resource_type": "27",
+        "alternative_technology": "214",
+        "strategy_type": "3"
+    },
+    {
+        "id": "111",
+        "resource_type": "27",
+        "alternative_technology": "215",
+        "strategy_type": "3"
+    },
+    {
+        "id": "112",
+        "resource_type": "27",
+        "alternative_technology": "216",
+        "strategy_type": "3"
+    },
+    {
+        "id": "113",
+        "resource_type": "27",
+        "alternative_technology": "217",
+        "strategy_type": "3"
+    },
+    {
+        "id": "114",
+        "resource_type": "27",
+        "alternative_technology": "218",
+        "strategy_type": "3"
+    },
+    {
+        "id": "115",
+        "resource_type": "27",
+        "alternative_technology": "219",
+        "strategy_type": "3"
+    },
+    {
+        "id": "116",
+        "resource_type": "27",
+        "alternative_technology": "220",
+        "strategy_type": "3"
+    },
+    {
+        "id": "117",
+        "resource_type": "27",
+        "alternative_technology": "221",
+        "strategy_type": "3"
+    },
+    {
+        "id": "118",
+        "resource_type": "27",
+        "alternative_technology": "222",
+        "strategy_type": "3"
+    },
+    {
+        "id": "119",
+        "resource_type": "28",
+        "alternative_technology": "223",
+        "strategy_type": "3"
+    },
+    {
+        "id": "120",
+        "resource_type": "28",
+        "alternative_technology": "224",
+        "strategy_type": "3"
+    },
+    {
+        "id": "121",
+        "resource_type": "28",
+        "alternative_technology": "225",
+        "strategy_type": "3"
+    },
+    {
+        "id": "122",
+        "resource_type": "28",
+        "alternative_technology": "226",
+        "strategy_type": "1"
+    },
+    {
+        "id": "123",
+        "resource_type": "28",
+        "alternative_technology": "227",
+        "strategy_type": "1"
+    },
+    {
+        "id": "124",
+        "resource_type": "28",
+        "alternative_technology": "228",
+        "strategy_type": "1"
+    },
+    {
+        "id": "125",
+        "resource_type": "28",
+        "alternative_technology": "229",
+        "strategy_type": "1"
+    },
+    {
+        "id": "126",
+        "resource_type": "28",
+        "alternative_technology": "230",
+        "strategy_type": "1"
+    },
+    {
+        "id": "127",
+        "resource_type": "28",
+        "alternative_technology": "231",
+        "strategy_type": "3"
+    },
+    {
+        "id": "128",
+        "resource_type": "28",
+        "alternative_technology": "232",
+        "strategy_type": "3"
+    },
+    {
+        "id": "129",
+        "resource_type": "29",
+        "alternative_technology": "233",
+        "strategy_type": "3"
+    },
+    {
+        "id": "130",
+        "resource_type": "29",
+        "alternative_technology": "234",
+        "strategy_type": "3"
+    },
+    {
+        "id": "131",
+        "resource_type": "29",
+        "alternative_technology": "235",
+        "strategy_type": "3"
+    },
+    {
+        "id": "132",
+        "resource_type": "29",
+        "alternative_technology": "236",
+        "strategy_type": "3"
+    },
+    {
+        "id": "133",
+        "resource_type": "29",
+        "alternative_technology": "237",
+        "strategy_type": "3"
+    },
+    {
+        "id": "134",
+        "resource_type": "29",
+        "alternative_technology": "238",
+        "strategy_type": "3"
+    },
+    {
+        "id": "135",
+        "resource_type": "29",
+        "alternative_technology": "239",
+        "strategy_type": "1"
+    },
+    {
+        "id": "136",
+        "resource_type": "29",
+        "alternative_technology": "240",
+        "strategy_type": "1"
+    },
+    {
+        "id": "137",
+        "resource_type": "29",
+        "alternative_technology": "241",
+        "strategy_type": "1"
+    },
+    {
+        "id": "138",
+        "resource_type": "30",
+        "alternative_technology": "243",
+        "strategy_type": "3"
+    },
+    {
+        "id": "139",
+        "resource_type": "30",
+        "alternative_technology": "244",
+        "strategy_type": "3"
+    },
+    {
+        "id": "140",
+        "resource_type": "30",
+        "alternative_technology": "245",
+        "strategy_type": "3"
+    },
+    {
+        "id": "141",
+        "resource_type": "30",
+        "alternative_technology": "246",
+        "strategy_type": "1"
+    },
+    {
+        "id": "142",
+        "resource_type": "30",
+        "alternative_technology": "247",
+        "strategy_type": "3"
+    },
+    {
+        "id": "143",
+        "resource_type": "30",
+        "alternative_technology": "248",
+        "strategy_type": "3"
+    },
+    {
+        "id": "144",
+        "resource_type": "30",
+        "alternative_technology": "249",
+        "strategy_type": "3"
+    },
+    {
+        "id": "145",
+        "resource_type": "30",
+        "alternative_technology": "250",
+        "strategy_type": "1"
+    },
+    {
+        "id": "146",
+        "resource_type": "30",
+        "alternative_technology": "251",
+        "strategy_type": "3"
+    },
+    {
+        "id": "147",
+        "resource_type": "31",
+        "alternative_technology": "253",
+        "strategy_type": "3"
+    },
+    {
+        "id": "148",
+        "resource_type": "31",
+        "alternative_technology": "254",
+        "strategy_type": "3"
+    },
+    {
+        "id": "149",
+        "resource_type": "31",
+        "alternative_technology": "259",
+        "strategy_type": "3"
+    },
+    {
+        "id": "150",
+        "resource_type": "31",
+        "alternative_technology": "260",
+        "strategy_type": "3"
+    },
+    {
+        "id": "151",
+        "resource_type": "31",
+        "alternative_technology": "262",
+        "strategy_type": "1"
+    },
+    {
+        "id": "152",
+        "resource_type": "32",
+        "alternative_technology": "263",
+        "strategy_type": "3"
+    },
+    {
+        "id": "153",
+        "resource_type": "32",
+        "alternative_technology": "264",
+        "strategy_type": "3"
+    },
+    {
+        "id": "154",
+        "resource_type": "32",
+        "alternative_technology": "266",
+        "strategy_type": "1"
+    },
+    {
+        "id": "155",
+        "resource_type": "32",
+        "alternative_technology": "269",
+        "strategy_type": "3"
+    },
+    {
+        "id": "156",
+        "resource_type": "32",
+        "alternative_technology": "270",
+        "strategy_type": "1"
+    },
+    {
+        "id": "157",
+        "resource_type": "32",
+        "alternative_technology": "271",
+        "strategy_type": "1"
+    },
+    {
+        "id": "158",
+        "resource_type": "33",
+        "alternative_technology": "273",
+        "strategy_type": "3"
+    },
+    {
+        "id": "159",
+        "resource_type": "33",
+        "alternative_technology": "274",
+        "strategy_type": "3"
+    },
+    {
+        "id": "160",
+        "resource_type": "33",
+        "alternative_technology": "275",
+        "strategy_type": "3"
+    },
+    {
+        "id": "161",
+        "resource_type": "33",
+        "alternative_technology": "276",
+        "strategy_type": "3"
+    },
+    {
+        "id": "162",
+        "resource_type": "33",
+        "alternative_technology": "277",
+        "strategy_type": "3"
+    },
+    {
+        "id": "163",
+        "resource_type": "33",
+        "alternative_technology": "278",
+        "strategy_type": "3"
+    },
+    {
+        "id": "164",
+        "resource_type": "33",
+        "alternative_technology": "279",
+        "strategy_type": "3"
+    },
+    {
+        "id": "165",
+        "resource_type": "33",
+        "alternative_technology": "280",
+        "strategy_type": "3"
+    },
+    {
+        "id": "166",
+        "resource_type": "33",
+        "alternative_technology": "281",
+        "strategy_type": "3"
+    },
+    {
+        "id": "167",
+        "resource_type": "33",
+        "alternative_technology": "282",
+        "strategy_type": "3"
+    },
+    {
+        "id": "168",
+        "resource_type": "35",
+        "alternative_technology": "283",
+        "strategy_type": "3"
+    },
+    {
+        "id": "169",
+        "resource_type": "35",
+        "alternative_technology": "284",
+        "strategy_type": "3"
+    },
+    {
+        "id": "170",
+        "resource_type": "35",
+        "alternative_technology": "285",
+        "strategy_type": "3"
+    },
+    {
+        "id": "171",
+        "resource_type": "35",
+        "alternative_technology": "286",
+        "strategy_type": "3"
+    },
+    {
+        "id": "172",
+        "resource_type": "35",
+        "alternative_technology": "287",
+        "strategy_type": "3"
+    },
+    {
+        "id": "173",
+        "resource_type": "35",
+        "alternative_technology": "288",
+        "strategy_type": "3"
+    },
+    {
+        "id": "174",
+        "resource_type": "37",
+        "alternative_technology": "293",
+        "strategy_type": "3"
+    },
+    {
+        "id": "175",
+        "resource_type": "37",
+        "alternative_technology": "294",
+        "strategy_type": "3"
+    },
+    {
+        "id": "176",
+        "resource_type": "37",
+        "alternative_technology": "295",
+        "strategy_type": "3"
+    },
+    {
+        "id": "177",
+        "resource_type": "37",
+        "alternative_technology": "296",
+        "strategy_type": "3"
+    },
+    {
+        "id": "178",
+        "resource_type": "37",
+        "alternative_technology": "297",
+        "strategy_type": "3"
+    },
+    {
+        "id": "179",
+        "resource_type": "37",
+        "alternative_technology": "298",
+        "strategy_type": "3"
+    },
+    {
+        "id": "180",
+        "resource_type": "37",
+        "alternative_technology": "299",
+        "strategy_type": "3"
+    },
+    {
+        "id": "181",
+        "resource_type": "37",
+        "alternative_technology": "300",
+        "strategy_type": "3"
+    },
+    {
+        "id": "182",
+        "resource_type": "38",
+        "alternative_technology": "228",
+        "strategy_type": "1"
+    },
+    {
+        "id": "183",
+        "resource_type": "38",
+        "alternative_technology": "303",
+        "strategy_type": "1"
+    },
+    {
+        "id": "184",
+        "resource_type": "38",
+        "alternative_technology": "227",
+        "strategy_type": "1"
+    },
+    {
+        "id": "185",
+        "resource_type": "38",
+        "alternative_technology": "305",
+        "strategy_type": "3"
+    },
+    {
+        "id": "186",
+        "resource_type": "38",
+        "alternative_technology": "306",
+        "strategy_type": "1"
+    },
+    {
+        "id": "187",
+        "resource_type": "38",
+        "alternative_technology": "307",
+        "strategy_type": "1"
+    },
+    {
+        "id": "188",
+        "resource_type": "38",
+        "alternative_technology": "308",
+        "strategy_type": "3"
+    },
+    {
+        "id": "189",
+        "resource_type": "38",
+        "alternative_technology": "310",
+        "strategy_type": "3"
+    },
+    {
+        "id": "190",
+        "resource_type": "40",
+        "alternative_technology": "312",
+        "strategy_type": "3"
+    },
+    {
+        "id": "191",
+        "resource_type": "40",
+        "alternative_technology": "313",
+        "strategy_type": "3"
+    },
+    {
+        "id": "192",
+        "resource_type": "40",
+        "alternative_technology": "266",
+        "strategy_type": "1"
+    },
+    {
+        "id": "193",
+        "resource_type": "40",
+        "alternative_technology": "317",
+        "strategy_type": "3"
+    },
+    {
+        "id": "194",
+        "resource_type": "42",
+        "alternative_technology": "310",
+        "strategy_type": "3"
+    },
+    {
+        "id": "195",
+        "resource_type": "42",
+        "alternative_technology": "320",
+        "strategy_type": "3"
+    },
+    {
+        "id": "196",
+        "resource_type": "42",
+        "alternative_technology": "321",
+        "strategy_type": "3"
+    },
+    {
+        "id": "197",
+        "resource_type": "42",
+        "alternative_technology": "322",
+        "strategy_type": "3"
+    },
+    {
+        "id": "198",
+        "resource_type": "42",
+        "alternative_technology": "323",
+        "strategy_type": "3"
+    },
+    {
+        "id": "199",
+        "resource_type": "42",
+        "alternative_technology": "324",
+        "strategy_type": "3"
+    },
+    {
+        "id": "200",
+        "resource_type": "42",
+        "alternative_technology": "325",
+        "strategy_type": "3"
+    },
+    {
+        "id": "201",
+        "resource_type": "42",
+        "alternative_technology": "326",
+        "strategy_type": "3"
+    },
+    {
+        "id": "202",
+        "resource_type": "43",
+        "alternative_technology": "228",
+        "strategy_type": "1"
+    },
+    {
+        "id": "203",
+        "resource_type": "43",
+        "alternative_technology": "303",
+        "strategy_type": "1"
+    },
+    {
+        "id": "204",
+        "resource_type": "43",
+        "alternative_technology": "328",
+        "strategy_type": "3"
+    },
+    {
+        "id": "205",
+        "resource_type": "43",
+        "alternative_technology": "329",
+        "strategy_type": "3"
+    },
+    {
+        "id": "206",
+        "resource_type": "43",
+        "alternative_technology": "330",
+        "strategy_type": "3"
+    },
+    {
+        "id": "207",
+        "resource_type": "43",
+        "alternative_technology": "227",
+        "strategy_type": "1"
+    },
+    {
+        "id": "208",
+        "resource_type": "43",
+        "alternative_technology": "306",
+        "strategy_type": "1"
+    },
+    {
+        "id": "209",
+        "resource_type": "43",
+        "alternative_technology": "308",
+        "strategy_type": "3"
+    },
+    {
+        "id": "210",
+        "resource_type": "44",
+        "alternative_technology": "228",
+        "strategy_type": "1"
+    },
+    {
+        "id": "211",
+        "resource_type": "44",
+        "alternative_technology": "303",
+        "strategy_type": "1"
+    },
+    {
+        "id": "212",
+        "resource_type": "44",
+        "alternative_technology": "328",
+        "strategy_type": "3"
+    },
+    {
+        "id": "213",
+        "resource_type": "44",
+        "alternative_technology": "329",
+        "strategy_type": "3"
+    },
+    {
+        "id": "214",
+        "resource_type": "44",
+        "alternative_technology": "330",
+        "strategy_type": "3"
+    },
+    {
+        "id": "215",
+        "resource_type": "44",
+        "alternative_technology": "227",
+        "strategy_type": "1"
+    },
+    {
+        "id": "216",
+        "resource_type": "44",
+        "alternative_technology": "306",
+        "strategy_type": "1"
+    },
+    {
+        "id": "217",
+        "resource_type": "44",
+        "alternative_technology": "308",
+        "strategy_type": "3"
+    },
+    {
+        "id": "218",
+        "resource_type": "45",
+        "alternative_technology": "335",
+        "strategy_type": "1"
+    },
+    {
+        "id": "219",
+        "resource_type": "45",
+        "alternative_technology": "337",
+        "strategy_type": "3"
+    },
+    {
+        "id": "220",
+        "resource_type": "45",
+        "alternative_technology": "338",
+        "strategy_type": "3"
+    },
+    {
+        "id": "221",
+        "resource_type": "45",
+        "alternative_technology": "339",
+        "strategy_type": "3"
+    },
+    {
+        "id": "222",
+        "resource_type": "46",
+        "alternative_technology": "228",
+        "strategy_type": "1"
+    },
+    {
+        "id": "223",
+        "resource_type": "46",
+        "alternative_technology": "303",
+        "strategy_type": "1"
+    },
+    {
+        "id": "224",
+        "resource_type": "46",
+        "alternative_technology": "329",
+        "strategy_type": "3"
+    },
+    {
+        "id": "225",
+        "resource_type": "46",
+        "alternative_technology": "330",
+        "strategy_type": "3"
+    },
+    {
+        "id": "226",
+        "resource_type": "46",
+        "alternative_technology": "328",
+        "strategy_type": "3"
+    },
+    {
+        "id": "227",
+        "resource_type": "46",
+        "alternative_technology": "306",
+        "strategy_type": "1"
+    },
+    {
+        "id": "228",
+        "resource_type": "46",
+        "alternative_technology": "227",
+        "strategy_type": "1"
+    },
+    {
+        "id": "229",
+        "resource_type": "46",
+        "alternative_technology": "308",
+        "strategy_type": "3"
+    },
+    {
+        "id": "230",
+        "resource_type": "46",
+        "alternative_technology": "341",
+        "strategy_type": "1"
+    },
+    {
+        "id": "231",
+        "resource_type": "47",
+        "alternative_technology": "342",
+        "strategy_type": "1"
+    },
+    {
+        "id": "232",
+        "resource_type": "47",
+        "alternative_technology": "343",
+        "strategy_type": "3"
+    },
+    {
+        "id": "233",
+        "resource_type": "47",
+        "alternative_technology": "344",
+        "strategy_type": "3"
+    },
+    {
+        "id": "234",
+        "resource_type": "47",
+        "alternative_technology": "349",
+        "strategy_type": "3"
+    },
+    {
+        "id": "235",
+        "resource_type": "47",
+        "alternative_technology": "350",
+        "strategy_type": "3"
+    },
+    {
+        "id": "236",
+        "resource_type": "47",
+        "alternative_technology": "351",
+        "strategy_type": "3"
+    },
+    {
+        "id": "237",
+        "resource_type": "48",
+        "alternative_technology": "352",
+        "strategy_type": "3"
+    },
+    {
+        "id": "238",
+        "resource_type": "48",
+        "alternative_technology": "330",
+        "strategy_type": "3"
+    },
+    {
+        "id": "239",
+        "resource_type": "48",
+        "alternative_technology": "328",
+        "strategy_type": "3"
+    },
+    {
+        "id": "240",
+        "resource_type": "48",
+        "alternative_technology": "353",
+        "strategy_type": "3"
+    },
+    {
+        "id": "241",
+        "resource_type": "48",
+        "alternative_technology": "354",
+        "strategy_type": "1"
+    },
+    {
+        "id": "242",
+        "resource_type": "48",
+        "alternative_technology": "355",
+        "strategy_type": "3"
+    },
+    {
+        "id": "243",
+        "resource_type": "48",
+        "alternative_technology": "357",
+        "strategy_type": "1"
+    },
+    {
+        "id": "244",
+        "resource_type": "48",
+        "alternative_technology": "358",
+        "strategy_type": "3"
+    },
+    {
+        "id": "245",
+        "resource_type": "48",
+        "alternative_technology": "359",
+        "strategy_type": "3"
+    },
+    {
+        "id": "246",
+        "resource_type": "49",
+        "alternative_technology": "328",
+        "strategy_type": "3"
+    },
+    {
+        "id": "247",
+        "resource_type": "49",
+        "alternative_technology": "352",
+        "strategy_type": "3"
+    },
+    {
+        "id": "248",
+        "resource_type": "49",
+        "alternative_technology": "330",
+        "strategy_type": "3"
+    },
+    {
+        "id": "249",
+        "resource_type": "49",
+        "alternative_technology": "353",
+        "strategy_type": "3"
+    },
+    {
+        "id": "250",
+        "resource_type": "49",
+        "alternative_technology": "354",
+        "strategy_type": "1"
+    },
+    {
+        "id": "251",
+        "resource_type": "49",
+        "alternative_technology": "355",
+        "strategy_type": "3"
+    },
+    {
+        "id": "252",
+        "resource_type": "49",
+        "alternative_technology": "357",
+        "strategy_type": "1"
+    },
+    {
+        "id": "253",
+        "resource_type": "49",
+        "alternative_technology": "358",
+        "strategy_type": "3"
+    },
+    {
+        "id": "254",
+        "resource_type": "49",
+        "alternative_technology": "359",
+        "strategy_type": "3"
+    },
+    {
+        "id": "255",
+        "resource_type": "50",
+        "alternative_technology": "360",
+        "strategy_type": "3"
+    },
+    {
+        "id": "256",
+        "resource_type": "50",
+        "alternative_technology": "361",
+        "strategy_type": "3"
+    },
+    {
+        "id": "257",
+        "resource_type": "50",
+        "alternative_technology": "362",
+        "strategy_type": "3"
+    },
+    {
+        "id": "258",
+        "resource_type": "50",
+        "alternative_technology": "363",
+        "strategy_type": "3"
+    },
+    {
+        "id": "259",
+        "resource_type": "50",
+        "alternative_technology": "364",
+        "strategy_type": "3"
+    },
+    {
+        "id": "260",
+        "resource_type": "50",
+        "alternative_technology": "365",
+        "strategy_type": "1"
+    },
+    {
+        "id": "261",
+        "resource_type": "50",
+        "alternative_technology": "368",
+        "strategy_type": "1"
+    },
+    {
+        "id": "262",
+        "resource_type": "50",
+        "alternative_technology": "369",
+        "strategy_type": "1"
+    },
+    {
+        "id": "263",
+        "resource_type": "51",
+        "alternative_technology": "369",
+        "strategy_type": "1"
+    },
+    {
+        "id": "264",
+        "resource_type": "51",
+        "alternative_technology": "371",
+        "strategy_type": "3"
+    },
+    {
+        "id": "265",
+        "resource_type": "51",
+        "alternative_technology": "372",
+        "strategy_type": "3"
+    },
+    {
+        "id": "266",
+        "resource_type": "51",
+        "alternative_technology": "375",
+        "strategy_type": "3"
+    },
+    {
+        "id": "267",
+        "resource_type": "53",
+        "alternative_technology": "380",
+        "strategy_type": "1"
+    },
+    {
+        "id": "268",
+        "resource_type": "53",
+        "alternative_technology": "381",
+        "strategy_type": "3"
+    },
+    {
+        "id": "269",
+        "resource_type": "53",
+        "alternative_technology": "382",
+        "strategy_type": "3"
+    },
+    {
+        "id": "270",
+        "resource_type": "53",
+        "alternative_technology": "383",
+        "strategy_type": "1"
+    },
+    {
+        "id": "271",
+        "resource_type": "53",
+        "alternative_technology": "384",
+        "strategy_type": "1"
+    },
+    {
+        "id": "272",
+        "resource_type": "53",
+        "alternative_technology": "385",
+        "strategy_type": "1"
+    },
+    {
+        "id": "273",
+        "resource_type": "53",
+        "alternative_technology": "386",
+        "strategy_type": "3"
+    },
+    {
+        "id": "274",
+        "resource_type": "53",
+        "alternative_technology": "387",
+        "strategy_type": "1"
+    },
+    {
+        "id": "275",
+        "resource_type": "53",
+        "alternative_technology": "388",
+        "strategy_type": "3"
+    },
+    {
+        "id": "276",
+        "resource_type": "53",
+        "alternative_technology": "389",
+        "strategy_type": "3"
+    },
+    {
+        "id": "277",
+        "resource_type": "54",
+        "alternative_technology": "380",
+        "strategy_type": "1"
+    },
+    {
+        "id": "278",
+        "resource_type": "54",
+        "alternative_technology": "390",
+        "strategy_type": "3"
+    },
+    {
+        "id": "279",
+        "resource_type": "54",
+        "alternative_technology": "391",
+        "strategy_type": "3"
+    },
+    {
+        "id": "280",
+        "resource_type": "54",
+        "alternative_technology": "392",
+        "strategy_type": "1"
+    },
+    {
+        "id": "281",
+        "resource_type": "54",
+        "alternative_technology": "383",
+        "strategy_type": "1"
+    },
+    {
+        "id": "282",
+        "resource_type": "54",
+        "alternative_technology": "386",
+        "strategy_type": "3"
+    },
+    {
+        "id": "283",
+        "resource_type": "54",
+        "alternative_technology": "385",
+        "strategy_type": "1"
+    },
+    {
+        "id": "284",
+        "resource_type": "54",
+        "alternative_technology": "387",
+        "strategy_type": "1"
+    },
+    {
+        "id": "285",
+        "resource_type": "54",
+        "alternative_technology": "388",
+        "strategy_type": "3"
+    },
+    {
+        "id": "286",
+        "resource_type": "54",
+        "alternative_technology": "389",
+        "strategy_type": "3"
+    },
+    {
+        "id": "287",
+        "resource_type": "56",
+        "alternative_technology": "385",
+        "strategy_type": "1"
+    },
+    {
+        "id": "288",
+        "resource_type": "56",
+        "alternative_technology": "393",
+        "strategy_type": "3"
+    },
+    {
+        "id": "289",
+        "resource_type": "56",
+        "alternative_technology": "394",
+        "strategy_type": "3"
+    },
+    {
+        "id": "290",
+        "resource_type": "56",
+        "alternative_technology": "392",
+        "strategy_type": "1"
+    },
+    {
+        "id": "291",
+        "resource_type": "56",
+        "alternative_technology": "399",
+        "strategy_type": "3"
+    },
+    {
+        "id": "292",
+        "resource_type": "56",
+        "alternative_technology": "388",
+        "strategy_type": "3"
+    },
+    {
+        "id": "293",
+        "resource_type": "58",
+        "alternative_technology": "400",
+        "strategy_type": "1"
+    },
+    {
+        "id": "294",
+        "resource_type": "58",
+        "alternative_technology": "401",
+        "strategy_type": "1"
+    },
+    {
+        "id": "295",
+        "resource_type": "58",
+        "alternative_technology": "402",
+        "strategy_type": "3"
+    },
+    {
+        "id": "296",
+        "resource_type": "58",
+        "alternative_technology": "408",
+        "strategy_type": "1"
+    },
+    {
+        "id": "297",
+        "resource_type": "59",
+        "alternative_technology": "385",
+        "strategy_type": "1"
+    },
+    {
+        "id": "298",
+        "resource_type": "59",
+        "alternative_technology": "380",
+        "strategy_type": "1"
+    },
+    {
+        "id": "299",
+        "resource_type": "59",
+        "alternative_technology": "409",
+        "strategy_type": "3"
+    },
+    {
+        "id": "300",
+        "resource_type": "59",
+        "alternative_technology": "410",
+        "strategy_type": "3"
+    },
+    {
+        "id": "301",
+        "resource_type": "59",
+        "alternative_technology": "411",
+        "strategy_type": "3"
+    },
+    {
+        "id": "302",
+        "resource_type": "59",
+        "alternative_technology": "388",
+        "strategy_type": "3"
+    },
+    {
+        "id": "303",
+        "resource_type": "59",
+        "alternative_technology": "392",
+        "strategy_type": "1"
+    },
+    {
+        "id": "304",
+        "resource_type": "59",
+        "alternative_technology": "387",
+        "strategy_type": "1"
+    },
+    {
+        "id": "305",
+        "resource_type": "60",
+        "alternative_technology": "413",
+        "strategy_type": "3"
+    },
+    {
+        "id": "306",
+        "resource_type": "60",
+        "alternative_technology": "414",
+        "strategy_type": "3"
+    },
+    {
+        "id": "307",
+        "resource_type": "60",
+        "alternative_technology": "411",
+        "strategy_type": "3"
+    },
+    {
+        "id": "308",
+        "resource_type": "60",
+        "alternative_technology": "363",
+        "strategy_type": "3"
+    },
+    {
+        "id": "309",
+        "resource_type": "60",
+        "alternative_technology": "385",
+        "strategy_type": "1"
+    },
+    {
+        "id": "310",
+        "resource_type": "60",
+        "alternative_technology": "380",
+        "strategy_type": "1"
+    },
+    {
+        "id": "311",
+        "resource_type": "60",
+        "alternative_technology": "392",
+        "strategy_type": "1"
+    },
+    {
+        "id": "312",
+        "resource_type": "60",
+        "alternative_technology": "387",
+        "strategy_type": "1"
+    },
+    {
+        "id": "313",
+        "resource_type": "61",
+        "alternative_technology": "385",
+        "strategy_type": "1"
+    },
+    {
+        "id": "314",
+        "resource_type": "61",
+        "alternative_technology": "380",
+        "strategy_type": "1"
+    },
+    {
+        "id": "315",
+        "resource_type": "61",
+        "alternative_technology": "392",
+        "strategy_type": "1"
+    },
+    {
+        "id": "316",
+        "resource_type": "61",
+        "alternative_technology": "413",
+        "strategy_type": "3"
+    },
+    {
+        "id": "317",
+        "resource_type": "61",
+        "alternative_technology": "399",
+        "strategy_type": "3"
+    },
+    {
+        "id": "318",
+        "resource_type": "61",
+        "alternative_technology": "388",
+        "strategy_type": "3"
+    },
+    {
+        "id": "319",
+        "resource_type": "61",
+        "alternative_technology": "387",
+        "strategy_type": "1"
+    },
+    {
+        "id": "320",
+        "resource_type": "61",
+        "alternative_technology": "389",
+        "strategy_type": "3"
+    },
+    {
+        "id": "321",
+        "resource_type": "61",
+        "alternative_technology": "415",
+        "strategy_type": "1"
+    },
+    {
+        "id": "322",
+        "resource_type": "63",
+        "alternative_technology": "416",
+        "strategy_type": "3"
+    },
+    {
+        "id": "323",
+        "resource_type": "63",
+        "alternative_technology": "417",
+        "strategy_type": "3"
+    },
+    {
+        "id": "324",
+        "resource_type": "63",
+        "alternative_technology": "418",
+        "strategy_type": "3"
+    },
+    {
+        "id": "325",
+        "resource_type": "63",
+        "alternative_technology": "419",
+        "strategy_type": "3"
+    },
+    {
+        "id": "326",
+        "resource_type": "63",
+        "alternative_technology": "420",
+        "strategy_type": "3"
+    },
+    {
+        "id": "327",
+        "resource_type": "63",
+        "alternative_technology": "422",
+        "strategy_type": "3"
+    },
+    {
+        "id": "328",
+        "resource_type": "65",
+        "alternative_technology": "428",
+        "strategy_type": "3"
+    },
+    {
+        "id": "329",
+        "resource_type": "65",
+        "alternative_technology": "431",
+        "strategy_type": "1"
+    },
+    {
+        "id": "330",
+        "resource_type": "66",
+        "alternative_technology": "436",
+        "strategy_type": "3"
+    },
+    {
+        "id": "331",
+        "resource_type": "67",
+        "alternative_technology": "447",
+        "strategy_type": "3"
+    },
+    {
+        "id": "332",
+        "resource_type": "67",
+        "alternative_technology": "449",
+        "strategy_type": "3"
+    },
+    {
+        "id": "333",
+        "resource_type": "68",
+        "alternative_technology": "456",
+        "strategy_type": "3"
+    },
+    {
+        "id": "334",
+        "resource_type": "68",
+        "alternative_technology": "458",
+        "strategy_type": "3"
+    },
+    {
+        "id": "335",
+        "resource_type": "69",
+        "alternative_technology": "266",
+        "strategy_type": "1"
+    },
+    {
+        "id": "336",
+        "resource_type": "69",
+        "alternative_technology": "471",
+        "strategy_type": "1"
+    },
+    {
+        "id": "337",
+        "resource_type": "70",
+        "alternative_technology": "266",
+        "strategy_type": "1"
+    },
+    {
+        "id": "338",
+        "resource_type": "70",
+        "alternative_technology": "471",
+        "strategy_type": "1"
+    },
+    {
+        "id": "339",
+        "resource_type": "71",
+        "alternative_technology": "472",
+        "strategy_type": "3"
+    },
+    {
+        "id": "340",
+        "resource_type": "71",
+        "alternative_technology": "473",
+        "strategy_type": "3"
+    },
+    {
+        "id": "341",
+        "resource_type": "71",
+        "alternative_technology": "217",
+        "strategy_type": "3"
+    },
+    {
+        "id": "342",
+        "resource_type": "71",
+        "alternative_technology": "474",
+        "strategy_type": "3"
+    },
+    {
+        "id": "343",
+        "resource_type": "71",
+        "alternative_technology": "475",
+        "strategy_type": "3"
+    },
+    {
+        "id": "344",
+        "resource_type": "71",
+        "alternative_technology": "476",
+        "strategy_type": "3"
+    },
+    {
+        "id": "345",
+        "resource_type": "71",
+        "alternative_technology": "477",
+        "strategy_type": "3"
+    },
+    {
+        "id": "346",
+        "resource_type": "71",
+        "alternative_technology": "478",
+        "strategy_type": "3"
+    },
+    {
+        "id": "347",
+        "resource_type": "71",
+        "alternative_technology": "479",
+        "strategy_type": "3"
+    },
+    {
+        "id": "348",
+        "resource_type": "72",
+        "alternative_technology": "480",
+        "strategy_type": "3"
+    },
+    {
+        "id": "349",
+        "resource_type": "72",
+        "alternative_technology": "482",
+        "strategy_type": "3"
+    },
+    {
+        "id": "350",
+        "resource_type": "72",
+        "alternative_technology": "483",
+        "strategy_type": "3"
+    },
+    {
+        "id": "351",
+        "resource_type": "72",
+        "alternative_technology": "484",
+        "strategy_type": "3"
+    },
+    {
+        "id": "352",
+        "resource_type": "72",
+        "alternative_technology": "486",
+        "strategy_type": "3"
+    },
+    {
+        "id": "353",
+        "resource_type": "73",
+        "alternative_technology": "473",
+        "strategy_type": "3"
+    },
+    {
+        "id": "354",
+        "resource_type": "73",
+        "alternative_technology": "472",
+        "strategy_type": "3"
+    },
+    {
+        "id": "355",
+        "resource_type": "73",
+        "alternative_technology": "478",
+        "strategy_type": "3"
+    },
+    {
+        "id": "356",
+        "resource_type": "73",
+        "alternative_technology": "24",
+        "strategy_type": "3"
+    },
+    {
+        "id": "357",
+        "resource_type": "73",
+        "alternative_technology": "490",
+        "strategy_type": "3"
+    },
+    {
+        "id": "358",
+        "resource_type": "73",
+        "alternative_technology": "474",
+        "strategy_type": "3"
+    },
+    {
+        "id": "359",
+        "resource_type": "73",
+        "alternative_technology": "217",
+        "strategy_type": "3"
+    },
+    {
+        "id": "360",
+        "resource_type": "73",
+        "alternative_technology": "477",
+        "strategy_type": "3"
+    },
+    {
+        "id": "361",
+        "resource_type": "73",
+        "alternative_technology": "491",
+        "strategy_type": "3"
+    },
+    {
+        "id": "362",
+        "resource_type": "74",
+        "alternative_technology": "217",
+        "strategy_type": "3"
+    },
+    {
+        "id": "363",
+        "resource_type": "74",
+        "alternative_technology": "220",
+        "strategy_type": "3"
+    },
+    {
+        "id": "364",
+        "resource_type": "74",
+        "alternative_technology": "493",
+        "strategy_type": "3"
+    },
+    {
+        "id": "365",
+        "resource_type": "74",
+        "alternative_technology": "495",
+        "strategy_type": "1"
+    },
+    {
+        "id": "366",
+        "resource_type": "74",
+        "alternative_technology": "498",
+        "strategy_type": "1"
+    },
+    {
+        "id": "367",
+        "resource_type": "75",
+        "alternative_technology": "504",
+        "strategy_type": "3"
+    },
+    {
+        "id": "368",
+        "resource_type": "75",
+        "alternative_technology": "506",
+        "strategy_type": "3"
+    },
+    {
+        "id": "369",
+        "resource_type": "76",
+        "alternative_technology": "513",
+        "strategy_type": "3"
+    },
+    {
+        "id": "370",
+        "resource_type": "76",
+        "alternative_technology": "515",
+        "strategy_type": "3"
+    },
+    {
+        "id": "371",
+        "resource_type": "77",
+        "alternative_technology": "519",
+        "strategy_type": "3"
+    },
+    {
+        "id": "372",
+        "resource_type": "77",
+        "alternative_technology": "520",
+        "strategy_type": "3"
+    },
+    {
+        "id": "373",
+        "resource_type": "77",
+        "alternative_technology": "525",
+        "strategy_type": "3"
+    },
+    {
+        "id": "374",
+        "resource_type": "78",
+        "alternative_technology": "527",
+        "strategy_type": "3"
+    },
+    {
+        "id": "375",
+        "resource_type": "78",
+        "alternative_technology": "528",
+        "strategy_type": "3"
+    },
+    {
+        "id": "376",
+        "resource_type": "78",
+        "alternative_technology": "535",
+        "strategy_type": "3"
+    },
+    {
+        "id": "377",
+        "resource_type": "80",
+        "alternative_technology": "546",
+        "strategy_type": "3"
+    },
+    {
+        "id": "378",
+        "resource_type": "80",
+        "alternative_technology": "547",
+        "strategy_type": "1"
+    },
+    {
+        "id": "379",
+        "resource_type": "80",
+        "alternative_technology": "548",
+        "strategy_type": "3"
+    },
+    {
+        "id": "380",
+        "resource_type": "80",
+        "alternative_technology": "550",
+        "strategy_type": "3"
+    },
+    {
+        "id": "381",
+        "resource_type": "80",
+        "alternative_technology": "551",
+        "strategy_type": "3"
+    },
+    {
+        "id": "382",
+        "resource_type": "80",
+        "alternative_technology": "553",
+        "strategy_type": "3"
+    },
+    {
+        "id": "383",
+        "resource_type": "81",
+        "alternative_technology": "556",
+        "strategy_type": "3"
+    },
+    {
+        "id": "384",
+        "resource_type": "81",
+        "alternative_technology": "557",
+        "strategy_type": "3"
+    },
+    {
+        "id": "385",
+        "resource_type": "81",
+        "alternative_technology": "559",
+        "strategy_type": "1"
+    },
+    {
+        "id": "386",
+        "resource_type": "81",
+        "alternative_technology": "560",
+        "strategy_type": "3"
+    },
+    {
+        "id": "387",
+        "resource_type": "81",
+        "alternative_technology": "561",
+        "strategy_type": "3"
+    },
+    {
+        "id": "388",
+        "resource_type": "81",
+        "alternative_technology": "563",
+        "strategy_type": "3"
+    },
+    {
+        "id": "389",
+        "resource_type": "82",
+        "alternative_technology": "566",
+        "strategy_type": "3"
+    },
+    {
+        "id": "390",
+        "resource_type": "82",
+        "alternative_technology": "567",
+        "strategy_type": "3"
+    },
+    {
+        "id": "391",
+        "resource_type": "82",
+        "alternative_technology": "569",
+        "strategy_type": "1"
+    },
+    {
+        "id": "392",
+        "resource_type": "82",
+        "alternative_technology": "570",
+        "strategy_type": "3"
+    },
+    {
+        "id": "393",
+        "resource_type": "82",
+        "alternative_technology": "571",
+        "strategy_type": "3"
+    },
+    {
+        "id": "394",
+        "resource_type": "82",
+        "alternative_technology": "573",
+        "strategy_type": "3"
+    },
+    {
+        "id": "395",
+        "resource_type": "83",
+        "alternative_technology": "547",
+        "strategy_type": "1"
+    },
+    {
+        "id": "396",
+        "resource_type": "83",
+        "alternative_technology": "576",
+        "strategy_type": "3"
+    },
+    {
+        "id": "397",
+        "resource_type": "83",
+        "alternative_technology": "548",
+        "strategy_type": "3"
+    },
+    {
+        "id": "398",
+        "resource_type": "83",
+        "alternative_technology": "550",
+        "strategy_type": "3"
+    },
+    {
+        "id": "399",
+        "resource_type": "83",
+        "alternative_technology": "578",
+        "strategy_type": "3"
+    },
+    {
+        "id": "400",
+        "resource_type": "84",
+        "alternative_technology": "547",
+        "strategy_type": "1"
+    },
+    {
+        "id": "401",
+        "resource_type": "84",
+        "alternative_technology": "582",
+        "strategy_type": "3"
+    },
+    {
+        "id": "402",
+        "resource_type": "84",
+        "alternative_technology": "548",
+        "strategy_type": "3"
+    },
+    {
+        "id": "403",
+        "resource_type": "84",
+        "alternative_technology": "550",
+        "strategy_type": "3"
+    },
+    {
+        "id": "404",
+        "resource_type": "84",
+        "alternative_technology": "578",
+        "strategy_type": "3"
+    },
+    {
+        "id": "405",
+        "resource_type": "85",
+        "alternative_technology": "1208",
+        "strategy_type": "1"
+    },
+    {
+        "id": "406",
+        "resource_type": "85",
+        "alternative_technology": "553",
+        "strategy_type": "3"
+    },
+    {
+        "id": "407",
+        "resource_type": "85",
+        "alternative_technology": "589",
+        "strategy_type": "3"
+    },
+    {
+        "id": "408",
+        "resource_type": "86",
+        "alternative_technology": "600",
+        "strategy_type": "3"
+    },
+    {
+        "id": "409",
+        "resource_type": "87",
+        "alternative_technology": "604",
+        "strategy_type": "3"
+    },
+    {
+        "id": "410",
+        "resource_type": "87",
+        "alternative_technology": "607",
+        "strategy_type": "3"
+    },
+    {
+        "id": "411",
+        "resource_type": "88",
+        "alternative_technology": "614",
+        "strategy_type": "3"
+    },
+    {
+        "id": "412",
+        "resource_type": "88",
+        "alternative_technology": "615",
+        "strategy_type": "3"
+    },
+    {
+        "id": "413",
+        "resource_type": "88",
+        "alternative_technology": "616",
+        "strategy_type": "3"
+    },
+    {
+        "id": "414",
+        "resource_type": "88",
+        "alternative_technology": "617",
+        "strategy_type": "3"
+    },
+    {
+        "id": "415",
+        "resource_type": "88",
+        "alternative_technology": "618",
+        "strategy_type": "1"
+    },
+    {
+        "id": "416",
+        "resource_type": "88",
+        "alternative_technology": "619",
+        "strategy_type": "3"
+    },
+    {
+        "id": "417",
+        "resource_type": "88",
+        "alternative_technology": "621",
+        "strategy_type": "3"
+    },
+    {
+        "id": "418",
+        "resource_type": "89",
+        "alternative_technology": "547",
+        "strategy_type": "1"
+    },
+    {
+        "id": "419",
+        "resource_type": "89",
+        "alternative_technology": "624",
+        "strategy_type": "3"
+    },
+    {
+        "id": "420",
+        "resource_type": "89",
+        "alternative_technology": "625",
+        "strategy_type": "3"
+    },
+    {
+        "id": "421",
+        "resource_type": "89",
+        "alternative_technology": "548",
+        "strategy_type": "3"
+    },
+    {
+        "id": "422",
+        "resource_type": "89",
+        "alternative_technology": "2069",
+        "strategy_type": "1"
+    },
+    {
+        "id": "423",
+        "resource_type": "90",
+        "alternative_technology": "629",
+        "strategy_type": "3"
+    },
+    {
+        "id": "424",
+        "resource_type": "90",
+        "alternative_technology": "630",
+        "strategy_type": "3"
+    },
+    {
+        "id": "425",
+        "resource_type": "90",
+        "alternative_technology": "1718",
+        "strategy_type": "3"
+    },
+    {
+        "id": "426",
+        "resource_type": "90",
+        "alternative_technology": "635",
+        "strategy_type": "3"
+    },
+    {
+        "id": "427",
+        "resource_type": "90",
+        "alternative_technology": "636",
+        "strategy_type": "3"
+    },
+    {
+        "id": "428",
+        "resource_type": "91",
+        "alternative_technology": "637",
+        "strategy_type": "3"
+    },
+    {
+        "id": "429",
+        "resource_type": "91",
+        "alternative_technology": "638",
+        "strategy_type": "3"
+    },
+    {
+        "id": "430",
+        "resource_type": "91",
+        "alternative_technology": "639",
+        "strategy_type": "3"
+    },
+    {
+        "id": "431",
+        "resource_type": "91",
+        "alternative_technology": "644",
+        "strategy_type": "3"
+    },
+    {
+        "id": "432",
+        "resource_type": "91",
+        "alternative_technology": "645",
+        "strategy_type": "3"
+    },
+    {
+        "id": "433",
+        "resource_type": "91",
+        "alternative_technology": "646",
+        "strategy_type": "3"
+    },
+    {
+        "id": "434",
+        "resource_type": "92",
+        "alternative_technology": "647",
+        "strategy_type": "3"
+    },
+    {
+        "id": "435",
+        "resource_type": "92",
+        "alternative_technology": "648",
+        "strategy_type": "3"
+    },
+    {
+        "id": "436",
+        "resource_type": "92",
+        "alternative_technology": "649",
+        "strategy_type": "3"
+    },
+    {
+        "id": "437",
+        "resource_type": "92",
+        "alternative_technology": "653",
+        "strategy_type": "3"
+    },
+    {
+        "id": "438",
+        "resource_type": "92",
+        "alternative_technology": "654",
+        "strategy_type": "3"
+    },
+    {
+        "id": "439",
+        "resource_type": "92",
+        "alternative_technology": "637",
+        "strategy_type": "3"
+    },
+    {
+        "id": "440",
+        "resource_type": "93",
+        "alternative_technology": "656",
+        "strategy_type": "3"
+    },
+    {
+        "id": "441",
+        "resource_type": "93",
+        "alternative_technology": "661",
+        "strategy_type": "3"
+    },
+    {
+        "id": "442",
+        "resource_type": "94",
+        "alternative_technology": "629",
+        "strategy_type": "3"
+    },
+    {
+        "id": "443",
+        "resource_type": "94",
+        "alternative_technology": "665",
+        "strategy_type": "3"
+    },
+    {
+        "id": "444",
+        "resource_type": "94",
+        "alternative_technology": "630",
+        "strategy_type": "3"
+    },
+    {
+        "id": "445",
+        "resource_type": "94",
+        "alternative_technology": "668",
+        "strategy_type": "3"
+    },
+    {
+        "id": "446",
+        "resource_type": "95",
+        "alternative_technology": "656",
+        "strategy_type": "3"
+    },
+    {
+        "id": "447",
+        "resource_type": "96",
+        "alternative_technology": "164",
+        "strategy_type": "1"
+    },
+    {
+        "id": "448",
+        "resource_type": "96",
+        "alternative_technology": "167",
+        "strategy_type": "1"
+    },
+    {
+        "id": "449",
+        "resource_type": "96",
+        "alternative_technology": "165",
+        "strategy_type": "1"
+    },
+    {
+        "id": "450",
+        "resource_type": "96",
+        "alternative_technology": "166",
+        "strategy_type": "1"
+    },
+    {
+        "id": "451",
+        "resource_type": "96",
+        "alternative_technology": "171",
+        "strategy_type": "1"
+    },
+    {
+        "id": "452",
+        "resource_type": "96",
+        "alternative_technology": "676",
+        "strategy_type": "3"
+    },
+    {
+        "id": "453",
+        "resource_type": "98",
+        "alternative_technology": "688",
+        "strategy_type": "3"
+    },
+    {
+        "id": "454",
+        "resource_type": "98",
+        "alternative_technology": "689",
+        "strategy_type": "3"
+    },
+    {
+        "id": "455",
+        "resource_type": "98",
+        "alternative_technology": "691",
+        "strategy_type": "3"
+    },
+    {
+        "id": "456",
+        "resource_type": "98",
+        "alternative_technology": "692",
+        "strategy_type": "3"
+    },
+    {
+        "id": "457",
+        "resource_type": "98",
+        "alternative_technology": "693",
+        "strategy_type": "3"
+    },
+    {
+        "id": "458",
+        "resource_type": "98",
+        "alternative_technology": "696",
+        "strategy_type": "3"
+    },
+    {
+        "id": "459",
+        "resource_type": "99",
+        "alternative_technology": "698",
+        "strategy_type": "3"
+    },
+    {
+        "id": "460",
+        "resource_type": "99",
+        "alternative_technology": "699",
+        "strategy_type": "3"
+    },
+    {
+        "id": "461",
+        "resource_type": "100",
+        "alternative_technology": "708",
+        "strategy_type": "3"
+    },
+    {
+        "id": "462",
+        "resource_type": "100",
+        "alternative_technology": "709",
+        "strategy_type": "3"
+    },
+    {
+        "id": "463",
+        "resource_type": "100",
+        "alternative_technology": "710",
+        "strategy_type": "3"
+    },
+    {
+        "id": "464",
+        "resource_type": "100",
+        "alternative_technology": "711",
+        "strategy_type": "3"
+    },
+    {
+        "id": "465",
+        "resource_type": "100",
+        "alternative_technology": "712",
+        "strategy_type": "3"
+    },
+    {
+        "id": "466",
+        "resource_type": "101",
+        "alternative_technology": "717",
+        "strategy_type": "3"
+    },
+    {
+        "id": "467",
+        "resource_type": "102",
+        "alternative_technology": "727",
+        "strategy_type": "3"
+    },
+    {
+        "id": "468",
+        "resource_type": "102",
+        "alternative_technology": "728",
+        "strategy_type": "3"
+    },
+    {
+        "id": "469",
+        "resource_type": "102",
+        "alternative_technology": "729",
+        "strategy_type": "1"
+    },
+    {
+        "id": "470",
+        "resource_type": "102",
+        "alternative_technology": "734",
+        "strategy_type": "1"
+    },
+    {
+        "id": "471",
+        "resource_type": "102",
+        "alternative_technology": "736",
+        "strategy_type": "1"
+    },
+    {
+        "id": "472",
+        "resource_type": "103",
+        "alternative_technology": "737",
+        "strategy_type": "3"
+    },
+    {
+        "id": "473",
+        "resource_type": "103",
+        "alternative_technology": "740",
+        "strategy_type": "3"
+    },
+    {
+        "id": "474",
+        "resource_type": "103",
+        "alternative_technology": "741",
+        "strategy_type": "3"
+    },
+    {
+        "id": "475",
+        "resource_type": "104",
+        "alternative_technology": "747",
+        "strategy_type": "3"
+    },
+    {
+        "id": "476",
+        "resource_type": "104",
+        "alternative_technology": "748",
+        "strategy_type": "3"
+    },
+    {
+        "id": "477",
+        "resource_type": "104",
+        "alternative_technology": "691",
+        "strategy_type": "3"
+    },
+    {
+        "id": "478",
+        "resource_type": "104",
+        "alternative_technology": "749",
+        "strategy_type": "3"
+    },
+    {
+        "id": "479",
+        "resource_type": "104",
+        "alternative_technology": "750",
+        "strategy_type": "3"
+    },
+    {
+        "id": "480",
+        "resource_type": "104",
+        "alternative_technology": "751",
+        "strategy_type": "3"
+    },
+    {
+        "id": "481",
+        "resource_type": "104",
+        "alternative_technology": "753",
+        "strategy_type": "3"
+    },
+    {
+        "id": "482",
+        "resource_type": "105",
+        "alternative_technology": "754",
+        "strategy_type": "3"
+    },
+    {
+        "id": "483",
+        "resource_type": "105",
+        "alternative_technology": "755",
+        "strategy_type": "3"
+    },
+    {
+        "id": "484",
+        "resource_type": "106",
+        "alternative_technology": "764",
+        "strategy_type": "3"
+    },
+    {
+        "id": "485",
+        "resource_type": "106",
+        "alternative_technology": "765",
+        "strategy_type": "3"
+    },
+    {
+        "id": "486",
+        "resource_type": "106",
+        "alternative_technology": "766",
+        "strategy_type": "3"
+    },
+    {
+        "id": "487",
+        "resource_type": "106",
+        "alternative_technology": "767",
+        "strategy_type": "3"
+    },
+    {
+        "id": "488",
+        "resource_type": "106",
+        "alternative_technology": "768",
+        "strategy_type": "3"
+    },
+    {
+        "id": "489",
+        "resource_type": "106",
+        "alternative_technology": "769",
+        "strategy_type": "3"
+    },
+    {
+        "id": "490",
+        "resource_type": "107",
+        "alternative_technology": "774",
+        "strategy_type": "3"
+    },
+    {
+        "id": "491",
+        "resource_type": "107",
+        "alternative_technology": "775",
+        "strategy_type": "3"
+    },
+    {
+        "id": "492",
+        "resource_type": "107",
+        "alternative_technology": "776",
+        "strategy_type": "3"
+    },
+    {
+        "id": "493",
+        "resource_type": "107",
+        "alternative_technology": "777",
+        "strategy_type": "3"
+    },
+    {
+        "id": "494",
+        "resource_type": "107",
+        "alternative_technology": "782",
+        "strategy_type": "3"
+    },
+    {
+        "id": "495",
+        "resource_type": "108",
+        "alternative_technology": "787",
+        "strategy_type": "1"
+    },
+    {
+        "id": "496",
+        "resource_type": "108",
+        "alternative_technology": "790",
+        "strategy_type": "1"
+    },
+    {
+        "id": "497",
+        "resource_type": "108",
+        "alternative_technology": "791",
+        "strategy_type": "1"
+    },
+    {
+        "id": "498",
+        "resource_type": "110",
+        "alternative_technology": "801",
+        "strategy_type": "3"
+    },
+    {
+        "id": "499",
+        "resource_type": "115",
+        "alternative_technology": "802",
+        "strategy_type": "3"
+    },
+    {
+        "id": "500",
+        "resource_type": "115",
+        "alternative_technology": "803",
+        "strategy_type": "3"
+    },
+    {
+        "id": "501",
+        "resource_type": "115",
+        "alternative_technology": "804",
+        "strategy_type": "3"
+    },
+    {
+        "id": "502",
+        "resource_type": "115",
+        "alternative_technology": "805",
+        "strategy_type": "3"
+    },
+    {
+        "id": "503",
+        "resource_type": "116",
+        "alternative_technology": "812",
+        "strategy_type": "3"
+    },
+    {
+        "id": "504",
+        "resource_type": "116",
+        "alternative_technology": "813",
+        "strategy_type": "3"
+    },
+    {
+        "id": "505",
+        "resource_type": "116",
+        "alternative_technology": "814",
+        "strategy_type": "3"
+    },
+    {
+        "id": "506",
+        "resource_type": "116",
+        "alternative_technology": "815",
+        "strategy_type": "3"
+    },
+    {
+        "id": "507",
+        "resource_type": "116",
+        "alternative_technology": "816",
+        "strategy_type": "3"
+    },
+    {
+        "id": "508",
+        "resource_type": "116",
+        "alternative_technology": "818",
+        "strategy_type": "3"
+    },
+    {
+        "id": "509",
+        "resource_type": "117",
+        "alternative_technology": "822",
+        "strategy_type": "1"
+    },
+    {
+        "id": "510",
+        "resource_type": "120",
+        "alternative_technology": "852",
+        "strategy_type": "3"
+    },
+    {
+        "id": "511",
+        "resource_type": "120",
+        "alternative_technology": "853",
+        "strategy_type": "3"
+    },
+    {
+        "id": "512",
+        "resource_type": "120",
+        "alternative_technology": "857",
+        "strategy_type": "3"
+    },
+    {
+        "id": "513",
+        "resource_type": "121",
+        "alternative_technology": "862",
+        "strategy_type": "3"
+    },
+    {
+        "id": "514",
+        "resource_type": "121",
+        "alternative_technology": "863",
+        "strategy_type": "3"
+    },
+    {
+        "id": "515",
+        "resource_type": "121",
+        "alternative_technology": "870",
+        "strategy_type": "1"
+    },
+    {
+        "id": "516",
+        "resource_type": "122",
+        "alternative_technology": "872",
+        "strategy_type": "3"
+    },
+    {
+        "id": "517",
+        "resource_type": "122",
+        "alternative_technology": "873",
+        "strategy_type": "3"
+    },
+    {
+        "id": "518",
+        "resource_type": "122",
+        "alternative_technology": "870",
+        "strategy_type": "1"
+    },
+    {
+        "id": "519",
+        "resource_type": "123",
+        "alternative_technology": "874",
+        "strategy_type": "3"
+    },
+    {
+        "id": "520",
+        "resource_type": "123",
+        "alternative_technology": "875",
+        "strategy_type": "3"
+    },
+    {
+        "id": "521",
+        "resource_type": "124",
+        "alternative_technology": "884",
+        "strategy_type": "3"
+    },
+    {
+        "id": "522",
+        "resource_type": "124",
+        "alternative_technology": "885",
+        "strategy_type": "3"
+    },
+    {
+        "id": "523",
+        "resource_type": "124",
+        "alternative_technology": "886",
+        "strategy_type": "3"
+    },
+    {
+        "id": "524",
+        "resource_type": "124",
+        "alternative_technology": "887",
+        "strategy_type": "3"
+    },
+    {
+        "id": "525",
+        "resource_type": "125",
+        "alternative_technology": "894",
+        "strategy_type": "3"
+    },
+    {
+        "id": "526",
+        "resource_type": "125",
+        "alternative_technology": "895",
+        "strategy_type": "3"
+    },
+    {
+        "id": "527",
+        "resource_type": "125",
+        "alternative_technology": "896",
+        "strategy_type": "3"
+    },
+    {
+        "id": "528",
+        "resource_type": "125",
+        "alternative_technology": "897",
+        "strategy_type": "3"
+    },
+    {
+        "id": "529",
+        "resource_type": "126",
+        "alternative_technology": "904",
+        "strategy_type": "3"
+    },
+    {
+        "id": "530",
+        "resource_type": "126",
+        "alternative_technology": "905",
+        "strategy_type": "3"
+    },
+    {
+        "id": "531",
+        "resource_type": "126",
+        "alternative_technology": "814",
+        "strategy_type": "3"
+    },
+    {
+        "id": "532",
+        "resource_type": "126",
+        "alternative_technology": "906",
+        "strategy_type": "3"
+    },
+    {
+        "id": "533",
+        "resource_type": "126",
+        "alternative_technology": "816",
+        "strategy_type": "3"
+    },
+    {
+        "id": "534",
+        "resource_type": "127",
+        "alternative_technology": "910",
+        "strategy_type": "3"
+    },
+    {
+        "id": "535",
+        "resource_type": "127",
+        "alternative_technology": "911",
+        "strategy_type": "3"
+    },
+    {
+        "id": "536",
+        "resource_type": "127",
+        "alternative_technology": "912",
+        "strategy_type": "3"
+    },
+    {
+        "id": "537",
+        "resource_type": "127",
+        "alternative_technology": "913",
+        "strategy_type": "3"
+    },
+    {
+        "id": "538",
+        "resource_type": "127",
+        "alternative_technology": "915",
+        "strategy_type": "3"
+    },
+    {
+        "id": "539",
+        "resource_type": "128",
+        "alternative_technology": "918",
+        "strategy_type": "3"
+    },
+    {
+        "id": "540",
+        "resource_type": "128",
+        "alternative_technology": "919",
+        "strategy_type": "3"
+    },
+    {
+        "id": "541",
+        "resource_type": "128",
+        "alternative_technology": "920",
+        "strategy_type": "3"
+    },
+    {
+        "id": "542",
+        "resource_type": "128",
+        "alternative_technology": "921",
+        "strategy_type": "3"
+    },
+    {
+        "id": "543",
+        "resource_type": "128",
+        "alternative_technology": "923",
+        "strategy_type": "3"
+    },
+    {
+        "id": "544",
+        "resource_type": "132",
+        "alternative_technology": "950",
+        "strategy_type": "3"
+    },
+    {
+        "id": "545",
+        "resource_type": "133",
+        "alternative_technology": "956",
+        "strategy_type": "3"
+    },
+    {
+        "id": "546",
+        "resource_type": "133",
+        "alternative_technology": "957",
+        "strategy_type": "3"
+    },
+    {
+        "id": "547",
+        "resource_type": "133",
+        "alternative_technology": "965",
+        "strategy_type": "3"
+    },
+    {
+        "id": "548",
+        "resource_type": "134",
+        "alternative_technology": "966",
+        "strategy_type": "3"
+    },
+    {
+        "id": "549",
+        "resource_type": "134",
+        "alternative_technology": "967",
+        "strategy_type": "3"
+    },
+    {
+        "id": "550",
+        "resource_type": "134",
+        "alternative_technology": "973",
+        "strategy_type": "3"
+    },
+    {
+        "id": "551",
+        "resource_type": "135",
+        "alternative_technology": "974",
+        "strategy_type": "3"
+    },
+    {
+        "id": "552",
+        "resource_type": "135",
+        "alternative_technology": "975",
+        "strategy_type": "3"
+    },
+    {
+        "id": "553",
+        "resource_type": "135",
+        "alternative_technology": "980",
+        "strategy_type": "3"
+    },
+    {
+        "id": "554",
+        "resource_type": "135",
+        "alternative_technology": "981",
+        "strategy_type": "3"
+    },
+    {
+        "id": "555",
+        "resource_type": "138",
+        "alternative_technology": "874",
+        "strategy_type": "3"
+    },
+    {
+        "id": "556",
+        "resource_type": "138",
+        "alternative_technology": "905",
+        "strategy_type": "3"
+    },
+    {
+        "id": "557",
+        "resource_type": "142",
+        "alternative_technology": "1023",
+        "strategy_type": "3"
+    },
+    {
+        "id": "558",
+        "resource_type": "142",
+        "alternative_technology": "1025",
+        "strategy_type": "3"
+    },
+    {
+        "id": "559",
+        "resource_type": "143",
+        "alternative_technology": "1033",
+        "strategy_type": "3"
+    },
+    {
+        "id": "560",
+        "resource_type": "143",
+        "alternative_technology": "1025",
+        "strategy_type": "3"
+    },
+    {
+        "id": "561",
+        "resource_type": "144",
+        "alternative_technology": "1037",
+        "strategy_type": "3"
+    },
+    {
+        "id": "562",
+        "resource_type": "144",
+        "alternative_technology": "1038",
+        "strategy_type": "3"
+    },
+    {
+        "id": "563",
+        "resource_type": "144",
+        "alternative_technology": "1039",
+        "strategy_type": "3"
+    },
+    {
+        "id": "564",
+        "resource_type": "144",
+        "alternative_technology": "1040",
+        "strategy_type": "3"
+    },
+    {
+        "id": "565",
+        "resource_type": "144",
+        "alternative_technology": "1041",
+        "strategy_type": "3"
+    },
+    {
+        "id": "566",
+        "resource_type": "144",
+        "alternative_technology": "1042",
+        "strategy_type": "3"
+    },
+    {
+        "id": "567",
+        "resource_type": "144",
+        "alternative_technology": "1043",
+        "strategy_type": "3"
+    },
+    {
+        "id": "568",
+        "resource_type": "144",
+        "alternative_technology": "1044",
+        "strategy_type": "3"
+    },
+    {
+        "id": "569",
+        "resource_type": "144",
+        "alternative_technology": "1046",
+        "strategy_type": "3"
+    },
+    {
+        "id": "570",
+        "resource_type": "145",
+        "alternative_technology": "1047",
+        "strategy_type": "3"
+    },
+    {
+        "id": "571",
+        "resource_type": "145",
+        "alternative_technology": "1048",
+        "strategy_type": "3"
+    },
+    {
+        "id": "572",
+        "resource_type": "145",
+        "alternative_technology": "1051",
+        "strategy_type": "3"
+    },
+    {
+        "id": "573",
+        "resource_type": "145",
+        "alternative_technology": "1052",
+        "strategy_type": "3"
+    },
+    {
+        "id": "574",
+        "resource_type": "147",
+        "alternative_technology": "1067",
+        "strategy_type": "3"
+    },
+    {
+        "id": "575",
+        "resource_type": "147",
+        "alternative_technology": "1068",
+        "strategy_type": "3"
+    },
+    {
+        "id": "576",
+        "resource_type": "147",
+        "alternative_technology": "1069",
+        "strategy_type": "3"
+    },
+    {
+        "id": "577",
+        "resource_type": "147",
+        "alternative_technology": "141",
+        "strategy_type": "1"
+    },
+    {
+        "id": "578",
+        "resource_type": "148",
+        "alternative_technology": "1076",
+        "strategy_type": "3"
+    },
+    {
+        "id": "579",
+        "resource_type": "148",
+        "alternative_technology": "137",
+        "strategy_type": "3"
+    },
+    {
+        "id": "580",
+        "resource_type": "148",
+        "alternative_technology": "138",
+        "strategy_type": "3"
+    },
+    {
+        "id": "581",
+        "resource_type": "148",
+        "alternative_technology": "141",
+        "strategy_type": "1"
+    },
+    {
+        "id": "582",
+        "resource_type": "148",
+        "alternative_technology": "1079",
+        "strategy_type": "3"
+    },
+    {
+        "id": "583",
+        "resource_type": "148",
+        "alternative_technology": "1080",
+        "strategy_type": "3"
+    },
+    {
+        "id": "584",
+        "resource_type": "149",
+        "alternative_technology": "1081",
+        "strategy_type": "3"
+    },
+    {
+        "id": "585",
+        "resource_type": "149",
+        "alternative_technology": "1082",
+        "strategy_type": "3"
+    },
+    {
+        "id": "586",
+        "resource_type": "149",
+        "alternative_technology": "1083",
+        "strategy_type": "3"
+    },
+    {
+        "id": "587",
+        "resource_type": "149",
+        "alternative_technology": "141",
+        "strategy_type": "1"
+    },
+    {
+        "id": "588",
+        "resource_type": "149",
+        "alternative_technology": "1079",
+        "strategy_type": "3"
+    },
+    {
+        "id": "589",
+        "resource_type": "149",
+        "alternative_technology": "1080",
+        "strategy_type": "3"
+    },
+    {
+        "id": "590",
+        "resource_type": "150",
+        "alternative_technology": "1081",
+        "strategy_type": "3"
+    },
+    {
+        "id": "591",
+        "resource_type": "150",
+        "alternative_technology": "1085",
+        "strategy_type": "3"
+    },
+    {
+        "id": "592",
+        "resource_type": "150",
+        "alternative_technology": "1086",
+        "strategy_type": "3"
+    },
+    {
+        "id": "593",
+        "resource_type": "154",
+        "alternative_technology": "1121",
+        "strategy_type": "3"
+    },
+    {
+        "id": "594",
+        "resource_type": "155",
+        "alternative_technology": "1128",
+        "strategy_type": "3"
+    },
+    {
+        "id": "595",
+        "resource_type": "155",
+        "alternative_technology": "1129",
+        "strategy_type": "3"
+    },
+    {
+        "id": "596",
+        "resource_type": "155",
+        "alternative_technology": "1130",
+        "strategy_type": "3"
+    },
+    {
+        "id": "597",
+        "resource_type": "155",
+        "alternative_technology": "1132",
+        "strategy_type": "3"
+    },
+    {
+        "id": "598",
+        "resource_type": "155",
+        "alternative_technology": "1136",
+        "strategy_type": "3"
+    },
+    {
+        "id": "599",
+        "resource_type": "156",
+        "alternative_technology": "1143",
+        "strategy_type": "3"
+    },
+    {
+        "id": "600",
+        "resource_type": "156",
+        "alternative_technology": "1144",
+        "strategy_type": "1"
+    },
+    {
+        "id": "601",
+        "resource_type": "156",
+        "alternative_technology": "1145",
+        "strategy_type": "1"
+    },
+    {
+        "id": "602",
+        "resource_type": "157",
+        "alternative_technology": "1128",
+        "strategy_type": "3"
+    },
+    {
+        "id": "603",
+        "resource_type": "157",
+        "alternative_technology": "1129",
+        "strategy_type": "3"
+    },
+    {
+        "id": "604",
+        "resource_type": "157",
+        "alternative_technology": "1130",
+        "strategy_type": "3"
+    },
+    {
+        "id": "605",
+        "resource_type": "157",
+        "alternative_technology": "1132",
+        "strategy_type": "3"
+    },
+    {
+        "id": "606",
+        "resource_type": "157",
+        "alternative_technology": "1146",
+        "strategy_type": "1"
+    },
+    {
+        "id": "607",
+        "resource_type": "157",
+        "alternative_technology": "1147",
+        "strategy_type": "1"
+    },
+    {
+        "id": "608",
+        "resource_type": "158",
+        "alternative_technology": "1150",
+        "strategy_type": "3"
+    },
+    {
+        "id": "609",
+        "resource_type": "158",
+        "alternative_technology": "1151",
+        "strategy_type": "3"
+    },
+    {
+        "id": "610",
+        "resource_type": "158",
+        "alternative_technology": "1152",
+        "strategy_type": "3"
+    },
+    {
+        "id": "611",
+        "resource_type": "158",
+        "alternative_technology": "1153",
+        "strategy_type": "3"
+    },
+    {
+        "id": "612",
+        "resource_type": "158",
+        "alternative_technology": "1156",
+        "strategy_type": "1"
+    },
+    {
+        "id": "613",
+        "resource_type": "158",
+        "alternative_technology": "1157",
+        "strategy_type": "1"
+    },
+    {
+        "id": "614",
+        "resource_type": "158",
+        "alternative_technology": "1147",
+        "strategy_type": "1"
+    },
+    {
+        "id": "615",
+        "resource_type": "159",
+        "alternative_technology": "1165",
+        "strategy_type": "1"
+    },
+    {
+        "id": "616",
+        "resource_type": "162",
+        "alternative_technology": "1176",
+        "strategy_type": "3"
+    },
+    {
+        "id": "617",
+        "resource_type": "162",
+        "alternative_technology": "1177",
+        "strategy_type": "1"
+    },
+    {
+        "id": "618",
+        "resource_type": "163",
+        "alternative_technology": "1176",
+        "strategy_type": "3"
+    },
+    {
+        "id": "619",
+        "resource_type": "163",
+        "alternative_technology": "1177",
+        "strategy_type": "1"
+    },
+    {
+        "id": "620",
+        "resource_type": "166",
+        "alternative_technology": "1143",
+        "strategy_type": "3"
+    },
+    {
+        "id": "621",
+        "resource_type": "166",
+        "alternative_technology": "1188",
+        "strategy_type": "3"
+    },
+    {
+        "id": "622",
+        "resource_type": "166",
+        "alternative_technology": "1130",
+        "strategy_type": "3"
+    },
+    {
+        "id": "623",
+        "resource_type": "166",
+        "alternative_technology": "1189",
+        "strategy_type": "3"
+    },
+    {
+        "id": "624",
+        "resource_type": "169",
+        "alternative_technology": "527",
+        "strategy_type": "3"
+    },
+    {
+        "id": "625",
+        "resource_type": "169",
+        "alternative_technology": "1192",
+        "strategy_type": "3"
+    },
+    {
+        "id": "626",
+        "resource_type": "169",
+        "alternative_technology": "1193",
+        "strategy_type": "1"
+    },
+    {
+        "id": "627",
+        "resource_type": "169",
+        "alternative_technology": "1194",
+        "strategy_type": "1"
+    },
+    {
+        "id": "628",
+        "resource_type": "169",
+        "alternative_technology": "528",
+        "strategy_type": "3"
+    },
+    {
+        "id": "629",
+        "resource_type": "172",
+        "alternative_technology": "1196",
+        "strategy_type": "3"
+    },
+    {
+        "id": "630",
+        "resource_type": "172",
+        "alternative_technology": "1197",
+        "strategy_type": "1"
+    },
+    {
+        "id": "631",
+        "resource_type": "172",
+        "alternative_technology": "1198",
+        "strategy_type": "1"
+    },
+    {
+        "id": "632",
+        "resource_type": "172",
+        "alternative_technology": "1201",
+        "strategy_type": "1"
+    },
+    {
+        "id": "633",
+        "resource_type": "172",
+        "alternative_technology": "1202",
+        "strategy_type": "1"
+    },
+    {
+        "id": "634",
+        "resource_type": "172",
+        "alternative_technology": "1203",
+        "strategy_type": "1"
+    },
+    {
+        "id": "635",
+        "resource_type": "175",
+        "alternative_technology": "589",
+        "strategy_type": "3"
+    },
+    {
+        "id": "636",
+        "resource_type": "175",
+        "alternative_technology": "1208",
+        "strategy_type": "1"
+    },
+    {
+        "id": "637",
+        "resource_type": "177",
+        "alternative_technology": "1211",
+        "strategy_type": "1"
+    },
+    {
+        "id": "638",
+        "resource_type": "177",
+        "alternative_technology": "1212",
+        "strategy_type": "3"
+    },
+    {
+        "id": "639",
+        "resource_type": "177",
+        "alternative_technology": "1213",
+        "strategy_type": "3"
+    },
+    {
+        "id": "640",
+        "resource_type": "177",
+        "alternative_technology": "1214",
+        "strategy_type": "1"
+    },
+    {
+        "id": "641",
+        "resource_type": "177",
+        "alternative_technology": "252",
+        "strategy_type": "1"
+    },
+    {
+        "id": "642",
+        "resource_type": "177",
+        "alternative_technology": "1216",
+        "strategy_type": "1"
+    },
+    {
+        "id": "643",
+        "resource_type": "177",
+        "alternative_technology": "1217",
+        "strategy_type": "3"
+    },
+    {
+        "id": "644",
+        "resource_type": "177",
+        "alternative_technology": "1219",
+        "strategy_type": "1"
+    },
+    {
+        "id": "645",
+        "resource_type": "180",
+        "alternative_technology": "1220",
+        "strategy_type": "1"
+    },
+    {
+        "id": "646",
+        "resource_type": "180",
+        "alternative_technology": "1221",
+        "strategy_type": "1"
+    },
+    {
+        "id": "647",
+        "resource_type": "180",
+        "alternative_technology": "1222",
+        "strategy_type": "1"
+    },
+    {
+        "id": "648",
+        "resource_type": "180",
+        "alternative_technology": "1223",
+        "strategy_type": "1"
+    },
+    {
+        "id": "649",
+        "resource_type": "180",
+        "alternative_technology": "1224",
+        "strategy_type": "1"
+    },
+    {
+        "id": "650",
+        "resource_type": "180",
+        "alternative_technology": "1225",
+        "strategy_type": "1"
+    },
+    {
+        "id": "651",
+        "resource_type": "180",
+        "alternative_technology": "1226",
+        "strategy_type": "1"
+    },
+    {
+        "id": "652",
+        "resource_type": "180",
+        "alternative_technology": "1227",
+        "strategy_type": "1"
+    },
+    {
+        "id": "653",
+        "resource_type": "180",
+        "alternative_technology": "1228",
+        "strategy_type": "3"
+    },
+    {
+        "id": "654",
+        "resource_type": "180",
+        "alternative_technology": "1229",
+        "strategy_type": "1"
+    },
+    {
+        "id": "655",
+        "resource_type": "181",
+        "alternative_technology": "1230",
+        "strategy_type": "3"
+    },
+    {
+        "id": "656",
+        "resource_type": "181",
+        "alternative_technology": "1231",
+        "strategy_type": "3"
+    },
+    {
+        "id": "657",
+        "resource_type": "181",
+        "alternative_technology": "1232",
+        "strategy_type": "3"
+    },
+    {
+        "id": "658",
+        "resource_type": "181",
+        "alternative_technology": "1233",
+        "strategy_type": "3"
+    },
+    {
+        "id": "659",
+        "resource_type": "181",
+        "alternative_technology": "310",
+        "strategy_type": "3"
+    },
+    {
+        "id": "660",
+        "resource_type": "181",
+        "alternative_technology": "1236",
+        "strategy_type": "3"
+    },
+    {
+        "id": "661",
+        "resource_type": "182",
+        "alternative_technology": "1245",
+        "strategy_type": "3"
+    },
+    {
+        "id": "662",
+        "resource_type": "183",
+        "alternative_technology": "1192",
+        "strategy_type": "3"
+    },
+    {
+        "id": "663",
+        "resource_type": "183",
+        "alternative_technology": "1248",
+        "strategy_type": "3"
+    },
+    {
+        "id": "664",
+        "resource_type": "183",
+        "alternative_technology": "528",
+        "strategy_type": "3"
+    },
+    {
+        "id": "665",
+        "resource_type": "185",
+        "alternative_technology": "94",
+        "strategy_type": "3"
+    },
+    {
+        "id": "666",
+        "resource_type": "185",
+        "alternative_technology": "1251",
+        "strategy_type": "3"
+    },
+    {
+        "id": "667",
+        "resource_type": "185",
+        "alternative_technology": "1252",
+        "strategy_type": "1"
+    },
+    {
+        "id": "668",
+        "resource_type": "185",
+        "alternative_technology": "1253",
+        "strategy_type": "1"
+    },
+    {
+        "id": "669",
+        "resource_type": "185",
+        "alternative_technology": "1254",
+        "strategy_type": "1"
+    },
+    {
+        "id": "670",
+        "resource_type": "185",
+        "alternative_technology": "95",
+        "strategy_type": "3"
+    },
+    {
+        "id": "671",
+        "resource_type": "186",
+        "alternative_technology": "696",
+        "strategy_type": "3"
+    },
+    {
+        "id": "672",
+        "resource_type": "186",
+        "alternative_technology": "1256",
+        "strategy_type": "3"
+    },
+    {
+        "id": "673",
+        "resource_type": "186",
+        "alternative_technology": "1257",
+        "strategy_type": "3"
+    },
+    {
+        "id": "674",
+        "resource_type": "186",
+        "alternative_technology": "1258",
+        "strategy_type": "1"
+    },
+    {
+        "id": "675",
+        "resource_type": "186",
+        "alternative_technology": "1261",
+        "strategy_type": "3"
+    },
+    {
+        "id": "676",
+        "resource_type": "194",
+        "alternative_technology": "1275",
+        "strategy_type": "3"
+    },
+    {
+        "id": "677",
+        "resource_type": "194",
+        "alternative_technology": "293",
+        "strategy_type": "3"
+    },
+    {
+        "id": "678",
+        "resource_type": "194",
+        "alternative_technology": "295",
+        "strategy_type": "3"
+    },
+    {
+        "id": "679",
+        "resource_type": "194",
+        "alternative_technology": "296",
+        "strategy_type": "3"
+    },
+    {
+        "id": "680",
+        "resource_type": "194",
+        "alternative_technology": "294",
+        "strategy_type": "3"
+    },
+    {
+        "id": "681",
+        "resource_type": "194",
+        "alternative_technology": "297",
+        "strategy_type": "3"
+    },
+    {
+        "id": "682",
+        "resource_type": "194",
+        "alternative_technology": "1277",
+        "strategy_type": "3"
+    },
+    {
+        "id": "683",
+        "resource_type": "203",
+        "alternative_technology": "1299",
+        "strategy_type": "3"
+    },
+    {
+        "id": "684",
+        "resource_type": "203",
+        "alternative_technology": "1300",
+        "strategy_type": "3"
+    },
+    {
+        "id": "685",
+        "resource_type": "203",
+        "alternative_technology": "1305",
+        "strategy_type": "3"
+    },
+    {
+        "id": "686",
+        "resource_type": "203",
+        "alternative_technology": "1308",
+        "strategy_type": "3"
+    },
+    {
+        "id": "687",
+        "resource_type": "204",
+        "alternative_technology": "1309",
+        "strategy_type": "1"
+    },
+    {
+        "id": "688",
+        "resource_type": "204",
+        "alternative_technology": "1310",
+        "strategy_type": "1"
+    },
+    {
+        "id": "689",
+        "resource_type": "204",
+        "alternative_technology": "1311",
+        "strategy_type": "1"
+    },
+    {
+        "id": "690",
+        "resource_type": "204",
+        "alternative_technology": "1312",
+        "strategy_type": "1"
+    },
+    {
+        "id": "691",
+        "resource_type": "204",
+        "alternative_technology": "1313",
+        "strategy_type": "1"
+    },
+    {
+        "id": "692",
+        "resource_type": "204",
+        "alternative_technology": "1314",
+        "strategy_type": "3"
+    },
+    {
+        "id": "693",
+        "resource_type": "204",
+        "alternative_technology": "1315",
+        "strategy_type": "1"
+    },
+    {
+        "id": "694",
+        "resource_type": "205",
+        "alternative_technology": "690",
+        "strategy_type": "3"
+    },
+    {
+        "id": "695",
+        "resource_type": "205",
+        "alternative_technology": "1319",
+        "strategy_type": "1"
+    },
+    {
+        "id": "696",
+        "resource_type": "205",
+        "alternative_technology": "748",
+        "strategy_type": "3"
+    },
+    {
+        "id": "697",
+        "resource_type": "205",
+        "alternative_technology": "1320",
+        "strategy_type": "3"
+    },
+    {
+        "id": "698",
+        "resource_type": "205",
+        "alternative_technology": "747",
+        "strategy_type": "3"
+    },
+    {
+        "id": "699",
+        "resource_type": "205",
+        "alternative_technology": "1324",
+        "strategy_type": "1"
+    },
+    {
+        "id": "700",
+        "resource_type": "206",
+        "alternative_technology": "1325",
+        "strategy_type": "3"
+    },
+    {
+        "id": "701",
+        "resource_type": "206",
+        "alternative_technology": "506",
+        "strategy_type": "3"
+    },
+    {
+        "id": "702",
+        "resource_type": "206",
+        "alternative_technology": "1326",
+        "strategy_type": "3"
+    },
+    {
+        "id": "703",
+        "resource_type": "207",
+        "alternative_technology": "272",
+        "strategy_type": "3"
+    },
+    {
+        "id": "704",
+        "resource_type": "207",
+        "alternative_technology": "314",
+        "strategy_type": "1"
+    },
+    {
+        "id": "705",
+        "resource_type": "207",
+        "alternative_technology": "1329",
+        "strategy_type": "3"
+    },
+    {
+        "id": "706",
+        "resource_type": "207",
+        "alternative_technology": "1330",
+        "strategy_type": "3"
+    },
+    {
+        "id": "707",
+        "resource_type": "207",
+        "alternative_technology": "1332",
+        "strategy_type": "1"
+    },
+    {
+        "id": "708",
+        "resource_type": "208",
+        "alternative_technology": "802",
+        "strategy_type": "3"
+    },
+    {
+        "id": "709",
+        "resource_type": "208",
+        "alternative_technology": "803",
+        "strategy_type": "3"
+    },
+    {
+        "id": "710",
+        "resource_type": "208",
+        "alternative_technology": "808",
+        "strategy_type": "1"
+    },
+    {
+        "id": "711",
+        "resource_type": "208",
+        "alternative_technology": "1336",
+        "strategy_type": "1"
+    },
+    {
+        "id": "712",
+        "resource_type": "209",
+        "alternative_technology": "1032",
+        "strategy_type": "3"
+    },
+    {
+        "id": "713",
+        "resource_type": "209",
+        "alternative_technology": "1337",
+        "strategy_type": "3"
+    },
+    {
+        "id": "714",
+        "resource_type": "209",
+        "alternative_technology": "1338",
+        "strategy_type": "3"
+    },
+    {
+        "id": "715",
+        "resource_type": "211",
+        "alternative_technology": "167",
+        "strategy_type": "1"
+    },
+    {
+        "id": "716",
+        "resource_type": "211",
+        "alternative_technology": "1342",
+        "strategy_type": "1"
+    },
+    {
+        "id": "717",
+        "resource_type": "211",
+        "alternative_technology": "1344",
+        "strategy_type": "3"
+    },
+    {
+        "id": "718",
+        "resource_type": "211",
+        "alternative_technology": "1350",
+        "strategy_type": "1"
+    },
+    {
+        "id": "719",
+        "resource_type": "213",
+        "alternative_technology": "1351",
+        "strategy_type": "3"
+    },
+    {
+        "id": "720",
+        "resource_type": "213",
+        "alternative_technology": "1352",
+        "strategy_type": "3"
+    },
+    {
+        "id": "721",
+        "resource_type": "215",
+        "alternative_technology": "790",
+        "strategy_type": "1"
+    },
+    {
+        "id": "722",
+        "resource_type": "215",
+        "alternative_technology": "791",
+        "strategy_type": "1"
+    },
+    {
+        "id": "723",
+        "resource_type": "215",
+        "alternative_technology": "1363",
+        "strategy_type": "3"
+    },
+    {
+        "id": "724",
+        "resource_type": "216",
+        "alternative_technology": "1372",
+        "strategy_type": "3"
+    },
+    {
+        "id": "725",
+        "resource_type": "217",
+        "alternative_technology": "266",
+        "strategy_type": "1"
+    },
+    {
+        "id": "726",
+        "resource_type": "217",
+        "alternative_technology": "269",
+        "strategy_type": "3"
+    },
+    {
+        "id": "727",
+        "resource_type": "218",
+        "alternative_technology": "266",
+        "strategy_type": "1"
+    },
+    {
+        "id": "728",
+        "resource_type": "218",
+        "alternative_technology": "1379",
+        "strategy_type": "3"
+    },
+    {
+        "id": "729",
+        "resource_type": "219",
+        "alternative_technology": "1381",
+        "strategy_type": "3"
+    },
+    {
+        "id": "730",
+        "resource_type": "220",
+        "alternative_technology": "266",
+        "strategy_type": "1"
+    },
+    {
+        "id": "731",
+        "resource_type": "220",
+        "alternative_technology": "314",
+        "strategy_type": "1"
+    },
+    {
+        "id": "732",
+        "resource_type": "220",
+        "alternative_technology": "1390",
+        "strategy_type": "3"
+    },
+    {
+        "id": "733",
+        "resource_type": "224",
+        "alternative_technology": "266",
+        "strategy_type": "1"
+    },
+    {
+        "id": "734",
+        "resource_type": "224",
+        "alternative_technology": "269",
+        "strategy_type": "3"
+    },
+    {
+        "id": "735",
+        "resource_type": "225",
+        "alternative_technology": "266",
+        "strategy_type": "1"
+    },
+    {
+        "id": "736",
+        "resource_type": "225",
+        "alternative_technology": "1379",
+        "strategy_type": "3"
+    },
+    {
+        "id": "737",
+        "resource_type": "234",
+        "alternative_technology": "690",
+        "strategy_type": "1"
+    },
+    {
+        "id": "738",
+        "resource_type": "234",
+        "alternative_technology": "694",
+        "strategy_type": "1"
+    },
+    {
+        "id": "739",
+        "resource_type": "234",
+        "alternative_technology": "695",
+        "strategy_type": "1"
+    },
+    {
+        "id": "740",
+        "resource_type": "234",
+        "alternative_technology": "691",
+        "strategy_type": "1"
+    },
+    {
+        "id": "741",
+        "resource_type": "240",
+        "alternative_technology": "336",
+        "strategy_type": "1"
+    },
+    {
+        "id": "742",
+        "resource_type": "240",
+        "alternative_technology": "332",
+        "strategy_type": "1"
+    },
+    {
+        "id": "743",
+        "resource_type": "240",
+        "alternative_technology": "333",
+        "strategy_type": "1"
+    },
+    {
+        "id": "744",
+        "resource_type": "240",
+        "alternative_technology": "334",
+        "strategy_type": "1"
+    },
+    {
+        "id": "745",
+        "resource_type": "245",
+        "alternative_technology": "1208",
+        "strategy_type": "1"
+    },
+    {
+        "id": "746",
+        "resource_type": "248",
+        "alternative_technology": "1484",
+        "strategy_type": "3"
+    },
+    {
+        "id": "747",
+        "resource_type": "248",
+        "alternative_technology": "1038",
+        "strategy_type": "3"
+    },
+    {
+        "id": "748",
+        "resource_type": "248",
+        "alternative_technology": "1037",
+        "strategy_type": "3"
+    },
+    {
+        "id": "749",
+        "resource_type": "248",
+        "alternative_technology": "1043",
+        "strategy_type": "3"
+    },
+    {
+        "id": "750",
+        "resource_type": "251",
+        "alternative_technology": "1501",
+        "strategy_type": "3"
+    },
+    {
+        "id": "751",
+        "resource_type": "251",
+        "alternative_technology": "905",
+        "strategy_type": "3"
+    },
+    {
+        "id": "752",
+        "resource_type": "251",
+        "alternative_technology": "815",
+        "strategy_type": "3"
+    },
+    {
+        "id": "753",
+        "resource_type": "251",
+        "alternative_technology": "820",
+        "strategy_type": "3"
+    },
+    {
+        "id": "754",
+        "resource_type": "254",
+        "alternative_technology": "1505",
+        "strategy_type": "3"
+    },
+    {
+        "id": "755",
+        "resource_type": "255",
+        "alternative_technology": "402",
+        "strategy_type": "3"
+    },
+    {
+        "id": "756",
+        "resource_type": "259",
+        "alternative_technology": "409",
+        "strategy_type": "3"
+    },
+    {
+        "id": "757",
+        "resource_type": "262",
+        "alternative_technology": "1537",
+        "strategy_type": "3"
+    },
+    {
+        "id": "758",
+        "resource_type": "262",
+        "alternative_technology": "234",
+        "strategy_type": "3"
+    },
+    {
+        "id": "759",
+        "resource_type": "264",
+        "alternative_technology": "344",
+        "strategy_type": "3"
+    },
+    {
+        "id": "760",
+        "resource_type": "264",
+        "alternative_technology": "1543",
+        "strategy_type": "3"
+    },
+    {
+        "id": "761",
+        "resource_type": "266",
+        "alternative_technology": "330",
+        "strategy_type": "3"
+    },
+    {
+        "id": "762",
+        "resource_type": "266",
+        "alternative_technology": "1546",
+        "strategy_type": "3"
+    },
+    {
+        "id": "763",
+        "resource_type": "267",
+        "alternative_technology": "1068",
+        "strategy_type": "3"
+    },
+    {
+        "id": "764",
+        "resource_type": "267",
+        "alternative_technology": "1549",
+        "strategy_type": "3"
+    },
+    {
+        "id": "765",
+        "resource_type": "268",
+        "alternative_technology": "330",
+        "strategy_type": "3"
+    },
+    {
+        "id": "766",
+        "resource_type": "268",
+        "alternative_technology": "1556",
+        "strategy_type": "3"
+    },
+    {
+        "id": "767",
+        "resource_type": "270",
+        "alternative_technology": "1570",
+        "strategy_type": "3"
+    },
+    {
+        "id": "768",
+        "resource_type": "270",
+        "alternative_technology": "1571",
+        "strategy_type": "3"
+    },
+    {
+        "id": "769",
+        "resource_type": "271",
+        "alternative_technology": "1230",
+        "strategy_type": "3"
+    },
+    {
+        "id": "770",
+        "resource_type": "271",
+        "alternative_technology": "1231",
+        "strategy_type": "3"
+    },
+    {
+        "id": "771",
+        "resource_type": "271",
+        "alternative_technology": "1232",
+        "strategy_type": "3"
+    },
+    {
+        "id": "772",
+        "resource_type": "272",
+        "alternative_technology": "1583",
+        "strategy_type": "3"
+    },
+    {
+        "id": "773",
+        "resource_type": "273",
+        "alternative_technology": "1585",
+        "strategy_type": "3"
+    },
+    {
+        "id": "774",
+        "resource_type": "275",
+        "alternative_technology": "1591",
+        "strategy_type": "3"
+    },
+    {
+        "id": "775",
+        "resource_type": "275",
+        "alternative_technology": "1593",
+        "strategy_type": "3"
+    },
+    {
+        "id": "776",
+        "resource_type": "275",
+        "alternative_technology": "1594",
+        "strategy_type": "3"
+    },
+    {
+        "id": "777",
+        "resource_type": "282",
+        "alternative_technology": "94",
+        "strategy_type": "3"
+    },
+    {
+        "id": "778",
+        "resource_type": "282",
+        "alternative_technology": "95",
+        "strategy_type": "3"
+    },
+    {
+        "id": "779",
+        "resource_type": "284",
+        "alternative_technology": "1600",
+        "strategy_type": "3"
+    },
+    {
+        "id": "780",
+        "resource_type": "284",
+        "alternative_technology": "548",
+        "strategy_type": "3"
+    },
+    {
+        "id": "781",
+        "resource_type": "287",
+        "alternative_technology": "1605",
+        "strategy_type": "3"
+    },
+    {
+        "id": "782",
+        "resource_type": "287",
+        "alternative_technology": "1606",
+        "strategy_type": "3"
+    },
+    {
+        "id": "783",
+        "resource_type": "287",
+        "alternative_technology": "1609",
+        "strategy_type": "3"
+    },
+    {
+        "id": "784",
+        "resource_type": "290",
+        "alternative_technology": "1068",
+        "strategy_type": "3"
+    },
+    {
+        "id": "785",
+        "resource_type": "291",
+        "alternative_technology": "1631",
+        "strategy_type": "3"
+    },
+    {
+        "id": "786",
+        "resource_type": "292",
+        "alternative_technology": "1631",
+        "strategy_type": "3"
+    },
+    {
+        "id": "787",
+        "resource_type": "293",
+        "alternative_technology": "144",
+        "strategy_type": "3"
+    },
+    {
+        "id": "788",
+        "resource_type": "293",
+        "alternative_technology": "137",
+        "strategy_type": "3"
+    },
+    {
+        "id": "789",
+        "resource_type": "293",
+        "alternative_technology": "138",
+        "strategy_type": "3"
+    },
+    {
+        "id": "790",
+        "resource_type": "293",
+        "alternative_technology": "141",
+        "strategy_type": "1"
+    },
+    {
+        "id": "791",
+        "resource_type": "293",
+        "alternative_technology": "1079",
+        "strategy_type": "3"
+    },
+    {
+        "id": "792",
+        "resource_type": "295",
+        "alternative_technology": "122",
+        "strategy_type": "1"
+    },
+    {
+        "id": "793",
+        "resource_type": "295",
+        "alternative_technology": "1652",
+        "strategy_type": "3"
+    },
+    {
+        "id": "794",
+        "resource_type": "295",
+        "alternative_technology": "104",
+        "strategy_type": "3"
+    },
+    {
+        "id": "795",
+        "resource_type": "297",
+        "alternative_technology": "783",
+        "strategy_type": "1"
+    },
+    {
+        "id": "796",
+        "resource_type": "299",
+        "alternative_technology": "13",
+        "strategy_type": "1"
+    },
+    {
+        "id": "797",
+        "resource_type": "299",
+        "alternative_technology": "1660",
+        "strategy_type": "1"
+    },
+    {
+        "id": "798",
+        "resource_type": "299",
+        "alternative_technology": "1661",
+        "strategy_type": "1"
+    },
+    {
+        "id": "799",
+        "resource_type": "299",
+        "alternative_technology": "1662",
+        "strategy_type": "1"
+    },
+    {
+        "id": "800",
+        "resource_type": "299",
+        "alternative_technology": "1663",
+        "strategy_type": "1"
+    },
+    {
+        "id": "801",
+        "resource_type": "299",
+        "alternative_technology": "1664",
+        "strategy_type": "1"
+    },
+    {
+        "id": "802",
+        "resource_type": "299",
+        "alternative_technology": "1665",
+        "strategy_type": "1"
+    },
+    {
+        "id": "803",
+        "resource_type": "299",
+        "alternative_technology": "1666",
+        "strategy_type": "1"
+    },
+    {
+        "id": "804",
+        "resource_type": "299",
+        "alternative_technology": "1667",
+        "strategy_type": "1"
+    },
+    {
+        "id": "805",
+        "resource_type": "299",
+        "alternative_technology": "1668",
+        "strategy_type": "1"
+    },
+    {
+        "id": "806",
+        "resource_type": "300",
+        "alternative_technology": "1669",
+        "strategy_type": "3"
+    },
+    {
+        "id": "807",
+        "resource_type": "300",
+        "alternative_technology": "1489",
+        "strategy_type": "3"
+    },
+    {
+        "id": "808",
+        "resource_type": "300",
+        "alternative_technology": "1037",
+        "strategy_type": "3"
+    },
+    {
+        "id": "809",
+        "resource_type": "300",
+        "alternative_technology": "1038",
+        "strategy_type": "3"
+    },
+    {
+        "id": "810",
+        "resource_type": "302",
+        "alternative_technology": "1676",
+        "strategy_type": "3"
+    },
+    {
+        "id": "811",
+        "resource_type": "302",
+        "alternative_technology": "1677",
+        "strategy_type": "3"
+    },
+    {
+        "id": "812",
+        "resource_type": "302",
+        "alternative_technology": "1678",
+        "strategy_type": "3"
+    },
+    {
+        "id": "813",
+        "resource_type": "304",
+        "alternative_technology": "1528",
+        "strategy_type": "3"
+    },
+    {
+        "id": "814",
+        "resource_type": "313",
+        "alternative_technology": "783",
+        "strategy_type": "1"
+    },
+    {
+        "id": "815",
+        "resource_type": "314",
+        "alternative_technology": "1708",
+        "strategy_type": "3"
+    },
+    {
+        "id": "816",
+        "resource_type": "314",
+        "alternative_technology": "630",
+        "strategy_type": "3"
+    },
+    {
+        "id": "817",
+        "resource_type": "314",
+        "alternative_technology": "1718",
+        "strategy_type": "3"
+    },
+    {
+        "id": "818",
+        "resource_type": "314",
+        "alternative_technology": "637",
+        "strategy_type": "3"
+    },
+    {
+        "id": "819",
+        "resource_type": "315",
+        "alternative_technology": "1711",
+        "strategy_type": "3"
+    },
+    {
+        "id": "820",
+        "resource_type": "315",
+        "alternative_technology": "630",
+        "strategy_type": "3"
+    },
+    {
+        "id": "821",
+        "resource_type": "315",
+        "alternative_technology": "1718",
+        "strategy_type": "3"
+    },
+    {
+        "id": "822",
+        "resource_type": "315",
+        "alternative_technology": "637",
+        "strategy_type": "3"
+    },
+    {
+        "id": "823",
+        "resource_type": "317",
+        "alternative_technology": "1712",
+        "strategy_type": "3"
+    },
+    {
+        "id": "824",
+        "resource_type": "317",
+        "alternative_technology": "1713",
+        "strategy_type": "3"
+    },
+    {
+        "id": "825",
+        "resource_type": "317",
+        "alternative_technology": "1714",
+        "strategy_type": "3"
+    },
+    {
+        "id": "826",
+        "resource_type": "319",
+        "alternative_technology": "1711",
+        "strategy_type": "3"
+    },
+    {
+        "id": "827",
+        "resource_type": "319",
+        "alternative_technology": "630",
+        "strategy_type": "3"
+    },
+    {
+        "id": "828",
+        "resource_type": "319",
+        "alternative_technology": "1718",
+        "strategy_type": "3"
+    },
+    {
+        "id": "829",
+        "resource_type": "322",
+        "alternative_technology": "1708",
+        "strategy_type": "3"
+    },
+    {
+        "id": "830",
+        "resource_type": "322",
+        "alternative_technology": "1720",
+        "strategy_type": "3"
+    },
+    {
+        "id": "831",
+        "resource_type": "322",
+        "alternative_technology": "1721",
+        "strategy_type": "3"
+    },
+    {
+        "id": "832",
+        "resource_type": "322",
+        "alternative_technology": "1726",
+        "strategy_type": "3"
+    },
+    {
+        "id": "833",
+        "resource_type": "324",
+        "alternative_technology": "1711",
+        "strategy_type": "3"
+    },
+    {
+        "id": "834",
+        "resource_type": "324",
+        "alternative_technology": "630",
+        "strategy_type": "3"
+    },
+    {
+        "id": "835",
+        "resource_type": "324",
+        "alternative_technology": "1729",
+        "strategy_type": "3"
+    },
+    {
+        "id": "836",
+        "resource_type": "326",
+        "alternative_technology": "1718",
+        "strategy_type": "3"
+    },
+    {
+        "id": "837",
+        "resource_type": "326",
+        "alternative_technology": "1741",
+        "strategy_type": "3"
+    },
+    {
+        "id": "838",
+        "resource_type": "331",
+        "alternative_technology": "1744",
+        "strategy_type": "3"
+    },
+    {
+        "id": "839",
+        "resource_type": "331",
+        "alternative_technology": "1745",
+        "strategy_type": "3"
+    },
+    {
+        "id": "840",
+        "resource_type": "331",
+        "alternative_technology": "1770",
+        "strategy_type": "3"
+    },
+    {
+        "id": "841",
+        "resource_type": "331",
+        "alternative_technology": "1769",
+        "strategy_type": "3"
+    },
+    {
+        "id": "842",
+        "resource_type": "335",
+        "alternative_technology": "401",
+        "strategy_type": "1"
+    },
+    {
+        "id": "843",
+        "resource_type": "335",
+        "alternative_technology": "1762",
+        "strategy_type": "1"
+    },
+    {
+        "id": "844",
+        "resource_type": "335",
+        "alternative_technology": "1763",
+        "strategy_type": "1"
+    },
+    {
+        "id": "845",
+        "resource_type": "335",
+        "alternative_technology": "1764",
+        "strategy_type": "1"
+    },
+    {
+        "id": "846",
+        "resource_type": "336",
+        "alternative_technology": "128",
+        "strategy_type": "1"
+    },
+    {
+        "id": "847",
+        "resource_type": "336",
+        "alternative_technology": "1767",
+        "strategy_type": "3"
+    },
+    {
+        "id": "848",
+        "resource_type": "336",
+        "alternative_technology": "548",
+        "strategy_type": "3"
+    },
+    {
+        "id": "849",
+        "resource_type": "336",
+        "alternative_technology": "1769",
+        "strategy_type": "3"
+    },
+    {
+        "id": "850",
+        "resource_type": "336",
+        "alternative_technology": "1770",
+        "strategy_type": "3"
+    },
+    {
+        "id": "851",
+        "resource_type": "340",
+        "alternative_technology": "1767",
+        "strategy_type": "3"
+    },
+    {
+        "id": "852",
+        "resource_type": "340",
+        "alternative_technology": "548",
+        "strategy_type": "3"
+    },
+    {
+        "id": "853",
+        "resource_type": "340",
+        "alternative_technology": "128",
+        "strategy_type": "1"
+    },
+    {
+        "id": "854",
+        "resource_type": "340",
+        "alternative_technology": "1769",
+        "strategy_type": "3"
+    },
+    {
+        "id": "855",
+        "resource_type": "340",
+        "alternative_technology": "1770",
+        "strategy_type": "3"
+    },
+    {
+        "id": "856",
+        "resource_type": "341",
+        "alternative_technology": "1767",
+        "strategy_type": "3"
+    },
+    {
+        "id": "857",
+        "resource_type": "341",
+        "alternative_technology": "32",
+        "strategy_type": "3"
+    },
+    {
+        "id": "858",
+        "resource_type": "341",
+        "alternative_technology": "1773",
+        "strategy_type": "3"
+    },
+    {
+        "id": "859",
+        "resource_type": "341",
+        "alternative_technology": "34",
+        "strategy_type": "3"
+    },
+    {
+        "id": "860",
+        "resource_type": "344",
+        "alternative_technology": "1024",
+        "strategy_type": "1"
+    },
+    {
+        "id": "861",
+        "resource_type": "344",
+        "alternative_technology": "1777",
+        "strategy_type": "3"
+    },
+    {
+        "id": "862",
+        "resource_type": "344",
+        "alternative_technology": "1033",
+        "strategy_type": "3"
+    },
+    {
+        "id": "863",
+        "resource_type": "346",
+        "alternative_technology": "1786",
+        "strategy_type": "3"
+    },
+    {
+        "id": "864",
+        "resource_type": "346",
+        "alternative_technology": "1787",
+        "strategy_type": "3"
+    },
+    {
+        "id": "865",
+        "resource_type": "346",
+        "alternative_technology": "1788",
+        "strategy_type": "3"
+    },
+    {
+        "id": "866",
+        "resource_type": "346",
+        "alternative_technology": "1790",
+        "strategy_type": "3"
+    },
+    {
+        "id": "867",
+        "resource_type": "346",
+        "alternative_technology": "1794",
+        "strategy_type": "3"
+    },
+    {
+        "id": "868",
+        "resource_type": "347",
+        "alternative_technology": "1795",
+        "strategy_type": "3"
+    },
+    {
+        "id": "869",
+        "resource_type": "347",
+        "alternative_technology": "53",
+        "strategy_type": "3"
+    },
+    {
+        "id": "870",
+        "resource_type": "351",
+        "alternative_technology": "1804",
+        "strategy_type": "3"
+    },
+    {
+        "id": "871",
+        "resource_type": "351",
+        "alternative_technology": "1809",
+        "strategy_type": "3"
+    },
+    {
+        "id": "872",
+        "resource_type": "354",
+        "alternative_technology": "237",
+        "strategy_type": "3"
+    },
+    {
+        "id": "873",
+        "resource_type": "354",
+        "alternative_technology": "1541",
+        "strategy_type": "3"
+    },
+    {
+        "id": "874",
+        "resource_type": "354",
+        "alternative_technology": "1811",
+        "strategy_type": "3"
+    },
+    {
+        "id": "875",
+        "resource_type": "354",
+        "alternative_technology": "1230",
+        "strategy_type": "3"
+    },
+    {
+        "id": "876",
+        "resource_type": "354",
+        "alternative_technology": "234",
+        "strategy_type": "3"
+    },
+    {
+        "id": "877",
+        "resource_type": "354",
+        "alternative_technology": "1812",
+        "strategy_type": "3"
+    },
+    {
+        "id": "878",
+        "resource_type": "354",
+        "alternative_technology": "1813",
+        "strategy_type": "3"
+    },
+    {
+        "id": "879",
+        "resource_type": "354",
+        "alternative_technology": "1540",
+        "strategy_type": "3"
+    },
+    {
+        "id": "880",
+        "resource_type": "354",
+        "alternative_technology": "1814",
+        "strategy_type": "3"
+    },
+    {
+        "id": "881",
+        "resource_type": "354",
+        "alternative_technology": "235",
+        "strategy_type": "3"
+    },
+    {
+        "id": "882",
+        "resource_type": "355",
+        "alternative_technology": "1815",
+        "strategy_type": "3"
+    },
+    {
+        "id": "883",
+        "resource_type": "355",
+        "alternative_technology": "1820",
+        "strategy_type": "1"
+    },
+    {
+        "id": "884",
+        "resource_type": "355",
+        "alternative_technology": "1821",
+        "strategy_type": "3"
+    },
+    {
+        "id": "885",
+        "resource_type": "355",
+        "alternative_technology": "1822",
+        "strategy_type": "3"
+    },
+    {
+        "id": "886",
+        "resource_type": "362",
+        "alternative_technology": "1013",
+        "strategy_type": "3"
+    },
+    {
+        "id": "887",
+        "resource_type": "379",
+        "alternative_technology": "371",
+        "strategy_type": "3"
+    },
+    {
+        "id": "888",
+        "resource_type": "379",
+        "alternative_technology": "1570",
+        "strategy_type": "3"
+    },
+    {
+        "id": "889",
+        "resource_type": "388",
+        "alternative_technology": "547",
+        "strategy_type": "1"
+    },
+    {
+        "id": "890",
+        "resource_type": "388",
+        "alternative_technology": "625",
+        "strategy_type": "3"
+    },
+    {
+        "id": "891",
+        "resource_type": "388",
+        "alternative_technology": "551",
+        "strategy_type": "3"
+    },
+    {
+        "id": "892",
+        "resource_type": "388",
+        "alternative_technology": "552",
+        "strategy_type": "1"
+    },
+    {
+        "id": "893",
+        "resource_type": "388",
+        "alternative_technology": "548",
+        "strategy_type": "3"
+    },
+    {
+        "id": "894",
+        "resource_type": "391",
+        "alternative_technology": "1849",
+        "strategy_type": "3"
+    },
+    {
+        "id": "895",
+        "resource_type": "391",
+        "alternative_technology": "1850",
+        "strategy_type": "3"
+    },
+    {
+        "id": "896",
+        "resource_type": "392",
+        "alternative_technology": "1851",
+        "strategy_type": "3"
+    },
+    {
+        "id": "897",
+        "resource_type": "394",
+        "alternative_technology": "1870",
+        "strategy_type": "3"
+    },
+    {
+        "id": "898",
+        "resource_type": "397",
+        "alternative_technology": "167",
+        "strategy_type": "1"
+    },
+    {
+        "id": "899",
+        "resource_type": "397",
+        "alternative_technology": "1342",
+        "strategy_type": "1"
+    },
+    {
+        "id": "900",
+        "resource_type": "397",
+        "alternative_technology": "168",
+        "strategy_type": "1"
+    },
+    {
+        "id": "901",
+        "resource_type": "397",
+        "alternative_technology": "1881",
+        "strategy_type": "3"
+    },
+    {
+        "id": "902",
+        "resource_type": "401",
+        "alternative_technology": "1890",
+        "strategy_type": "3"
+    },
+    {
+        "id": "903",
+        "resource_type": "401",
+        "alternative_technology": "1891",
+        "strategy_type": "3"
+    },
+    {
+        "id": "904",
+        "resource_type": "401",
+        "alternative_technology": "1892",
+        "strategy_type": "3"
+    },
+    {
+        "id": "905",
+        "resource_type": "401",
+        "alternative_technology": "1893",
+        "strategy_type": "3"
+    },
+    {
+        "id": "906",
+        "resource_type": "401",
+        "alternative_technology": "751",
+        "strategy_type": "3"
+    },
+    {
+        "id": "907",
+        "resource_type": "401",
+        "alternative_technology": "691",
+        "strategy_type": "3"
+    },
+    {
+        "id": "908",
+        "resource_type": "401",
+        "alternative_technology": "697",
+        "strategy_type": "3"
+    },
+    {
+        "id": "909",
+        "resource_type": "403",
+        "alternative_technology": "472",
+        "strategy_type": "3"
+    },
+    {
+        "id": "910",
+        "resource_type": "403",
+        "alternative_technology": "478",
+        "strategy_type": "3"
+    },
+    {
+        "id": "911",
+        "resource_type": "416",
+        "alternative_technology": "1931",
+        "strategy_type": "3"
+    },
+    {
+        "id": "912",
+        "resource_type": "416",
+        "alternative_technology": "1932",
+        "strategy_type": "3"
+    },
+    {
+        "id": "913",
+        "resource_type": "416",
+        "alternative_technology": "1933",
+        "strategy_type": "3"
+    },
+    {
+        "id": "914",
+        "resource_type": "419",
+        "alternative_technology": "272",
+        "strategy_type": "3"
+    },
+    {
+        "id": "915",
+        "resource_type": "419",
+        "alternative_technology": "1329",
+        "strategy_type": "3"
+    },
+    {
+        "id": "916",
+        "resource_type": "419",
+        "alternative_technology": "1330",
+        "strategy_type": "3"
+    },
+    {
+        "id": "917",
+        "resource_type": "419",
+        "alternative_technology": "1328",
+        "strategy_type": "3"
+    },
+    {
+        "id": "918",
+        "resource_type": "419",
+        "alternative_technology": "1943",
+        "strategy_type": "3"
+    },
+    {
+        "id": "919",
+        "resource_type": "422",
+        "alternative_technology": "176",
+        "strategy_type": "3"
+    },
+    {
+        "id": "920",
+        "resource_type": "425",
+        "alternative_technology": "1947",
+        "strategy_type": "3"
+    },
+    {
+        "id": "921",
+        "resource_type": "425",
+        "alternative_technology": "361",
+        "strategy_type": "3"
+    },
+    {
+        "id": "922",
+        "resource_type": "425",
+        "alternative_technology": "411",
+        "strategy_type": "3"
+    },
+    {
+        "id": "923",
+        "resource_type": "425",
+        "alternative_technology": "363",
+        "strategy_type": "3"
+    },
+    {
+        "id": "924",
+        "resource_type": "425",
+        "alternative_technology": "1948",
+        "strategy_type": "3"
+    },
+    {
+        "id": "925",
+        "resource_type": "425",
+        "alternative_technology": "1950",
+        "strategy_type": "3"
+    },
+    {
+        "id": "926",
+        "resource_type": "425",
+        "alternative_technology": "1951",
+        "strategy_type": "3"
+    },
+    {
+        "id": "927",
+        "resource_type": "427",
+        "alternative_technology": "96",
+        "strategy_type": "3"
+    },
+    {
+        "id": "928",
+        "resource_type": "427",
+        "alternative_technology": "94",
+        "strategy_type": "3"
+    },
+    {
+        "id": "929",
+        "resource_type": "427",
+        "alternative_technology": "1251",
+        "strategy_type": "3"
+    },
+    {
+        "id": "930",
+        "resource_type": "427",
+        "alternative_technology": "97",
+        "strategy_type": "3"
+    },
+    {
+        "id": "931",
+        "resource_type": "427",
+        "alternative_technology": "98",
+        "strategy_type": "3"
+    },
+    {
+        "id": "932",
+        "resource_type": "427",
+        "alternative_technology": "197",
+        "strategy_type": "3"
+    },
+    {
+        "id": "933",
+        "resource_type": "427",
+        "alternative_technology": "102",
+        "strategy_type": "3"
+    },
+    {
+        "id": "934",
+        "resource_type": "430",
+        "alternative_technology": "1954",
+        "strategy_type": "3"
+    },
+    {
+        "id": "935",
+        "resource_type": "430",
+        "alternative_technology": "1955",
+        "strategy_type": "3"
+    },
+    {
+        "id": "936",
+        "resource_type": "430",
+        "alternative_technology": "1956",
+        "strategy_type": "3"
+    },
+    {
+        "id": "937",
+        "resource_type": "432",
+        "alternative_technology": "1973",
+        "strategy_type": "3"
+    },
+    {
+        "id": "938",
+        "resource_type": "432",
+        "alternative_technology": "1435",
+        "strategy_type": "3"
+    },
+    {
+        "id": "939",
+        "resource_type": "432",
+        "alternative_technology": "1974",
+        "strategy_type": "3"
+    },
+    {
+        "id": "940",
+        "resource_type": "437",
+        "alternative_technology": "852",
+        "strategy_type": "3"
+    },
+    {
+        "id": "941",
+        "resource_type": "437",
+        "alternative_technology": "1989",
+        "strategy_type": "3"
+    },
+    {
+        "id": "942",
+        "resource_type": "437",
+        "alternative_technology": "1990",
+        "strategy_type": "3"
+    },
+    {
+        "id": "943",
+        "resource_type": "444",
+        "alternative_technology": "137",
+        "strategy_type": "3"
+    },
+    {
+        "id": "944",
+        "resource_type": "444",
+        "alternative_technology": "144",
+        "strategy_type": "3"
+    },
+    {
+        "id": "945",
+        "resource_type": "444",
+        "alternative_technology": "138",
+        "strategy_type": "3"
+    },
+    {
+        "id": "946",
+        "resource_type": "444",
+        "alternative_technology": "1080",
+        "strategy_type": "3"
+    },
+    {
+        "id": "947",
+        "resource_type": "444",
+        "alternative_technology": "142",
+        "strategy_type": "3"
+    },
+    {
+        "id": "948",
+        "resource_type": "446",
+        "alternative_technology": "141",
+        "strategy_type": "1"
+    },
+    {
+        "id": "949",
+        "resource_type": "446",
+        "alternative_technology": "1640",
+        "strategy_type": "1"
+    },
+    {
+        "id": "950",
+        "resource_type": "446",
+        "alternative_technology": "138",
+        "strategy_type": "1"
+    },
+    {
+        "id": "951",
+        "resource_type": "446",
+        "alternative_technology": "1641",
+        "strategy_type": "1"
+    },
+    {
+        "id": "952",
+        "resource_type": "446",
+        "alternative_technology": "1997",
+        "strategy_type": "1"
+    },
+    {
+        "id": "953",
+        "resource_type": "446",
+        "alternative_technology": "1064",
+        "strategy_type": "1"
+    },
+    {
+        "id": "954",
+        "resource_type": "446",
+        "alternative_technology": "1998",
+        "strategy_type": "1"
+    },
+    {
+        "id": "955",
+        "resource_type": "446",
+        "alternative_technology": "1999",
+        "strategy_type": "1"
+    },
+    {
+        "id": "956",
+        "resource_type": "446",
+        "alternative_technology": "145",
+        "strategy_type": "1"
+    },
+    {
+        "id": "957",
+        "resource_type": "446",
+        "alternative_technology": "2000",
+        "strategy_type": "1"
+    },
+    {
+        "id": "958",
+        "resource_type": "447",
+        "alternative_technology": "2001",
+        "strategy_type": "3"
+    },
+    {
+        "id": "959",
+        "resource_type": "447",
+        "alternative_technology": "2002",
+        "strategy_type": "3"
+    },
+    {
+        "id": "960",
+        "resource_type": "447",
+        "alternative_technology": "43",
+        "strategy_type": "3"
+    },
+    {
+        "id": "961",
+        "resource_type": "458",
+        "alternative_technology": "1776",
+        "strategy_type": "3"
+    },
+    {
+        "id": "962",
+        "resource_type": "458",
+        "alternative_technology": "2007",
+        "strategy_type": "3"
+    },
+    {
+        "id": "963",
+        "resource_type": "458",
+        "alternative_technology": "1338",
+        "strategy_type": "3"
+    },
+    {
+        "id": "964",
+        "resource_type": "459",
+        "alternative_technology": "1489",
+        "strategy_type": "3"
+    },
+    {
+        "id": "965",
+        "resource_type": "459",
+        "alternative_technology": "1669",
+        "strategy_type": "3"
+    },
+    {
+        "id": "966",
+        "resource_type": "459",
+        "alternative_technology": "1038",
+        "strategy_type": "3"
+    },
+    {
+        "id": "967",
+        "resource_type": "460",
+        "alternative_technology": "1489",
+        "strategy_type": "3"
+    },
+    {
+        "id": "968",
+        "resource_type": "460",
+        "alternative_technology": "1484",
+        "strategy_type": "3"
+    },
+    {
+        "id": "969",
+        "resource_type": "460",
+        "alternative_technology": "1038",
+        "strategy_type": "3"
+    },
+    {
+        "id": "970",
+        "resource_type": "461",
+        "alternative_technology": "2019",
+        "strategy_type": "3"
+    },
+    {
+        "id": "971",
+        "resource_type": "461",
+        "alternative_technology": "2020",
+        "strategy_type": "3"
+    },
+    {
+        "id": "972",
+        "resource_type": "461",
+        "alternative_technology": "2021",
+        "strategy_type": "3"
+    },
+    {
+        "id": "973",
+        "resource_type": "461",
+        "alternative_technology": "2022",
+        "strategy_type": "3"
+    },
+    {
+        "id": "974",
+        "resource_type": "463",
+        "alternative_technology": "2029",
+        "strategy_type": "3"
+    },
+    {
+        "id": "975",
+        "resource_type": "463",
+        "alternative_technology": "2030",
+        "strategy_type": "3"
+    },
+    {
+        "id": "976",
+        "resource_type": "466",
+        "alternative_technology": "2034",
+        "strategy_type": "3"
+    },
+    {
+        "id": "977",
+        "resource_type": "466",
+        "alternative_technology": "2035",
+        "strategy_type": "3"
+    },
+    {
+        "id": "978",
+        "resource_type": "468",
+        "alternative_technology": "2044",
+        "strategy_type": "3"
+    },
+    {
+        "id": "979",
+        "resource_type": "468",
+        "alternative_technology": "2045",
+        "strategy_type": "3"
+    },
+    {
+        "id": "980",
+        "resource_type": "469",
+        "alternative_technology": "2053",
+        "strategy_type": "3"
+    },
+    {
+        "id": "981",
+        "resource_type": "469",
+        "alternative_technology": "1338",
+        "strategy_type": "3"
+    },
+    {
+        "id": "982",
+        "resource_type": "473",
+        "alternative_technology": "2059",
+        "strategy_type": "3"
+    },
+    {
+        "id": "983",
+        "resource_type": "473",
+        "alternative_technology": "2060",
+        "strategy_type": "3"
+    },
+    {
+        "id": "984",
+        "resource_type": "473",
+        "alternative_technology": "2061",
+        "strategy_type": "3"
+    },
+    {
+        "id": "985",
+        "resource_type": "473",
+        "alternative_technology": "2062",
+        "strategy_type": "3"
+    },
+    {
+        "id": "986",
+        "resource_type": "475",
+        "alternative_technology": "548",
+        "strategy_type": "3"
+    },
+    {
+        "id": "987",
+        "resource_type": "475",
+        "alternative_technology": "551",
+        "strategy_type": "3"
+    },
+    {
+        "id": "988",
+        "resource_type": "476",
+        "alternative_technology": "548",
+        "strategy_type": "3"
+    },
+    {
+        "id": "989",
+        "resource_type": "476",
+        "alternative_technology": "2070",
+        "strategy_type": "3"
+    },
+    {
+        "id": "990",
+        "resource_type": "477",
+        "alternative_technology": "2071",
+        "strategy_type": "3"
+    },
+    {
+        "id": "991",
+        "resource_type": "484",
+        "alternative_technology": "2078",
+        "strategy_type": "3"
+    },
+    {
+        "id": "992",
+        "resource_type": "484",
+        "alternative_technology": "2079",
+        "strategy_type": "3"
+    },
+    {
+        "id": "993",
+        "resource_type": "484",
+        "alternative_technology": "1469",
+        "strategy_type": "3"
+    },
+    {
+        "id": "994",
+        "resource_type": "485",
+        "alternative_technology": "2083",
+        "strategy_type": "3"
+    },
+    {
+        "id": "995",
+        "resource_type": "485",
+        "alternative_technology": "1094",
+        "strategy_type": "3"
+    },
+    {
+        "id": "996",
+        "resource_type": "491",
+        "alternative_technology": "1954",
+        "strategy_type": "3"
+    },
+    {
+        "id": "997",
+        "resource_type": "491",
+        "alternative_technology": "2089",
+        "strategy_type": "3"
+    },
+    {
+        "id": "998",
+        "resource_type": "491",
+        "alternative_technology": "2090",
+        "strategy_type": "3"
+    },
+    {
+        "id": "999",
+        "resource_type": "492",
+        "alternative_technology": "2097",
+        "strategy_type": "3"
+    },
+    {
+        "id": "1000",
+        "resource_type": "492",
+        "alternative_technology": "2098",
+        "strategy_type": "3"
+    },
+    {
+        "id": "1001",
+        "resource_type": "495",
+        "alternative_technology": "2105",
+        "strategy_type": "3"
+    },
+    {
+        "id": "1002",
+        "resource_type": "495",
+        "alternative_technology": "1932",
+        "strategy_type": "3"
+    },
+    {
+        "id": "1003",
+        "resource_type": "495",
+        "alternative_technology": "2106",
+        "strategy_type": "3"
+    },
+    {
+        "id": "1004",
+        "resource_type": "496",
+        "alternative_technology": "144",
+        "strategy_type": "3"
+    },
+    {
+        "id": "1005",
+        "resource_type": "496",
+        "alternative_technology": "137",
+        "strategy_type": "3"
+    },
+    {
+        "id": "1006",
+        "resource_type": "497",
+        "alternative_technology": "2122",
+        "strategy_type": "3"
+    },
+    {
+        "id": "1007",
+        "resource_type": "497",
+        "alternative_technology": "2123",
+        "strategy_type": "3"
+    },
+    {
+        "id": "1008",
+        "resource_type": "497",
+        "alternative_technology": "2124",
+        "strategy_type": "3"
+    },
+    {
+        "id": "1009",
+        "resource_type": "498",
+        "alternative_technology": "2132",
+        "strategy_type": "3"
+    },
+    {
+        "id": "1010",
+        "resource_type": "498",
+        "alternative_technology": "2133",
+        "strategy_type": "3"
+    },
+    {
+        "id": "1011",
+        "resource_type": "498",
+        "alternative_technology": "2134",
+        "strategy_type": "3"
+    },
+    {
+        "id": "1012",
+        "resource_type": "498",
+        "alternative_technology": "2135",
+        "strategy_type": "3"
+    },
+    {
+        "id": "1013",
+        "resource_type": "498",
+        "alternative_technology": "2136",
+        "strategy_type": "3"
+    },
+    {
+        "id": "1014",
+        "resource_type": "498",
+        "alternative_technology": "2137",
+        "strategy_type": "3"
+    },
+    {
+        "id": "1015",
+        "resource_type": "501",
+        "alternative_technology": "2142",
+        "strategy_type": "3"
+    },
+    {
+        "id": "1016",
+        "resource_type": "506",
+        "alternative_technology": "2160",
+        "strategy_type": "3"
+    },
+    {
+        "id": "1017",
+        "resource_type": "506",
+        "alternative_technology": "2161",
+        "strategy_type": "3"
+    },
+    {
+        "id": "1018",
+        "resource_type": "508",
+        "alternative_technology": "2179",
+        "strategy_type": "3"
+    },
+    {
+        "id": "1019",
+        "resource_type": "508",
+        "alternative_technology": "2161",
+        "strategy_type": "3"
+    },
+    {
+        "id": "1020",
+        "resource_type": "510",
+        "alternative_technology": "2190",
+        "strategy_type": "3"
+    }
+]
