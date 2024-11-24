@@ -30,8 +30,8 @@ def is_resource_inventory_empty(credential, subscription_id, resource_group_name
 
 def build_azure_resource_inventory(cloud_service_provider, provider_details, report_path, raw_data_path):
     try:
-        # Initialize Azure credentials and clients
-        credential = ClientSecretCredential(
+        # Use DefaultAzureCredential if provided, otherwise fall back to ClientSecretCredential
+        credential = provider_details.get("credential") or ClientSecretCredential(
             tenant_id=provider_details["tenantId"],
             client_id=provider_details["clientId"],
             client_secret=provider_details["clientSecret"]
@@ -134,7 +134,8 @@ def get_missing_months_azure(processed_costs, months_back):
 
 def build_azure_cost_inventory(cloud_service_provider, provider_details, report_path, raw_data_path):
     try:
-        credential = ClientSecretCredential(
+        # Use DefaultAzureCredential if provided, otherwise fall back to ClientSecretCredential
+        credential = provider_details.get("credential") or ClientSecretCredential(
             tenant_id=provider_details["tenantId"],
             client_id=provider_details["clientId"],
             client_secret=provider_details["clientSecret"]

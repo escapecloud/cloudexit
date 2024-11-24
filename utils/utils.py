@@ -1,6 +1,58 @@
 # utils.py
-from datetime import datetime
 import os
+import logging
+import json
+from rich.console import Console
+from datetime import datetime
+
+logger = logging.getLogger("main.utils")
+console = Console()
+
+def load_config(file_path):
+    try:
+        #logger.info(f"Attempting to load config file from {file_path}")
+        with open(file_path, "r") as f:
+            config = json.load(f)
+        #logger.info("Config file loaded successfully.")
+        return config
+    except Exception as e:
+        logger.error(f"Error loading config file: {e}", exc_info=True)
+        console.print(f"[red]Error loading config file: {e}[/red]")
+        return None
+
+def prompt_required_inputs():
+    while True:
+        try:
+            exit_strategy = int(
+                input(
+                    "Enter Exit Strategy (1 for 'Repatriation to On-Premises', 3 for 'Migration to Alternate Cloud'): "
+                ).strip()
+            )
+            if exit_strategy not in [1, 3]:
+                raise ValueError("Invalid exit strategy.")
+            #logger.info(f"Exit Strategy selected: {exit_strategy}")
+            break
+        except ValueError as e:
+            logger.warning(f"Invalid exit strategy input: {e}")
+            console.print(f"[red]{e} Please enter 1 or 3.[/red]")
+
+    #while True:
+    #    try:
+    #        assessment_type = int(
+    #            input(
+    #                "Enter Assessment Type (1 for 'Basic', 2 for 'Basic+'): "
+    #            ).strip()
+    #        )
+    #        if assessment_type not in [1, 2]:
+    #            raise ValueError("Invalid assessment type.")
+    #        logger.info(f"Assessment Type selected: {assessment_type}")
+    #        break
+    #    except ValueError as e:
+    #        logger.warning(f"Invalid assessment type input: {e}")
+    #        console.print(f"[red]{e} Please enter 1 or 2.[/red]")
+    #
+    #return exit_strategy, assessment_type
+    return exit_strategy
 
 ascii_art = r"""
       _                 _           _ _
@@ -26,3 +78,13 @@ def create_directory(base_path="reports"):
     os.makedirs(raw_data_path, exist_ok=True)
 
     return directory_path, raw_data_path
+
+def print_help_message():
+    console.print("EscapeCloud - Community Edition", style="bold cyan")
+    console.print("[green]Run the script with one of the following options:[/green]\n")
+    console.print("  python3 main.py aws")
+    console.print("  python3 main.py aws --config config/aws.json")
+    console.print("  python3 main.py aws --profile PROFILE")
+    console.print("  python3 main.py azure")
+    console.print("  python3 main.py azure --config config/azure.json")
+    console.print("  python3 main.py azure --cli")
