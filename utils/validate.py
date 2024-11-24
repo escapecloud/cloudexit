@@ -26,7 +26,12 @@ def validate_config(config):
     # Validate providerDetails based on cloudServiceProvider
     provider_details = config.get("providerDetails", {})
     if cloud_service_provider == 1:  # Azure
-        missing_fields = [field for field in REQUIRED_FIELDS_AZURE if field not in provider_details]
+        # Skip validation of clientId and clientSecret if using CLI credentials
+        if isinstance(provider_details.get("credential"), object):  # Assuming it's DefaultAzureCredential
+            required_fields = ["tenantId", "subscriptionId", "resourceGroupName"]
+        else:
+            required_fields = REQUIRED_FIELDS_AZURE
+        missing_fields = [field for field in required_fields if field not in provider_details]
     elif cloud_service_provider == 2:  # AWS
         missing_fields = [field for field in REQUIRED_FIELDS_AWS if field not in provider_details]
         if "region" in provider_details:

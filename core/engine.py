@@ -30,23 +30,22 @@ def verify_credentials(cloud_service_provider, provider_details):
 
     if cloud_service_provider == 1:  # Azure
         try:
-            credential = ClientSecretCredential(
+            # Use DefaultAzureCredential if provided, else use client secrets
+            credential = provider_details.get("credential") or ClientSecretCredential(
                 tenant_id=provider_details["tenantId"],
                 client_id=provider_details["clientId"],
                 client_secret=provider_details["clientSecret"]
             )
-            #logger.info("Creating ResourceManagementClient for Azure.")
             resource_client = ResourceManagementClient(credential, provider_details["subscriptionId"])
-            #logger.info("Listing resource groups to verify Azure credentials.")
-            #list(resource_client.resource_groups.list())  # Benign call to check credentials
+            list(resource_client.resource_groups.list())  # Benign call to verify credentials
             connection_success = True
             logs = "Azure connection successful."
         except ClientAuthenticationError as e:
             logs = f"Azure credentials validation failed: {str(e)}"
-            #logger.error(logs)
+            logger.error(logs)
         except Exception as e:
             logs = f"Azure connection test failed: {str(e)}"
-            #logger.error(logs)
+            logger.error(logs)
 
     elif cloud_service_provider == 2:  # AWS
         try:
@@ -56,14 +55,11 @@ def verify_credentials(cloud_service_provider, provider_details):
                 aws_secret_access_key=provider_details["secretKey"],
                 region_name=provider_details["region"]
             )
-            client.describe_regions()  # Benign call to check credentials
+            client.describe_regions()  # Benign call to verify credentials
             connection_success = True
             logs = "AWS connection successful."
         except NoCredentialsError as e:
             logs = f"AWS credentials validation failed: {str(e)}"
-            logger.error(logs)
-        except ClientError as e:
-            logs = f"AWS connection test failed: {e.response['Error']['Message'] if 'Error' in e.response else str(e)}"
             logger.error(logs)
         except Exception as e:
             logs = f"AWS connection test failed: {str(e)}"
@@ -80,20 +76,17 @@ def test_permissions(cloud_service_provider, provider_details):
 
     if cloud_service_provider == 1:  # Azure
         try:
-            credential = ClientSecretCredential(
+            # Use DefaultAzureCredential if provided, else use client secrets
+            credential = provider_details.get("credential") or ClientSecretCredential(
                 tenant_id=provider_details["tenantId"],
                 client_id=provider_details["clientId"],
                 client_secret=provider_details["clientSecret"]
             )
-            #logger.info("Checking Azure permissions.")
             resource_group_scope = f"/subscriptions/{provider_details['subscriptionId']}/resourceGroups/{provider_details['resourceGroupName']}"
 
-            # Check if role assignments exist
+            # Check role assignments
             auth_client = AuthorizationManagementClient(credential, provider_details["subscriptionId"])
             role_assignments = auth_client.role_assignments.list_for_scope(scope=resource_group_scope)
-
-            permission_reader = False
-            permission_cost = False
 
             for role_assignment in role_assignments:
                 role_definition_id = role_assignment.role_definition_id
@@ -398,24 +391,7 @@ def generate_report(cloud_service_provider, exit_strategy, assessment_type, repo
 
     assessment_ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
     assessment_type = assessment_type or "Not Specified"
-
-    # Log data to verify before rendering
-    #logger.info(f"Cloud Service Provider: {cloud_service_provider}")
-    #logger.info(f"Exit Strategy: {exit_strategy}")
-    #logger.info(f"Assessment Type: {assessment_type}")
-    #logger.info(f"Assessment TimeStamp: {assessment_ts}")
-    #logger.info(f"Risks: {risks}")
-    #logger.info(f"High Risk Count: {severity_counts['high']}")
-    #logger.info(f"Medium Risk Count: {severity_counts['medium']}")
-    #logger.info(f"Low Risk Count: {severity_counts['low']}")
-    #logger.info(f"Total Cost: {total_cost}")
-    #logger.info(f"Months JSON: {json.dumps(months)}")
-    #logger.info(f"Costs JSON: {json.dumps(cost_values)}")
-    #logger.info(f"Currency Symbol: {currency_symbol}")
-    #logger.info(f"Resource Inventory: {resource_counts}")
-    #logger.info(f"Total Resource Count: {total_resources}")
-    #logger.info(f"Alternative Technologies Data: {alternative_technologies}")
-
+    
     # Render and save the HTML template
     try:
         template_path = os.path.join("assets", "template", "index.html")

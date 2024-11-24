@@ -1,4 +1,4 @@
-![image](./docs/images/Report-Screen.png)
+![image](./docs/images/Main.png)
 
 # Cloud Exit Assessment
 
@@ -25,7 +25,7 @@ cloudexit is an open-source tool that empowers cloud engineers to conduct compre
 >```
 
 ## Required Permissions
-To conduct the risk assessment, the following role assignments or policies must be attached to the generated credentials:
+To conduct the assessment, the following role assignments or policies must be attached to the generated credentials:
 
 | Cloud Provider  | Required Permissions |
 | ------------- | ------------- |
@@ -39,16 +39,30 @@ Once you have installed the required dependencies, you can use 'cloudexit' inter
 ```python
 python3 main.py
 
-#Run with a configuration file for AWS:
-python3 main.py --config config/aws.json
+# Run with manual input for AWS:
+python3 main.py aws
 
-#Run with a configuration file for Azure:
-python3 main.py --config config/azure.json
+# Run with a configuration file for AWS:
+python3 main.py aws --config config.json
+
+# Run with an AWS CLI profile:
+python3 main.py aws --profile PROFILE
+
+# Run with manual input for Azure:
+python3 main.py azure
+
+# Run with a configuration file for Azure:
+python3 main.py azure --config config.json
+
+# Run with Azure CLI credentials:
+python3 main.py azure --cli
 ```
 
 The results are saved in the reports folder. Simply open the index.html file in the newly generated folder.
 
 Each assessment creates a new folder named after its timestamp, containing both raw and standardized data.
+
+![image](./docs/images/Report-Screen.png)
 
 ## **Config**
 The following parameters are common across configuration files for different cloud providers. They define the scope and context of the cloud exit assessment:
@@ -89,9 +103,6 @@ AWS Example Configuration:
 }
 ```
 
-![image](./docs/images/AWS_Manual.png)
-*Manual console input for the required parameters.*
-
 ![image](./docs/images/AWS_Config.png)
 *Using a configuration file for the required parameters.*
 
@@ -110,9 +121,6 @@ Azure Example Configuration:
    }
 }
 ```
-
-![image](./docs/images/Azure_Manual.png)
-*Manual console input for the required parameters.*
 
 ![image](./docs/images/Azure_Config.png)
 *Using a configuration file for the required parameters.*
