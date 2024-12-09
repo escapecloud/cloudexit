@@ -3,6 +3,8 @@ import os
 import logging
 import json
 from rich.console import Console
+from rich.style import Style
+from time import sleep
 from datetime import datetime
 
 logger = logging.getLogger("main.utils")
@@ -53,6 +55,32 @@ def prompt_required_inputs():
     #
     #return exit_strategy, assessment_type
     return exit_strategy
+
+def print_step(description, status="pending", logs=None):
+    # Define styles for statuses
+    ok_style = Style(color="green", bold=True)
+    error_style = Style(color="red", bold=True)
+    pending_style = Style(color="yellow", bold=True)
+
+    # Map statuses to their visual representation
+    status_map = {
+        "ok": "[ ok ]",
+        "error": "[ error ]",
+        "pending": "[ ... ]",
+    }
+
+    # Handle the pending status with a spinner
+    if status == "pending":
+        with console.status(f"{description:<50} [yellow]{status_map['pending']}[/yellow]", spinner="dots"):
+            sleep(2)
+            print_step(description, status="ok")
+    elif status == "ok":
+        console.print(f"{description:<50} {status_map['ok']}", style=ok_style)
+    elif status == "error":
+        console.print(f"{description:<50} {status_map['error']}", style=error_style)
+        if logs:
+            console.print(f"   ↳ {logs}", style="dim")
+
 
 ascii_art = r"""
       _                 _           _ _
