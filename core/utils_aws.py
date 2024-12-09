@@ -6,8 +6,11 @@ import os
 import time
 import logging
 from datetime import date, datetime, timedelta
+from collections import defaultdict
 from dateutil.relativedelta import relativedelta
 from botocore.exceptions import NoCredentialsError, ClientError
+
+from .utils_db import connect, load_data
 
 logger = logging.getLogger("core.engine.aws")
 
@@ -59,19 +62,20 @@ def build_aws_resource_inventory(cloud_service_provider, provider_details, repor
             region_name=region
         )
 
-        # Load the ResourceType mapping to include both `id` and `name`
-        with open("datasets/resourcetype.json", "r", encoding="utf-8") as f:
-            resource_type_mapping = {
-                item["code"]: {"id": item["id"], "name": item["name"]}
-                for item in json.load(f)
-                if item["csp"] == "2" and item["status"] == "t"
-            }
+        db_path = os.path.join(report_path, "data", "assessment.db")
 
-        resource_summary = {}
+        # Load the ResourceType mapping
+        resource_type_mapping = {
+            item["code"]: {"id": item["id"], "name": item["name"]}
+            for item in load_data("resourcetype")
+            if item["csp"] == 2 and item["status"] == "t"
+        }
+
+        # Save raw data for debugging and auditing purposes
         raw_data = []
 
-        # Initialize a custom counter
-        resource_inventory_id_counter = 1
+        # Aggregate resources by type and location
+        aggregated_resources = defaultdict(int)
 
         # Iterate through each resource type in the JSON
         for idx, (resource_type_code, resource_info) in enumerate(resource_type_mapping.items(), start=1):
@@ -108,17 +112,9 @@ def build_aws_resource_inventory(cloud_service_provider, provider_details, repor
                     #logger.warning(f"No valid response found for {service_name} operation {operation_name}. Skipping.")
                     continue
 
-                # Count resources and add to summary if count > 0
-                resource_count = len(resources)
-                if resource_count > 0:
-                    resource_inventory_id = str(resource_inventory_id_counter)
-                    resource_summary[resource_inventory_id] = {
-                        "resource_name": resource_info["name"],
-                        "resource_type": resource_info["id"],
-                        "location": region,
-                        "count": resource_count
-                    }
-                    resource_inventory_id_counter += 1
+                # Aggregate the resources
+                for resource in resources:
+                    aggregated_resources[(resource_type_code, region)] += 1
 
                 # Store raw data
                 raw_data.append({
@@ -126,9 +122,6 @@ def build_aws_resource_inventory(cloud_service_provider, provider_details, repor
                     "operation": operation_name,
                     "resources": resources
                 })
-
-
-                #logger.info(f"Processed {resource_count} resources for service {service_name} with operation {operation_name}")
 
             except (NoCredentialsError, ClientError, Exception) as e:
                 #logger.error(f"Error while processing {service_name}: {str(e)}", exc_info=True)
@@ -140,13 +133,35 @@ def build_aws_resource_inventory(cloud_service_provider, provider_details, repor
         raw_file_path = os.path.join(raw_data_path, "resource_inventory_raw_data.json")
         with open(raw_file_path, "w", encoding="utf-8") as raw_file:
             json.dump(raw_data, raw_file, indent=4)
-        #logger.info(f"AWS raw resource inventory saved to {raw_file_path}")
 
-        # Save structured data to a JSON file
-        structured_file_path = os.path.join(report_path, "resource_inventory_standard_data.json")
-        with open(structured_file_path, "w", encoding="utf-8") as structured_file:
-            json.dump(resource_summary, structured_file, indent=4)
-        #logger.info(f"AWS structured resource inventory saved to {structured_file_path}")
+        # Insert aggregated data into SQLite
+        with connect(db_path=db_path) as conn:
+            cursor = conn.cursor()
+
+            for (resource_type_code, resource_location), resource_count in aggregated_resources.items():
+                try:
+                    # Map resource type code to resource_type_id
+                    resource_info = resource_type_mapping.get(resource_type_code)
+                    if not resource_info:
+                        #logger.warning(f"Resource type {resource_type_code} not found in resourcetype mapping. Skipping.")
+                        continue
+
+                    resource_type_id = resource_info["id"]
+
+                    cursor.execute(
+                        """
+                        INSERT INTO resource_inventory (resource_type, location, count)
+                        VALUES (?, ?, ?)
+                        ON CONFLICT(resource_type, location) DO UPDATE SET count = excluded.count
+                        """,
+                        (resource_type_id, resource_location, resource_count)
+                    )
+                except sqlite3.Error as e:
+                    logger.error(f"SQLite error while processing aggregated resource: {e}", exc_info=True)
+                except Exception as e:
+                    logger.error(f"Unexpected error while processing aggregated resource: {e}", exc_info=True)
+
+            conn.commit()
 
     except Exception as e:
         logger.error(f"Error creating AWS resource inventory: {str(e)}", exc_info=True)
@@ -172,6 +187,8 @@ def build_aws_cost_inventory(cloud_service_provider, provider_details, report_pa
         )
         cost_explorer = session.client('ce', region_name='us-east-1')
 
+        db_path = os.path.join(report_path, "data", "assessment.db")
+
         end_time = date.today()
         start_time = end_time.replace(day=1) - timedelta(days=180)
         start_time = start_time.replace(day=1)
@@ -189,24 +206,54 @@ def build_aws_cost_inventory(cloud_service_provider, provider_details, report_pa
             }
         )
 
-        cost_inventory_raw_path = os.path.join(report_path, "cost_inventory_raw_data.json")
+        cost_inventory_raw_path = os.path.join(raw_data_path, "cost_inventory_raw_data.json")
         with open(cost_inventory_raw_path, "w", encoding="utf-8") as raw_file:
             json.dump(cost_and_usage, raw_file, indent=4)
 
-        structured_costs = {}
-        for result in cost_and_usage['ResultsByTime']:
-            month_str = result['TimePeriod']['Start']
-            total_cost = sum(float(group['Metrics']['UnblendedCost']['Amount']) for group in result['Groups'])
-            currency = result['Groups'][0]['Metrics']['UnblendedCost']['Unit'] if result['Groups'] else 'USD'
-            structured_costs[month_str] = {"cost": total_cost, "currency": currency}
+        # Insert structured data into SQLite
+        with connect(db_path=db_path) as conn:
+            cursor = conn.cursor()
 
-        missing_months = get_missing_months_aws(structured_costs.keys(), 6)
-        for missing_month in missing_months:
-            structured_costs[missing_month.isoformat()] = {"cost": 0.00, "currency": currency}
+            for result in cost_and_usage['ResultsByTime']:
+                month_str = result['TimePeriod']['Start']
+                total_cost = sum(float(group['Metrics']['UnblendedCost']['Amount']) for group in result['Groups'])
+                currency = result['Groups'][0]['Metrics']['UnblendedCost']['Unit'] if result['Groups'] else 'USD'
+                month_date = datetime.strptime(month_str, '%Y-%m-%d').date().replace(day=1).isoformat()
 
-        cost_inventory_standard_path = os.path.join(report_path, "cost_inventory_standard_data.json")
-        with open(cost_inventory_standard_path, "w", encoding="utf-8") as structured_file:
-            json.dump(structured_costs, structured_file, indent=4)
+                # Insert or update the cost data for the month
+                cursor.execute(
+                    """
+                    INSERT INTO cost_inventory (month, cost, currency)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT(month) DO UPDATE SET
+                        cost = excluded.cost,
+                        currency = excluded.currency
+                    """,
+                    (month_date, total_cost, currency)
+                )
+
+            # Handle missing months
+            structured_months = {datetime.strptime(result['TimePeriod']['Start'], '%Y-%m-%d').date() for result in cost_and_usage['ResultsByTime']}
+            missing_months = get_missing_months_aws({month.isoformat() for month in structured_months}, 6)
+
+            for missing_month in missing_months:
+                cursor.execute(
+                    """
+                    INSERT INTO cost_inventory (month, cost, currency)
+                    VALUES (?, 0.00, ?)
+                    ON CONFLICT(month) DO UPDATE SET
+                        currency = excluded.currency
+                    """,
+                    (missing_month.isoformat(), currency)
+                )
+
+            conn.commit()
+
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error: {str(e)}", exc_info=True)
+    except Exception as e:
+        logger.error(f"Error creating AWS cost inventory: {str(e)}", exc_info=True)
+        raise
 
     except Exception as e:
         logger.error(f"Error creating AWS cost inventory: {str(e)}", exc_info=True)

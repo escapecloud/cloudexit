@@ -7,6 +7,7 @@ import botocore
 from pathlib import Path
 from rich.console import Console
 from rich.text import Text
+from rich.style import Style
 from datetime import datetime
 from botocore.exceptions import NoCredentialsError, ClientError
 from azure.identity import DefaultAzureCredential, ClientSecretCredential
@@ -20,10 +21,9 @@ from core.engine import (
     create_resource_inventory,
     create_cost_inventory,
     perform_risk_assessment,
-    conduct_alternative_technology_analysis,
     generate_report,
 )
-from utils.utils import ascii_art, create_directory, load_config, prompt_required_inputs, print_help_message
+from utils.utils import ascii_art, create_directory, load_config, prompt_required_inputs, print_help_message, print_step
 from utils.constants import REGION_CHOICES, REQUIRED_FIELDS_AZURE, REQUIRED_FIELDS_AWS
 from utils.validate import validate_region, validate_config
 from utils.azure import select_subscription, select_resource_group, is_azure_cli_logged_in
@@ -101,7 +101,6 @@ def handle_aws(args):
             }
         except Exception as e:
             console.print(f"[red]Error during manual AWS configuration: {e}[/red]")
-            logger.error(f"Error during manual AWS configuration: {e}", exc_info=True)
             return
 
     # Run the AWS assessment pipeline
@@ -218,129 +217,161 @@ def handle_azure(args):
 
 def run_assessment(config, provider_name):
     try:
-        validate_config(config)
-
-        # Set up the directory for assessment
-        report_path, raw_data_path = create_directory()
-        #logger.info(f"Assessment directories created: Report Path: {report_path}, Raw Data Path: {raw_data_path}")
-
+        # Preliminary Stage: Validate configuration & create directory
         console.print("-------------------------------------------")
         console.print("Preliminary Stage", style="bold")
-        console.print("✓ | Directory successfully created.")
-        console.print("✓ | Configuration successfully validated.")
+        try:
+            validate_config(config)
+            print_step("Configuration successfully validated.", status="ok")
+        except ValueError as e:
+            print_step("Configuration validation failed.", status="error", logs=str(e))
+            return
 
-        # Stage 1: Verify Credentials
-        connection_success, logs = verify_credentials(
-            config["cloudServiceProvider"], config["providerDetails"]
+        # Create directories
+        try:
+            report_path, raw_data_path = create_directory()
+            print_step("Directory successfully created.", status="ok")
+        except RuntimeError as e:
+            print_step("Directory creation failed.", status="error", logs=str(e))
+            return
+
+        # Handle the result
+        provider_name = (
+            "Microsoft Azure" if config["cloudServiceProvider"] == 1
+            else "AWS" if config["cloudServiceProvider"] == 2
+            else "Unknown"
         )
 
+        # Stage 1: Verify Credentials
         console.print("-------------------------------------------")
         console.print("Stage #1 - Validate Credentials", style="bold")
+        # Test Connection
+        connection_success, logs = verify_credentials(config["cloudServiceProvider"], config["providerDetails"])
         if connection_success:
-            console.print("✓ | Connection successful.")
+            print_step(f"Connecting to {provider_name}...", status="ok")
         else:
-            console.print("- | Connection failed:")
-            console.print(f"{logs}")
+            print_step(f"Connecting to {provider_name}...", status="error")
+            console.print(f"   ↳ {logs}", style="dim")
             logger.error(f"Credential verification failed: {logs}")
             return
         console.print("-------------------------------------------")
 
         # Stage 2: Test Permissions
-        permission_valid, permission_reader, permission_cost, logs = test_permissions(
-            config["cloudServiceProvider"], config["providerDetails"]
-        )
+        console.print("Stage #2 - Validate Permissions", style="bold")
 
+        # Labels for permission types
         permission_reader_label = "Reader" if config["cloudServiceProvider"] == 1 else "ViewOnlyAccess"
         permission_cost_label = "Cost Management Reader" if config["cloudServiceProvider"] == 1 else "AWSBillingReadOnlyAccess"
 
-        console.print("Stage #2 - Validate Permissions", style="bold")
-        console.print(f"✓ | {permission_reader_label}" if permission_reader else f"- | {permission_reader_label}")
-        console.print(f"✓ | {permission_cost_label}" if permission_cost else f"- | {permission_cost_label}")
+        # Test permissions with spinners
+        with console.status("Validating permissions...", spinner="dots"):
+            permission_valid, permission_reader, permission_cost, logs = test_permissions(
+                config["cloudServiceProvider"], config["providerDetails"]
+            )
 
+        # Output results for permission checks
+        if permission_reader:
+            print_step(f"Checking {permission_reader_label}...", status="ok")
+        else:
+            print_step(f"Checking {permission_reader_label}...", status="error", logs=logs)
+
+        if permission_cost:
+            print_step(f"Checking {permission_cost_label}...", status="ok")
+        else:
+            print_step(f"Checking {permission_cost_label}...", status="error", logs=logs)
+
+        # Exit if permissions are invalid
         if not permission_valid:
-            console.print("Failed to validate all required permissions. Exiting.")
-            console.print(f"{logs}")
             logger.error(f"Permission validation failed: {logs}")
             return
+
         console.print("-------------------------------------------")
 
         # Stage 3: Build Resource Inventory
         console.print("Stage #3 - Build Resource Inventory", style="bold")
-        with console.status("In progress...", spinner="dots"):
-            result = create_resource_inventory(config["cloudServiceProvider"], config["providerDetails"], report_path, raw_data_path)
+
+        # Use a spinner to indicate progress
+        with console.status(f"Building resource inventory for {provider_name}...", spinner="dots"):
+            result = create_resource_inventory(
+                config["cloudServiceProvider"],
+                config["providerDetails"],
+                report_path,
+                raw_data_path,
+            )
 
         if result["success"]:
-            console.print(f"✓ | {provider_name.title()}")
+            print_step(f"Building resource inventory for {provider_name}...", status="ok")
         else:
-            console.print(f"- | {provider_name.title()}")
-            console.print(f"Log: {result['logs']}")
-            logger.error(f"Resource inventory creation failed: {result['logs']}")
+            print_step(f"Building resource inventory for {provider_name}...", status="error", logs=result["logs"])
             return
 
         console.print("-------------------------------------------")
 
         # Stage 4: Build Cost Inventory
         console.print("Stage #4 - Build Cost Inventory", style="bold")
-        with console.status("In progress...", spinner="dots"):
-            cost_result = create_cost_inventory(config["providerDetails"], config["cloudServiceProvider"], report_path, raw_data_path)
 
+        # Use a spinner to indicate progress
+        with console.status(f"Building cost inventory for {provider_name}...", spinner="dots"):
+            cost_result = create_cost_inventory(
+                config["providerDetails"],
+                config["cloudServiceProvider"],
+                report_path,
+                raw_data_path,
+            )
+
+        # Handle the result
         if cost_result["success"]:
-            console.print(f"✓ | {provider_name.title()}")
+            print_step(f"Building cost inventory for {provider_name}...", status="ok")
         else:
-            console.print(f"- | {provider_name.title()}")
-            console.print(f"Log: {cost_result['logs']}")
-            logger.error(f"Cost inventory creation failed: {cost_result['logs']}")
+            print_step(f"Building cost inventory for {provider_name}...", status="error", logs=cost_result["logs"])
             return
 
         console.print("-------------------------------------------")
 
         # Stage 5: Perform Risk Assessment
         console.print("Stage #5 - Perform Risk Assessment", style="bold")
-        with console.status("In progress...", spinner="dots"):
+
+        # Use a spinner to indicate progress
+        with console.status("Performing risk assessment...", spinner="dots"):
             risk_result = perform_risk_assessment(config["exitStrategy"], report_path)
 
+        # Handle the result
         if risk_result["success"]:
-            console.print("✓ | Risk Assessment.")
+            print_step("Performing risk assessment...", status="ok")
         else:
-            console.print("- | Risk Assessment.")
-            console.print(f"Log: {risk_result['logs']}")
-            logger.error(f"Risk assessment failed: {risk_result['logs']}")
+            print_step("Performing risk assessment...", status="error", logs=risk_result["logs"])
             return
 
         console.print("-------------------------------------------")
 
-        # Stage 6: Conduct Alternative Technology Analysis
-        console.print("Stage #6 - Conduct Alternative Technology Analysis", style="bold")
-        with console.status("In progress...", spinner="dots"):
-            alttech_result = conduct_alternative_technology_analysis(config["cloudServiceProvider"], config["exitStrategy"], report_path)
+        # Stage 6: Generate Report
+        console.print("Stage #6 - Generate Report", style="bold")
 
-        if alttech_result["success"]:
-            console.print("✓ | Alternative Technology Analysis.")
-        else:
-            console.print("- | Alternative Technology Analysis.")
-            console.print(f"Log: {alttech_result['logs']}")
-            logger.error(f"Alternative technology analysis failed: {alttech_result['logs']}")
-            return
+        # Use a spinner to indicate progress
+        with console.status("Generating report...", spinner="dots"):
+            report_status = generate_report(
+                config["cloudServiceProvider"],
+                config["exitStrategy"],
+                config["assessmentType"],
+                report_path
+            )
 
-        console.print("-------------------------------------------")
-
-        # Stage 7: Generate Report
-        console.print("Stage #7 - Generate Report", style="bold")
-        with console.status("In progress...", spinner="dots"):
-            report_status = generate_report(config["cloudServiceProvider"], config["exitStrategy"], config["assessmentType"], report_path)
-
+        # Handle the result
         if report_status["success"]:
-            console.print("✓ | Report generated successfully.")
-            console.print(f"{report_status['logs']}", style="cyan")
+            print_step("Generating report...", status="ok")
         else:
-            console.print("- | Report generation failed.")
-            console.print(f"Log: {report_status['logs']}")
-            logger.error(f"Report generation failed: {report_status['logs']}")
+            print_step("Generating report...", status="error", logs=report_status["logs"])
             return
 
+        # Output the report path after the separator
         console.print("-------------------------------------------")
+        console.print("Assessment Results:", style="bold")
+        html_report_path = report_status.get("reports", {}).get("HTML")
+        if html_report_path:
+            console.print(f"HTML Report: {html_report_path}", style="cyan")
+        console.print("-------------------------------------------")
+
     except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}", exc_info=True)
         console.print(f"[red]Unexpected error: {e}[/red]")
 
 def parse_arguments():

@@ -16,9 +16,10 @@ from botocore.exceptions import NoCredentialsError, ClientError
 from azure.mgmt.costmanagement import CostManagementClient
 from azure.mgmt.costmanagement.models import QueryDefinition, TimeframeType
 
-from .utils import copy_assets, get_cost_summary, get_risk_summary
+from .utils import copy_assets, get_cost_summary, get_risk_summary, prepare_alternative_technologies
 from .utils_aws import build_aws_resource_inventory, build_aws_cost_inventory
 from .utils_azure import build_azure_resource_inventory, build_azure_cost_inventory
+from .utils_db import connect, load_data
 
 # Configure the logger
 logger = logging.getLogger("core.engine")
@@ -42,10 +43,10 @@ def verify_credentials(cloud_service_provider, provider_details):
             logs = "Azure connection successful."
         except ClientAuthenticationError as e:
             logs = f"Azure credentials validation failed: {str(e)}"
-            logger.error(logs)
+            #logger.error(logs)
         except Exception as e:
             logs = f"Azure connection test failed: {str(e)}"
-            logger.error(logs)
+            #logger.error(logs)
 
     elif cloud_service_provider == 2:  # AWS
         try:
@@ -60,10 +61,10 @@ def verify_credentials(cloud_service_provider, provider_details):
             logs = "AWS connection successful."
         except NoCredentialsError as e:
             logs = f"AWS credentials validation failed: {str(e)}"
-            logger.error(logs)
+            #logger.error(logs)
         except Exception as e:
             logs = f"AWS connection test failed: {str(e)}"
-            logger.error(logs)
+            #logger.error(logs)
 
     return connection_success, logs
 
@@ -159,6 +160,9 @@ def test_permissions(cloud_service_provider, provider_details):
 
 # Stage 3
 def create_resource_inventory(cloud_service_provider, provider_details, report_path, raw_data_path):
+    # Copy assets and datasets folders data
+    copy_assets(report_path)
+
     try:
 
         if cloud_service_provider == 1:  # Azure
@@ -190,35 +194,28 @@ def create_cost_inventory(provider_details, cloud_service_provider, report_path,
 # Stage 5
 def perform_risk_assessment(exit_strategy, report_path):
     try:
-        # Load JSON files
-        with open("datasets/risk.json", "r", encoding="utf-8") as risk_file:
-            risks = json.load(risk_file)
+        # Define the database path
+        db_path = os.path.join(report_path, "data", "assessment.db")
 
-        with open(os.path.join(report_path, "resource_inventory_standard_data.json"), "r", encoding="utf-8") as resource_file:
-            resource_inventory = json.load(resource_file)
-
-        with open("datasets/alternative.json", "r", encoding="utf-8") as alt_file:
-            alternatives = json.load(alt_file)
-
-        with open("datasets/alternativetechnology.json", "r", encoding="utf-8") as tech_file:
-            alternative_technologies = json.load(tech_file)
+        # Load data from the database
+        resource_inventory = load_data("resource_inventory", db_path=db_path)
+        risks = load_data("risk", db_path=db_path)
+        alternatives = load_data("alternative", db_path=db_path)
+        alternative_technologies = load_data("alternativetechnology", db_path=db_path)
 
         # Initialize risk inventory
         risk_inventory = []
 
         # Calculate the total count of resources across all types
-        total_resource_count = sum(item["count"] for item in resource_inventory.values())
+        total_resource_count = sum(item["count"] for item in resource_inventory)
 
         # Calculate total number of distinct resource types
-        distinct_resource_types = set(resource_data["resource_type"] for resource_data in resource_inventory.values())
+        distinct_resource_types = set(item["resource_type"] for item in resource_inventory)
         total_resource_types = len(distinct_resource_types)
 
         # Process each resource by `resource_type`
-        for resource_code, resource_data in resource_inventory.items():
+        for resource_data in resource_inventory:
             resource_type_id = str(resource_data["resource_type"])  # Convert to string for consistent comparison
-
-            # Debugging: Log type and value to ensure consistency
-            #logger.info(f"Resource Type (ID): {resource_type_id} (Type: {type(resource_type_id)}), Exit Strategy: {exit_strategy}")
 
             # Filter alternatives for the current resource_type and exit strategy
             relevant_alternatives = [
@@ -232,10 +229,6 @@ def perform_risk_assessment(exit_strategy, report_path):
                 1 for alt in relevant_alternatives
                 if any(tech["id"] == alt["alternative_technology"] and tech["support_plan"] == "t" for tech in alternative_technologies)
             )
-
-            # Debugging: Log the counts to verify
-            #logger.info(f"Resource Type: {resource_type_id}, Relevant Alternatives: {relevant_alternatives}")
-            #logger.info(f"Resource Type: {resource_type_id}, Support Count: {support_count}, Alternative Count: {alternative_count}")
 
             # Determine risks based on criteria, using resource_type_id in output
             if 1 <= alternative_count < 3:
@@ -259,10 +252,17 @@ def perform_risk_assessment(exit_strategy, report_path):
         elif total_resource_types > 30:
             risk_inventory.append({"resource_type": "null", "risk": "8"})
 
-        # Save results to risk_inventory_standard_data.json
-        risk_inventory_path = os.path.join(report_path, "risk_inventory_standard_data.json")
-        with open(risk_inventory_path, "w", encoding="utf-8") as risk_file:
-            json.dump(risk_inventory, risk_file, indent=4)
+        # Insert risk inventory into the database
+        with connect(db_path=db_path) as conn:
+            cursor = conn.cursor()
+            cursor.executemany(
+                """
+                INSERT INTO risk_inventory (resource_type, risk)
+                VALUES (?, ?)
+                """,
+                [(entry["resource_type"], entry["risk"]) for entry in risk_inventory]
+            )
+            conn.commit()
 
         return {"success": True, "logs": "Risk assessment completed successfully."}
 
@@ -271,132 +271,71 @@ def perform_risk_assessment(exit_strategy, report_path):
         return {"success": False, "logs": str(e)}
 
 # Stage 6
-def conduct_alternative_technology_analysis(cloud_service_provider, exit_strategy, report_path):
-    try:
-        # Load resource inventory data
-        with open(os.path.join(report_path, "resource_inventory_standard_data.json"), 'r', encoding='utf-8') as file:
-            resource_inventory = json.load(file)
-
-        # Load alternatives and alternative technologies datasets
-        with open("datasets/alternative.json", 'r', encoding='utf-8') as file:
-            alternatives = json.load(file)
-        with open("datasets/alternativetechnology.json", 'r', encoding='utf-8') as file:
-            alternative_technologies = json.load(file)
-
-        # Collect unique resource types from resource inventory
-        resource_types_in_use = {resource["resource_type"] for resource in resource_inventory.values()}
-
-        # Prepare a dictionary to group alternative technologies by resource_type
-        grouped_alternatives = {}
-
-        # Filter alternatives based on the resource types and exit strategy
-        for resource_type in resource_types_in_use:
-            # Filter for alternatives matching the resource type and exit strategy
-            filtered_alternatives = [
-                alt for alt in alternatives
-                if alt["resource_type"] == resource_type and str(alt["strategy_type"]) == str(exit_strategy)
-            ]
-
-            # Get alternative technology details for each filtered alternative
-            alternative_details = [
-                tech for alt in filtered_alternatives
-                for tech in alternative_technologies
-                if tech["id"] == alt["alternative_technology"] and tech["status"] == "t"
-            ]
-
-            # Assign the collected alternatives to the grouped dictionary by resource type
-            grouped_alternatives[resource_type] = alternative_details
-
-        # Format the grouped data for JSON serialization
-        grouped_alternatives_list = [
-            {"resource_type": resource_type, "alternatives": alternatives}
-            for resource_type, alternatives in grouped_alternatives.items()
-        ]
-
-        # Write the grouped alternative technologies to a JSON file
-        alt_tech_path = os.path.join(report_path, "alt_tech_standard_data.json")
-        with open(alt_tech_path, 'w', encoding='utf-8') as file:
-            json.dump(grouped_alternatives_list, file, indent=4)
-
-        #logger.info(f"Alternative technologies report saved to {alt_tech_path}")
-        return {"success": True, "logs": "Alternative technology analysis completed successfully."}
-
-    except Exception as e:
-        logger.error(f"Error generating alternative technologies report: {str(e)}", exc_info=True)
-        return {"success": False, "logs": str(e)}
-
-# Stage 7
 def generate_report(cloud_service_provider, exit_strategy, assessment_type, report_path):
+    try:
+        db_path = os.path.join(report_path, "data", "assessment.db")
 
-    copy_assets(report_path)
+        # Load data
+        resource_type_mapping = {
+            str(item["id"]): item for item in load_data("resourcetype", db_path=db_path)
+        }
+        risk_definitions = load_data("risk", db_path=db_path)
+        alternatives = load_data("alternative", db_path=db_path)
+        alternative_technologies = load_data("alternativetechnology", db_path=db_path)
+        resource_inventory = load_data("resource_inventory", db_path=db_path)
+        cost_data = load_data("cost_inventory", db_path=db_path)
+        risk_data = load_data("risk_inventory", db_path=db_path)
 
-    # Load data directly in generate_report
-    with open(os.path.join(report_path, "risk_inventory_standard_data.json"), 'r', encoding='utf-8') as file:
-        risk_data = json.load(file)
-    with open("datasets/risk.json", "r", encoding="utf-8") as file:
-        risk_definitions = json.load(file)
-    with open(os.path.join(report_path, "resource_inventory_standard_data.json"), 'r', encoding='utf-8') as file:
-        resource_inventory = json.load(file)
-    with open("datasets/resourcetype.json", "r", encoding="utf-8") as f:
-        resource_type_mapping = {str(item["id"]): item for item in json.load(f)}
-    with open(os.path.join(report_path, "cost_inventory_standard_data.json"), 'r', encoding='utf-8') as file:
-        cost_data = json.load(file)
-    with open(os.path.join(report_path, "alt_tech_standard_data.json"), 'r', encoding='utf-8') as file:
-        alt_tech_data = json.load(file)
+        # Create resource_inventory_dict with names and icons
+        resource_inventory_dict = {
+            str(item["resource_type"]): {
+                **item,
+                "name": resource_type_mapping.get(str(item["resource_type"]), {}).get("name", "Unknown Resource"),
+                "icon": resource_type_mapping.get(str(item["resource_type"]), {}).get("icon", "assets/icons/default.png")
+            }
+            for item in resource_inventory
+        }
 
-    # Prepare risk data
-    risks, severity_counts = get_risk_summary(risk_data, risk_definitions, resource_inventory)
+        # Prepare risk data
+        risks, severity_counts = get_risk_summary(risk_data, risk_definitions, resource_inventory_dict)
 
-    # Prepare cost data
-    months, cost_values, total_cost, currency_symbol = get_cost_summary(cost_data)
+        # Prepare cost data
+        months, cost_values, total_cost, currency_symbol = get_cost_summary(cost_data)
 
-    # Prepare resource data with names and icons
-    resource_counts = []
-    for resource_id, resource in resource_inventory.items():
-        resource_type = resource.get("resource_type")
-        count = resource.get("count", 0)
+        # Prepare resource data with names and icons
+        resource_counts = []
+        for resource_type, resource in resource_inventory_dict.items():
+            count = resource.get("count", 0)
+            resource_info = resource_type_mapping.get(str(resource_type), {})
+            name = resource_info.get("name", "Unknown Resource")
+            icon = resource_info.get("icon", "assets/icons/default.png").lstrip('/')
 
-        # Get resource info from resource_type_mapping based on resource_type
-        resource_info = resource_type_mapping.get(str(resource_type), {})
-        name = resource_info.get("name", "Unknown Resource")
-        icon = resource_info.get("icon", "assets/icons/default.png")
-
-        # Construct the relative path for the icon
-        icon = icon.lstrip('/')  # Remove leading slash for a relative path if needed
-
-        resource_counts.append({
-            "resource_type": resource_type,
-            "name": name,
-            "icon": icon,
-            "count": count
-        })
-
-    # Get the total resources count
-    total_resources = sum(item["count"] for item in resource_counts)
-
-    # Flatten and format the alternative technology data for easier use in the template
-    alternative_technologies = []
-    for alternatives in alt_tech_data:
-        resource_type = alternatives.get("resource_type")
-        for tech in alternatives.get("alternatives", []):
-            alternative_technologies.append({
-                "resource_type_id": resource_type,
-                "product_name": tech.get("product_name"),
-                "product_description": tech.get("product_description"),
-                "product_url": tech.get("product_url"),
-                "open_source": tech.get("open_source") == "t",  # Convert 't'/'f' to boolean
-                "support_plan": tech.get("support_plan") == "t",  # Convert 't'/'f' to boolean
-                "status": tech.get("status") == "t"
+            resource_counts.append({
+                "resource_type": resource_type,
+                "name": name,
+                "icon": icon,
+                "count": count
             })
 
-    assessment_ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-    assessment_type = assessment_type or "Not Specified"
-    
-    # Render and save the HTML template
-    try:
+        # Get the total count of all resources
+        total_resources = sum(item["count"] for item in resource_counts)
+
+        # Prepare alternative technologies using the helper function
+        alternative_technologies_data = prepare_alternative_technologies(
+            resource_inventory,
+            alternatives,
+            alternative_technologies,
+            exit_strategy
+        )
+
+        # Render the HTML template
+        assessment_ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+        assessment_type = assessment_type or "Not Specified"
+
         template_path = os.path.join("assets", "template", "index.html")
         with open(template_path, 'r') as file:
             template_content = file.read()
+
         template = Template(template_content)
         html_content = template.render(
             cloud_service_provider=cloud_service_provider,
@@ -413,14 +352,15 @@ def generate_report(cloud_service_provider, exit_strategy, assessment_type, repo
             currency_symbol=currency_symbol,
             total_resources=total_resources,
             resource_inventory=resource_counts,
-            alternative_technologies=alternative_technologies,
+            alternative_technologies=alternative_technologies_data,
         )
+
+        # Save the generated report to a file
         report_file_path = os.path.join(report_path, "index.html")
         with open(report_file_path, 'w') as report_file:
             report_file.write(html_content)
-        #logger.info(f"Report generated at: {report_file_path}")
-    except Exception as e:
-        #logger.error(f"Error generating report: {str(e)}")
-        return {"success": False, "logs": f"Error generating report: {str(e)}"}
 
-    return {"success": True, "logs": f"Report generated at: {report_file_path}"}
+        return {"success": True, "reports": {"HTML": report_file_path}}
+
+    except Exception as e:
+        return {"success": False, "logs": f"Error generating report: {str(e)}"}

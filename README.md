@@ -11,7 +11,8 @@
 
 **Release Date: November 20th, 2024**
 
-cloudexit is an open-source tool that empowers cloud engineers to conduct comprehensive cloud exit assessments. It helps identify and evaluate the risks associated with their cloud environment while providing actionable insights into the challenges and constraints of transitioning away from their current cloud provider. By leveraging EscapeCloud OSS, organizations can better prepare for a potential cloud exit, ensuring a smoother and more informed decision-making process.
+cloudexit is an open-source tool that empowers cloud engineers to conduct comprehensive cloud exit assessments. It helps identify and evaluate the risks associated with their cloud environment while providing actionable insights into the challenges and constraints of transitioning away from their current cloud provider. By leveraging EscapeCloud Community Edition, organizations can better prepare for a potential cloud exit, ensuring a smoother and more informed decision-making process.
+
 
 ## Required Packages
 

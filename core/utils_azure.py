@@ -2,13 +2,17 @@
 import json
 import os
 import logging
+import sqlite3
 from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
+from collections import defaultdict
 from azure.identity import ClientSecretCredential
 from azure.mgmt.resource import ResourceManagementClient
 from azure.mgmt.costmanagement import CostManagementClient
 from azure.mgmt.costmanagement.models import QueryDefinition, TimeframeType
 from azure.core.exceptions import AzureError, ClientAuthenticationError
+
+from .utils_db import connect, load_data
 
 logger = logging.getLogger("core.engine.azure")
 logging.getLogger("azure").setLevel(logging.WARNING)
@@ -39,79 +43,63 @@ def build_azure_resource_inventory(cloud_service_provider, provider_details, rep
         subscription_id = provider_details["subscriptionId"]
         resource_group_name = provider_details["resourceGroupName"]
 
+        db_path = os.path.join(report_path, "data", "assessment.db")
+
         # Check if resource inventory is empty
         if is_resource_inventory_empty(credential, subscription_id, resource_group_name):
-            #logger.warning("Azure resource inventory is empty.")
+            logger.warning("The selected resource group does not contain any resources.")
             return
 
         resource_client = ResourceManagementClient(credential, subscription_id)
-        #logger.info("Fetching Azure resources...")
 
         # Fetch resources and serialize to raw JSON
         resources = list(resource_client.resources.list_by_resource_group(resource_group_name))
         raw_data = [resource.serialize(True) for resource in resources]
-        #logger.info(f"Serialized Resources RAW Data: {raw_data}")
 
         # Save raw data to a JSON file
         raw_file_path = os.path.join(raw_data_path, "resource_inventory_raw_data.json")
         with open(raw_file_path, "w", encoding="utf-8") as raw_file:
             json.dump(raw_data, raw_file, indent=4)
-        #logger.info(f"Azure raw resource inventory saved to {raw_file_path}")
 
-        # Load the ResourceType mapping from JSON
-        with open("datasets/resourcetype.json", "r", encoding="utf-8") as f:
+        # Load resource type mapping from the assessment database
+        resource_type_mapping = getattr(build_azure_resource_inventory, "_resource_type_cache", None)
+        if resource_type_mapping is None:
             resource_type_mapping = {
                 item["code"].strip().lower(): {"id": item["id"], "name": item["name"]}
-                for item in json.load(f)
+                for item in load_data("resourcetype", db_path=db_path)
+                if item["csp"] == 1 and item["status"] == "t"
             }
+            build_azure_resource_inventory._resource_type_cache = resource_type_mapping
 
-        # Process resources and create a structured summary
-        # Process resources and create a structured summary
-        resource_summary = {}
-        resource_inventory_id_counter = 1  # Unique ID for each resource
-
+        # Aggregate resources by type and location
+        aggregated_resources = defaultdict(int)
         for resource in resources:
             resource_type_code = resource.type.strip().lower()
             resource_location = resource.location.strip().lower()
+            aggregated_resources[(resource_type_code, resource_location)] += 1
 
-            # Map resource type code to resource_type_id and resource_name
-            resource_info = resource_type_mapping.get(resource_type_code)
-            if not resource_info:
-                continue  # Skip if no matching ResourceType found
-
-            resource_type_id = resource_info["id"]
-            resource_name = resource_info["name"]
-
-            # Check for duplicates and merge if necessary
-            resource_key = (resource_name, resource_type_id, resource_location)  # Unique key for deduplication
-            if resource_key in resource_summary:
-                resource_summary[resource_key]["count"] += 1
-            else:
-                resource_summary[resource_key] = {
-                    "resource_name": resource_name,
-                    "resource_type": resource_type_id,
-                    "location": resource_location,
-                    "count": 1
-                }
-
-            # Convert resource_summary to the desired dictionary structure with numbered keys
-            resource_summary_numbered = {
-                str(idx): details
-                for idx, details in enumerate(resource_summary.values(), start=1)
-            }
-
-        # Log the resource summary
-        #logger.info(f"Resource summary: {resource_summary}")
-
-        # Save structured data to a JSON file
-        structured_file_path = os.path.join(report_path, "resource_inventory_standard_data.json")
-        with open(structured_file_path, "w", encoding="utf-8") as structured_file:
-            json.dump(resource_summary_numbered, structured_file, indent=4)
-
-        #logger.info(f"Azure structured resource inventory saved to {structured_file_path}")
+        # Insert data into SQLite
+        with connect(db_path=db_path) as conn:
+            cursor = conn.cursor()
+            data_to_insert = [
+                (resource_type_mapping[resource_type_code]["id"], resource_location, resource_count)
+                for (resource_type_code, resource_location), resource_count in aggregated_resources.items()
+                if resource_type_code in resource_type_mapping
+            ]
+            cursor.executemany(
+                """
+                INSERT INTO resource_inventory (resource_type, location, count)
+                VALUES (?, ?, ?)
+                ON CONFLICT(resource_type, location) DO UPDATE SET count = excluded.count
+                """,
+                data_to_insert
+            )
+            conn.commit()
 
     except ClientAuthenticationError as e:
         logger.error(f"Azure authentication error: {str(e)}", exc_info=True)
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error: {str(e)}", exc_info=True)
     except Exception as e:
         logger.error(f"Error fetching Azure resources: {str(e)}", exc_info=True)
 
@@ -142,6 +130,8 @@ def build_azure_cost_inventory(cloud_service_provider, provider_details, report_
         )
         cost_management_client = CostManagementClient(credential, base_url="https://management.azure.com")
 
+        db_path = os.path.join(report_path, "data", "assessment.db")
+
         end_time = date.today()
         start_time = end_time.replace(day=1) - timedelta(days=180)
         start_time = start_time.replace(day=1)
@@ -166,20 +156,48 @@ def build_azure_cost_inventory(cloud_service_provider, provider_details, report_
         with open(cost_inventory_raw_path, "w", encoding="utf-8") as raw_file:
             json.dump(cost_data.as_dict(), raw_file, indent=4)
 
-        structured_costs = {}
-        for row in cost_data.rows:
-            cost, month_str, currency = row
-            month_date = datetime.strptime(month_str, '%Y-%m-%dT%H:%M:%S').date().replace(day=1)
-            structured_costs[month_date.isoformat()] = {"cost": cost, "currency": currency}
+        # Insert structured cost data into SQLite
+        with connect(db_path=db_path) as conn:
+            cursor = conn.cursor()
 
-        missing_months = get_missing_months_azure(structured_costs.keys(), 6)
-        for missing_month in missing_months:
-            structured_costs[missing_month.isoformat()] = {"cost": 0.00, "currency": currency}
+            for row in cost_data.rows:
+                cost, month_str, currency = row
+                month_date = datetime.strptime(month_str, '%Y-%m-%dT%H:%M:%S').date().replace(day=1).isoformat()
 
-        cost_inventory_standard_path = os.path.join(report_path, "cost_inventory_standard_data.json")
-        with open(cost_inventory_standard_path, "w", encoding="utf-8") as structured_file:
-            json.dump(structured_costs, structured_file, indent=4)
+                # Insert or update cost data
+                cursor.execute(
+                    """
+                    INSERT INTO cost_inventory (month, cost, currency)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT(month) DO UPDATE SET
+                        cost = excluded.cost,
+                        currency = excluded.currency
+                    """,
+                    (month_date, cost, currency)
+                )
 
+            # Extract months already in the cost data
+            structured_months = {datetime.strptime(row[1], '%Y-%m-%dT%H:%M:%S').date() for row in cost_data.rows}
+
+            # Identify missing months and insert with zero cost
+            missing_months = get_missing_months_azure(
+                {month.isoformat() for month in structured_months}, 6
+            )
+            for missing_month in missing_months:
+                cursor.execute(
+                    """
+                    INSERT INTO cost_inventory (month, cost, currency)
+                    VALUES (?, 0.00, ?)
+                    ON CONFLICT(month) DO UPDATE SET
+                        currency = excluded.currency
+                    """,
+                    (missing_month.isoformat(), currency)
+                )
+
+            conn.commit()
+
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error: {str(e)}", exc_info=True)
     except Exception as e:
         logger.error(f"Error creating Azure cost inventory: {str(e)}", exc_info=True)
         raise
