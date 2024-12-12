@@ -350,10 +350,12 @@ def run_assessment(config, provider_name):
         # Use a spinner to indicate progress
         with console.status("Generating report...", spinner="dots"):
             report_status = generate_report(
+                config["providerDetails"],
                 config["cloudServiceProvider"],
                 config["exitStrategy"],
                 config["assessmentType"],
-                report_path
+                report_path,
+                raw_data_path
             )
 
         # Handle the result
@@ -365,10 +367,16 @@ def run_assessment(config, provider_name):
 
         # Output the report path after the separator
         console.print("-------------------------------------------")
-        console.print("Assessment Results:", style="bold")
+        console.print("Outputs:", style="bold")
         html_report_path = report_status.get("reports", {}).get("HTML")
         if html_report_path:
             console.print(f"HTML Report: {html_report_path}", style="cyan")
+        pdf_report_path = report_status.get("reports", {}).get("PDF")
+        if pdf_report_path:
+            console.print(f"PDF Report: {pdf_report_path}", style="cyan")
+        json_report_path = report_status.get("reports", {}).get("JSON")
+        if html_report_path:
+            console.print(f"JSON Report: {json_report_path}", style="cyan")
         console.print("-------------------------------------------")
 
     except Exception as e:
