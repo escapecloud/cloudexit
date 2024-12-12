@@ -16,10 +16,11 @@ from botocore.exceptions import NoCredentialsError, ClientError
 from azure.mgmt.costmanagement import CostManagementClient
 from azure.mgmt.costmanagement.models import QueryDefinition, TimeframeType
 
-from .utils import copy_assets, get_cost_summary, get_risk_summary, prepare_alternative_technologies
+from .utils import copy_assets
 from .utils_aws import build_aws_resource_inventory, build_aws_cost_inventory
 from .utils_azure import build_azure_resource_inventory, build_azure_cost_inventory
 from .utils_db import connect, load_data
+from .utils_report import generate_html_report, generate_pdf_report, generate_json_report
 
 # Configure the logger
 logger = logging.getLogger("core.engine")
@@ -271,7 +272,7 @@ def perform_risk_assessment(exit_strategy, report_path):
         return {"success": False, "logs": str(e)}
 
 # Stage 6
-def generate_report(cloud_service_provider, exit_strategy, assessment_type, report_path):
+def generate_report(provider_details, cloud_service_provider, exit_strategy, assessment_type, report_path, raw_data_path):
     try:
         db_path = os.path.join(report_path, "data", "assessment.db")
 
@@ -286,81 +287,38 @@ def generate_report(cloud_service_provider, exit_strategy, assessment_type, repo
         cost_data = load_data("cost_inventory", db_path=db_path)
         risk_data = load_data("risk_inventory", db_path=db_path)
 
-        # Create resource_inventory_dict with names and icons
-        resource_inventory_dict = {
-            str(item["resource_type"]): {
-                **item,
-                "name": resource_type_mapping.get(str(item["resource_type"]), {}).get("name", "Unknown Resource"),
-                "icon": resource_type_mapping.get(str(item["resource_type"]), {}).get("icon", "assets/icons/default.png")
-            }
-            for item in resource_inventory
+        # Timestamp
+        timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+
+        metadata = {
+            "cloud_service_provider": cloud_service_provider,
+            "exit_strategy": exit_strategy,
+            "assessment_type": assessment_type,
+            "timestamp": timestamp,
         }
 
-        # Prepare risk data
-        risks, severity_counts = get_risk_summary(risk_data, risk_definitions, resource_inventory_dict)
+        # Generate Outputs
+        reports = {}
 
-        # Prepare cost data
-        months, cost_values, total_cost, currency_symbol = get_cost_summary(cost_data)
-
-        # Prepare resource data with names and icons
-        resource_counts = []
-        for resource_type, resource in resource_inventory_dict.items():
-            count = resource.get("count", 0)
-            resource_info = resource_type_mapping.get(str(resource_type), {})
-            name = resource_info.get("name", "Unknown Resource")
-            icon = resource_info.get("icon", "assets/icons/default.png").lstrip('/')
-
-            resource_counts.append({
-                "resource_type": resource_type,
-                "name": name,
-                "icon": icon,
-                "count": count
-            })
-
-        # Get the total count of all resources
-        total_resources = sum(item["count"] for item in resource_counts)
-
-        # Prepare alternative technologies using the helper function
-        alternative_technologies_data = prepare_alternative_technologies(
-            resource_inventory,
-            alternatives,
-            alternative_technologies,
-            exit_strategy
+        # Generate HTML report
+        reports["HTML"] = generate_html_report(
+            report_path, metadata, resource_type_mapping, resource_inventory,
+            cost_data, risk_data, risk_definitions, alternatives, alternative_technologies, exit_strategy
         )
 
-        # Render the HTML template
-        assessment_ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-        assessment_type = assessment_type or "Not Specified"
-
-        template_path = os.path.join("assets", "template", "index.html")
-        with open(template_path, 'r') as file:
-            template_content = file.read()
-
-        template = Template(template_content)
-        html_content = template.render(
-            cloud_service_provider=cloud_service_provider,
-            exit_strategy=exit_strategy,
-            assessment_type=assessment_type,
-            assessment_ts=assessment_ts,
-            risks=risks,
-            high_risk_count=severity_counts['high'],
-            medium_risk_count=severity_counts['medium'],
-            low_risk_count=severity_counts['low'],
-            total_cost=total_cost,
-            months_json=json.dumps(months),
-            costs_json=json.dumps(cost_values),
-            currency_symbol=currency_symbol,
-            total_resources=total_resources,
-            resource_inventory=resource_counts,
-            alternative_technologies=alternative_technologies_data,
+        # Generate PDF report
+        reports["PDF"] = generate_pdf_report(
+            provider_details, report_path, metadata, resource_type_mapping, resource_inventory,
+            cost_data, risk_data, risk_definitions, alternatives, alternative_technologies, exit_strategy
         )
 
-        # Save the generated report to a file
-        report_file_path = os.path.join(report_path, "index.html")
-        with open(report_file_path, 'w') as report_file:
-            report_file.write(html_content)
+        # Generate JSON report
+        reports["JSON"] = generate_json_report(
+            raw_data_path, metadata, resource_type_mapping, resource_inventory,
+            cost_data, risk_data, risk_definitions, alternatives, alternative_technologies, exit_strategy
+        )
 
-        return {"success": True, "reports": {"HTML": report_file_path}}
+        return {"success": True, "reports": reports}
 
     except Exception as e:
         return {"success": False, "logs": f"Error generating report: {str(e)}"}
