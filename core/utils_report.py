@@ -144,7 +144,7 @@ def generate_html_report(report_path, metadata, resource_type_mapping, resource_
         str(item["resource_type"]): {
             **item,
             "name": resource_type_mapping.get(str(item["resource_type"]), {}).get("name", "Unknown Resource"),
-            "icon": resource_type_mapping.get(str(item["resource_type"]), {}).get("icon", "assets/icons/default.png")
+            "icon": "/assets" + resource_type_mapping.get(str(item["resource_type"]), {}).get("icon", "/icons/default.png")
         }
         for item in resource_inventory
     }
@@ -342,7 +342,8 @@ def transform_resource_inventory_for_pdf(resource_inventory, resource_type_mappi
 
         resource_name = resource_info.get("name", "Unknown Resource")
         # Construct icon_url from the resource_info, default if not found
-        icon_path = resource_info.get("icon", "/assets/icons/default.png")
+        icon_path = "/assets" + resource_info.get("icon", "/icons/default.png")
+
         # Prepend report_storage to form the full path to the icon
         icon_url = f"{report_path}{icon_path}"
 
@@ -439,7 +440,7 @@ def transform_alt_tech_for_pdf(resource_inventory, resource_type_mapping, altern
         rtype_info = resource_type_mapping.get(rtype_str, {})
         resource_name = rtype_info.get("name", "Unknown Resource")
 
-        icon_path = rtype_info.get("icon", "/assets/icons/default.png")
+        icon_path = "/assets" + rtype_info.get("icon", "/icons/default.png")
         icon_url = f"{report_path}{icon_path}"
 
         count = alt_counts.get(rtype_str, 0)
