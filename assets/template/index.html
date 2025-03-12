@@ -230,7 +230,7 @@
                         {% for resource_type in resource_inventory %}
                           <div class="col-md-3 col-sm-12 service-model-item" data-service-model="{{ resource_type.resource_type | trim }}">
                             <div class="resource-box">
-                              <img src="{{ resource_type.icon | trim }}" alt="{{ resource_type.name | trim }}">
+                              <img src="assets/{{ resource_type.icon | trim }}" alt="{{ resource_type.name | trim }}">
                               <h3>{{ resource_type.name | trim }}</h3>
                               <h5>
                                 {{ resource_type.count }} Resource{% if resource_type.count != 1 %}s{% endif %} Available

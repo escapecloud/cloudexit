@@ -27,6 +27,7 @@ from utils.utils import ascii_art, create_directory, load_config, prompt_require
 from utils.constants import REGION_CHOICES, REQUIRED_FIELDS_AZURE, REQUIRED_FIELDS_AWS
 from utils.validate import validate_region, validate_config
 from utils.azure import select_subscription, select_resource_group, is_azure_cli_logged_in
+from utils.data import initialize_dataset
 
 # Configure the root logger to ensure logs propagate from all modules
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -416,6 +417,9 @@ def parse_arguments():
 def main():
     # Print ASCII art
     console.print(ascii_art, style="bold cyan")
+
+    # Ensure latest dataset is available before proceeding
+    initialize_dataset()
 
     args = parse_arguments()
 
