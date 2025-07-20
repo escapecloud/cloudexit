@@ -3,6 +3,7 @@ import logging
 import argparse
 import boto3
 import time
+import sys
 from rich.console import Console
 from datetime import datetime
 from botocore.exceptions import NoCredentialsError, ProfileNotFound
@@ -534,6 +535,11 @@ def main():
 if __name__ == "__main__":
     try:
         main()
+    except KeyboardInterrupt:
+        console.print("\n[bold yellow]Operation cancelled by user (Ctrl+C). Exiting gracefully.[/bold yellow]")
+        #logger.warning("Process interrupted by user via KeyboardInterrupt.")
+        sys.exit(0)
     except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}", exc_info=True)
+        #logger.error(f"An unexpected error occurred: {e}", exc_info=True)
         console.print(f"[red]Unexpected error: {e}[/red]")
+        sys.exit(1)
