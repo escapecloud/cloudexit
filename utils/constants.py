@@ -1,4 +1,4 @@
-# constants.py
+# utils/constants.py
 REGION_CHOICES = [
     ('us-east-1', 'us-east-1 (N. Virginia)'),
     ('us-east-2', 'us-east-2 (Ohio)'),

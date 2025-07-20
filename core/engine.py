@@ -1,32 +1,27 @@
+# core/engine.py
 import logging
-import json
 import os
-import time
 import boto3
-import botocore
-
-from datetime import date, datetime, timedelta
-from dateutil.relativedelta import relativedelta
-from jinja2 import Template
+from datetime import datetime
+from typing import Any, Dict, Optional, Tuple
 from azure.identity import ClientSecretCredential
 from azure.mgmt.resource import ResourceManagementClient
 from azure.core.exceptions import ClientAuthenticationError
 from azure.mgmt.authorization import AuthorizationManagementClient
-from botocore.exceptions import NoCredentialsError, ClientError
-from azure.mgmt.costmanagement import CostManagementClient
-from azure.mgmt.costmanagement.models import QueryDefinition, TimeframeType
+from botocore.exceptions import NoCredentialsError
 
 from .utils import copy_assets
 from .utils_aws import build_aws_resource_inventory, build_aws_cost_inventory
 from .utils_azure import build_azure_resource_inventory, build_azure_cost_inventory
 from .utils_db import connect, load_data
 from .utils_report import generate_html_report, generate_pdf_report, generate_json_report
+from .utils_sync import post_assessment
 
 # Configure the logger
 logger = logging.getLogger("core.engine")
 
 # Stage 1
-def verify_credentials(cloud_service_provider, provider_details):
+def verify_credentials(cloud_service_provider: int, provider_details: Dict[str, Any]) -> Tuple[bool, str]:
     connection_success = False
     logs = ""
 
@@ -70,7 +65,7 @@ def verify_credentials(cloud_service_provider, provider_details):
     return connection_success, logs
 
 # Stage 2
-def test_permissions(cloud_service_provider, provider_details):
+def test_permissions(cloud_service_provider: int, provider_details: Dict[str, Any]) -> Tuple[bool, bool, bool, str]:
     permission_valid = False
     permission_reader = False
     permission_cost = False
@@ -160,7 +155,7 @@ def test_permissions(cloud_service_provider, provider_details):
     return permission_valid, permission_reader, permission_cost, logs
 
 # Stage 3
-def create_resource_inventory(cloud_service_provider, provider_details, report_path, raw_data_path):
+def create_resource_inventory(cloud_service_provider: int, provider_details: Dict[str, Any], report_path: str, raw_data_path: str) -> Dict[str, Any]:
     # Copy assets and datasets folders data
     copy_assets(report_path)
 
@@ -179,7 +174,7 @@ def create_resource_inventory(cloud_service_provider, provider_details, report_p
         return {"success": False, "logs": str(e)}
 
 # Stage 4
-def create_cost_inventory(provider_details, cloud_service_provider, report_path, raw_data_path):
+def create_cost_inventory(cloud_service_provider: int, provider_details: Dict[str, Any], report_path: str, raw_data_path: str) -> Dict[str, Any]:
     try:
         if cloud_service_provider == 1:  # Azure
             build_azure_cost_inventory(cloud_service_provider, provider_details, report_path, raw_data_path)
@@ -192,15 +187,98 @@ def create_cost_inventory(provider_details, cloud_service_provider, report_path,
         logger.error(f"Error creating cost inventory: {str(e)}", exc_info=True)
         return {"success": False, "logs": str(e)}
 
-# Stage 5
-def perform_risk_assessment(exit_strategy, report_path):
+# Stage 5 - Online
+def sync_assessment(report_path: str, name: str, started_at: int, metadata: Dict[str, Any], mode: str, token: Optional[str]) -> Dict[str, Any]:
+    if mode != "online" or not token:
+        return {"success": True, "online": False,
+                "payload": None,
+                "logs": "offline – sync skipped."}
+
+    result = post_assessment(
+        name=name,
+        started_at=started_at,
+        report_path=report_path,
+        meta=metadata,
+        token=token,
+    )
+
+    if not result.get("success"):
+        raise RuntimeError(f"Assessment sync failed: {result.get('logs')}")
+
+    logger.debug(result)
+
+    try:
+        payload = result["payload"].get("data", {})
+        server_risks = payload.get("risk_inventory", [])
+
+        rows = []
+        for entry in server_risks:
+            rid = entry["id"]
+            impacted = entry.get("impacted_resources", [])
+            if impacted:
+                for rt in impacted:
+                    rows.append((rt, rid))
+            else:
+                rows.append(("null", rid))
+
+
+        db_path = os.path.join(report_path, "data", "assessment.db")
+        with connect(db_path=db_path) as conn:
+            cursor = conn.cursor()
+            cursor.executemany(
+                """
+                INSERT INTO risk_inventory (resource_type, risk)
+                VALUES (?, ?)
+                """,
+                rows
+            )
+            conn.commit()
+
+    except Exception as e:
+        logger.error("Error saving server risks to local DB: %s", str(e), exc_info=True)
+        raise RuntimeError(f"Failed to store server risks: {str(e)}")
+
+    try:
+        scoring = payload.get("scoring_data")
+        if scoring:
+            db_path = os.path.join(report_path, "data", "assessment.db")
+            with connect(db_path=db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    INSERT INTO scoring_data (exit_score, human_score, technology_score, operational_score)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (
+                        int(scoring["exit_score"]),
+                        int(scoring["human_score"]),
+                        int(scoring["technology_score"]),
+                        int(scoring["operational_score"])
+                    )
+                )
+                conn.commit()
+                logger.debug("Scoring data saved to local DB.")
+
+    except Exception as e:
+        logger.error("Error saving scoring data to local DB: %s", str(e), exc_info=True)
+        raise RuntimeError(f"Failed to store scoring data: {str(e)}")
+
+    return result
+
+# Stage 5 - Offline
+def perform_risk_assessment(exit_strategy: int, report_path: str, mode: str) -> Dict[str, Any]:
+
+    if mode != "offline":
+        logger.debug("Online mode – skipping local risk assessment.")
+        return {"success": True,
+                "logs": "online mode – local risk skipped."}
+
     try:
         # Define the database path
         db_path = os.path.join(report_path, "data", "assessment.db")
 
         # Load data from the database
         resource_inventory = load_data("resource_inventory", db_path=db_path)
-        risks = load_data("risk", db_path=db_path)
         alternatives = load_data("alternative", db_path=db_path)
         alternative_technologies = load_data("alternativetechnology", db_path=db_path)
 
@@ -272,7 +350,7 @@ def perform_risk_assessment(exit_strategy, report_path):
         return {"success": False, "logs": str(e)}
 
 # Stage 6
-def generate_report(provider_details, cloud_service_provider, exit_strategy, assessment_type, report_path, raw_data_path):
+def generate_report(cloud_service_provider: int, provider_details: Dict[str, Any], exit_strategy: int, assessment_type: int, name: str, report_path: str, raw_data_path: str) -> Dict[str, Any]:
     try:
         db_path = os.path.join(report_path, "data", "assessment.db")
 
@@ -286,16 +364,28 @@ def generate_report(provider_details, cloud_service_provider, exit_strategy, ass
         resource_inventory = load_data("resource_inventory", db_path=db_path)
         cost_data = load_data("cost_inventory", db_path=db_path)
         risk_data = load_data("risk_inventory", db_path=db_path)
+        scoring_data = load_data("scoring_data", db_path=db_path)
 
         # Timestamp
         timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
 
         metadata = {
+            "name": name,
             "cloud_service_provider": cloud_service_provider,
             "exit_strategy": exit_strategy,
             "assessment_type": assessment_type,
             "timestamp": timestamp,
         }
+
+        # Handle scoring_data
+        if isinstance(scoring_data, list):
+            if len(scoring_data) == 1:
+                scoring_data = scoring_data[0]
+            elif len(scoring_data) == 0:
+                scoring_data = None
+            else:
+                logger.warning("Unexpected multiple rows in scoring_data: %d", len(scoring_data))
+                scoring_data = scoring_data[0]
 
         # Generate Outputs
         reports = {}
@@ -303,19 +393,19 @@ def generate_report(provider_details, cloud_service_provider, exit_strategy, ass
         # Generate HTML report
         reports["HTML"] = generate_html_report(
             report_path, metadata, resource_type_mapping, resource_inventory,
-            cost_data, risk_data, risk_definitions, alternatives, alternative_technologies, exit_strategy
+            cost_data, scoring_data, risk_data, risk_definitions, alternatives, alternative_technologies, exit_strategy
         )
 
         # Generate PDF report
         reports["PDF"] = generate_pdf_report(
             provider_details, report_path, metadata, resource_type_mapping, resource_inventory,
-            cost_data, risk_data, risk_definitions, alternatives, alternative_technologies, exit_strategy
+            cost_data, scoring_data, risk_data, risk_definitions, alternatives, alternative_technologies, exit_strategy
         )
 
         # Generate JSON report
         reports["JSON"] = generate_json_report(
             raw_data_path, metadata, resource_type_mapping, resource_inventory,
-            cost_data, risk_data, risk_definitions, alternatives, alternative_technologies, exit_strategy
+            cost_data, scoring_data, risk_data, risk_definitions, alternatives, alternative_technologies, exit_strategy
         )
 
         return {"success": True, "reports": reports}

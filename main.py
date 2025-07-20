@@ -1,18 +1,14 @@
+# main.py
 import logging
-import os
-import json
 import argparse
 import boto3
-import botocore
-from pathlib import Path
+import time
+import sys
 from rich.console import Console
-from rich.text import Text
-from rich.style import Style
 from datetime import datetime
-from botocore.exceptions import NoCredentialsError, ClientError
+from botocore.exceptions import NoCredentialsError, ProfileNotFound
 from azure.identity import DefaultAzureCredential, ClientSecretCredential
 from azure.mgmt.resource import SubscriptionClient, ResourceManagementClient
-from azure.core.exceptions import ClientAuthenticationError
 
 # Import the functions
 from core.engine import (
@@ -21,18 +17,22 @@ from core.engine import (
     create_resource_inventory,
     create_cost_inventory,
     perform_risk_assessment,
+    sync_assessment,
     generate_report,
 )
-from utils.utils import ascii_art, create_directory, load_config, prompt_required_inputs, print_help_message, print_step
-from utils.constants import REGION_CHOICES, REQUIRED_FIELDS_AZURE, REQUIRED_FIELDS_AWS
-from utils.validate import validate_region, validate_config
-from utils.azure import select_subscription, select_resource_group, is_azure_cli_logged_in
+from utils.azure import select_subscription, select_resource_group, is_azure_cli_installed, is_azure_cli_logged_in, is_azure_cli_token_expired
+from utils.aws import is_aws_cli_installed, is_aws_profile_valid
+from utils.connection import resolve_mode
 from utils.data import initialize_dataset
+from utils.utils import ascii_art, create_directory, load_config, prompt_required_inputs, print_help_message, print_step
+from utils.validate import validate_region, validate_config
 
 # Configure the root logger to ensure logs propagate from all modules
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logging.getLogger("botocore").setLevel(logging.WARNING)
 logging.getLogger("boto3").setLevel(logging.WARNING)
+logging.getLogger("kaleido").setLevel(logging.WARNING)
+logging.getLogger("choreographer").setLevel(logging.WARNING)
 
 # Configure the logger
 logger = logging.getLogger(__name__)
@@ -44,26 +44,52 @@ console = Console()
 def handle_aws(args):
     config = {}
 
+    cloud_provider = 2
+
     if args.config:
         #logger.info(f"AWS --config argument detected with path: {args.config}")
         config = load_config(args.config)
+
         if not config:
             console.print("[red]Invalid or missing AWS configuration file.[/red]")
             return
+
+        # Handle name field logic (priority: --name > config name > fallback)
+        if args.name:
+            config["name"] = args.name.strip()
+
+        if "name" not in config or not config["name"].strip():
+            config["name"] = f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
     elif args.profile:
+        # Check if aws cli available
+        if not is_aws_cli_installed():
+            #logger.error("AWS CLI is not installed.")
+            console.print("[red]AWS CLI is not installed. Install it from https://aws.amazon.com/cli/[/red]")
+            return
+        # Check if aws cli profile is valid
+        if not is_aws_profile_valid(args.profile):
+            #logger.error(f"AWS profile '{args.profile}' is not configured.")
+            console.print(f"[red]AWS profile '{args.profile}' is not configured. Use `aws configure --profile {args.profile}`.[/red]")
+            return
+
         #logger.info(f"AWS --profile argument detected with profile: {args.profile}")
         try:
             session = boto3.Session(profile_name=args.profile)
             credentials = session.get_credentials()
+            if credentials is None:
+                #logger.error(f"AWS profile '{args.profile}' has no valid credentials.")
+                console.print(f"[red]AWS profile '{args.profile}' has no valid credentials. Use `aws configure --profile {args.profile}`.[/red]")
+                return
             region = session.region_name or "us-east-1"
             #logger.info(f"Using AWS profile '{args.profile}' with region '{region}'.")
 
-            #exit_strategy, assessment_type = prompt_required_inputs()
-            exit_strategy = prompt_required_inputs()
+            exit_strategy, assessment_type = prompt_required_inputs()
             config = {
-                "cloudServiceProvider": 2,
+                "name": args.name.strip() if args.name else f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                "cloudServiceProvider": cloud_provider,
                 "exitStrategy": exit_strategy,
-                "assessmentType": 1,
+                "assessmentType": assessment_type,
                 "providerDetails": {
                     "accessKey": credentials.access_key,
                     "secretKey": credentials.secret_key,
@@ -75,7 +101,7 @@ def handle_aws(args):
             console.print(f"[red]AWS profile error: {str(e)}. Use `aws configure` to set up a profile.[/red]")
             return
     else:
-        exit_strategy = prompt_required_inputs()
+        exit_strategy, assessment_type = prompt_required_inputs()
         # Prompt for manual input
         try:
             access_key = input("Enter AWS Access Key: ").strip()
@@ -91,9 +117,10 @@ def handle_aws(args):
                     console.print(f"[red]{e} Please enter a valid AWS region.[/red]")
 
             config = {
-                "cloudServiceProvider": 2,
+                "name": args.name.strip() if args.name else f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                "cloudServiceProvider": cloud_provider,
                 "exitStrategy": exit_strategy,
-                "assessmentType": 1,
+                "assessmentType": assessment_type,
                 "providerDetails": {
                     "accessKey": access_key,
                     "secretKey": secret_key,
@@ -109,17 +136,43 @@ def handle_aws(args):
 
 def handle_azure(args):
     config = {}
+
+    cloud_provider = 1
+
     if args.config:
         #logger.info(f"Azure --config argument detected with path: {args.config}")
         config = load_config(args.config)
+
         if not config:
             console.print("[red]Invalid or missing Azure configuration file.[/red]")
             return
+
+        # Handle name field logic (priority: --name > config name > fallback)
+        if args.name:
+            config["name"] = args.name.strip()
+
+        if "name" not in config or not config["name"].strip():
+            config["name"] = f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
     elif args.cli:
         #logger.info("Azure --cli argument detected. Using Azure CLI credentials.")
+        # Check if az cli available
+        if not is_azure_cli_installed():
+            #logger.error("Azure CLI is not installed.")
+            console.print("[red]Azure CLI is not installed. Install it from https://aka.ms/install-azure-cli.[/red]")
+            return
+
         # Check if the user is logged in to Azure CLI
         if not is_azure_cli_logged_in():
+            #logger.error("User is not logged in to Azure CLI")
             console.print("[red]You are not logged in to Azure CLI. Please run 'az login' and try again.[/red]")
+            return
+
+        # Check if the cli token is expired
+        if is_azure_cli_token_expired():
+            #logger.error("Azure CLI token is expired.")
+            console.print("[red]Your Azure CLI token has expired. Please run:[/red]")
+            console.print("[bold cyan]az login --scope https://management.azure.com/.default[/bold cyan]")
             return
 
         try:
@@ -143,12 +196,12 @@ def handle_azure(args):
                 return
 
             resource_group_name = select_resource_group(resource_groups)
-            #exit_strategy, assessment_type = prompt_required_inputs()
-            exit_strategy = prompt_required_inputs()
+            exit_strategy, assessment_type = prompt_required_inputs()
             config = {
-                "cloudServiceProvider": 1,
+                "name": args.name.strip() if args.name else f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                "cloudServiceProvider": cloud_provider,
                 "exitStrategy": exit_strategy,
-                "assessmentType": 1,
+                "assessmentType": assessment_type,
                 "providerDetails": {
                     "credential": credential,
                     "tenantId": tenant_id,
@@ -160,8 +213,7 @@ def handle_azure(args):
             logger.error(f"Error during Azure CLI processing: {e}", exc_info=True)
             console.print(f"[red]An error occurred: {e}[/red]")
     else:
-        # Prompt for exit strategy
-        exit_strategy = prompt_required_inputs()
+        exit_strategy, assessment_type = prompt_required_inputs()
 
         tenant_id = input("Enter Azure Tenant ID: ").strip()
         client_id = input("Enter Service Principal / Client ID: ").strip()
@@ -196,9 +248,10 @@ def handle_azure(args):
 
             # Build the configuration
             config = {
-                "cloudServiceProvider": 1,
+                "name": args.name.strip() if args.name else f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                "cloudServiceProvider": cloud_provider,
                 "exitStrategy": exit_strategy,
-                "assessmentType": 1,
+                "assessmentType": assessment_type,
                 "providerDetails": {
                     "tenantId": tenant_id,
                     "clientId": client_id,
@@ -217,6 +270,9 @@ def handle_azure(args):
     run_assessment(config, "azure")
 
 def run_assessment(config, provider_name):
+    # Record the assessment start time to propagate across stages
+    started_at = int(time.time())
+
     try:
         # Preliminary Stage: Validate configuration & create directory
         console.print("-------------------------------------------")
@@ -227,6 +283,17 @@ def run_assessment(config, provider_name):
         except ValueError as e:
             print_step("Configuration validation failed.", status="error", logs=str(e))
             return
+
+        # Detect ExitCloud Integration
+        mode, jwt = resolve_mode()
+        if mode == "online":
+            print_step("ExitCloud integration configured.", status="ok")
+        else:
+            print_step("ExitCloud integration not configured.", status="warning")
+            # Overwrite assessment type to basic
+            if config["assessmentType"] != 1:
+                print_step("Forcing Basic Assessment due to offline mode.", status="warning")
+                config["assessmentType"] = 1
 
         # Create directories
         try:
@@ -314,8 +381,8 @@ def run_assessment(config, provider_name):
         # Use a spinner to indicate progress
         with console.status(f"Building cost inventory for {provider_name}...", spinner="dots"):
             cost_result = create_cost_inventory(
-                config["providerDetails"],
                 config["cloudServiceProvider"],
+                config["providerDetails"],
                 report_path,
                 raw_data_path,
             )
@@ -329,19 +396,40 @@ def run_assessment(config, provider_name):
 
         console.print("-------------------------------------------")
 
-        # Stage 5: Perform Risk Assessment
-        console.print("Stage #5 - Perform Risk Assessment", style="bold")
+        name = config.get("name") or f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
-        # Use a spinner to indicate progress
-        with console.status("Performing risk assessment...", spinner="dots"):
-            risk_result = perform_risk_assessment(config["exitStrategy"], report_path)
+        # Stage 5 – Online / Offline Risk Assessment
+        if mode == "online":
+            console.print("Stage #5 – Online Risk Assessment", style="bold")
 
-        # Handle the result
-        if risk_result["success"]:
-            print_step("Performing risk assessment...", status="ok")
-        else:
-            print_step("Performing risk assessment...", status="error", logs=risk_result["logs"])
-            return
+            sync_result = sync_assessment(
+                name=name,
+                started_at=started_at,
+                report_path=report_path,
+                metadata={
+                    "cloud_service_provider": config["cloudServiceProvider"],
+                    "exit_strategy":         config["exitStrategy"],
+                    "assessment_type":       config["assessmentType"],
+                },
+                mode=mode,
+                token=jwt,
+            )
+
+            status = "ok" if sync_result["success"] else "error"
+            print_step("Sync assessment...", status=status, logs=sync_result["logs"])
+
+        elif mode == "offline":
+            console.print("Stage #5 – Offline Risk Assessment", style="bold")
+
+            with console.status("Performing risk assessment...", spinner="dots"):
+                risk_result = perform_risk_assessment(
+                    exit_strategy=config["exitStrategy"],
+                    report_path=report_path,
+                    mode=mode,
+                )
+
+            status = "ok" if risk_result["success"] else "error"
+            print_step("Performing risk assessment...", status=status, logs=risk_result["logs"])
 
         console.print("-------------------------------------------")
 
@@ -351,10 +439,11 @@ def run_assessment(config, provider_name):
         # Use a spinner to indicate progress
         with console.status("Generating report...", spinner="dots"):
             report_status = generate_report(
-                config["providerDetails"],
                 config["cloudServiceProvider"],
+                config["providerDetails"],
                 config["exitStrategy"],
                 config["assessmentType"],
+                name,
                 report_path,
                 raw_data_path
             )
@@ -391,9 +480,12 @@ def parse_arguments():
             "  python3 main.py aws                        # Use manual input for AWS\n"
             "  python3 main.py aws --config config.json   # Use a configuration file for AWS\n"
             "  python3 main.py aws --profile PROFILE      # Use an AWS CLI profile\n"
+            "  python3 main.py aws --name 'DMS System'    # Use a pre-defined assessment name\n"
             "  python3 main.py azure                      # Use manual input for Azure\n"
             "  python3 main.py azure --config config.json # Use a configuration file for Azure\n"
             "  python3 main.py azure --cli                # Use Azure CLI credentials\n"
+            "  python3 main.py azure --name 'DMS System'  # Use a pre-defined assessment name\n"
+
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -405,12 +497,15 @@ def parse_arguments():
     aws_group = aws_parser.add_mutually_exclusive_group(required=False)
     aws_group.add_argument("--config", type=str, help="Path to the configuration file (JSON format).")
     aws_group.add_argument("--profile", type=str, help="AWS profile name to use credentials from ~/.aws/credentials.")
+    aws_parser.add_argument("--name", type=str, help="Assessment Name (Optional / Max. 50 characters).")
+
 
     # Subparser for Azure
     azure_parser = subparsers.add_parser("azure", help="Perform an Azure assessment.")
     azure_group = azure_parser.add_mutually_exclusive_group(required=False)
     azure_group.add_argument("--config", type=str, help="Path to the configuration file (JSON format).")
     azure_group.add_argument("--cli", action="store_true", help="Use Azure CLI credentials for authentication.")
+    azure_parser.add_argument("--name", type=str, help="Assessment Name (Optional / Max. 50 characters).")
 
     return parser.parse_args()
 
@@ -440,6 +535,11 @@ def main():
 if __name__ == "__main__":
     try:
         main()
+    except KeyboardInterrupt:
+        console.print("\n[bold yellow]Operation cancelled by user (Ctrl+C). Exiting gracefully.[/bold yellow]")
+        #logger.warning("Process interrupted by user via KeyboardInterrupt.")
+        sys.exit(0)
     except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}", exc_info=True)
+        #logger.error(f"An unexpected error occurred: {e}", exc_info=True)
         console.print(f"[red]Unexpected error: {e}[/red]")
+        sys.exit(1)

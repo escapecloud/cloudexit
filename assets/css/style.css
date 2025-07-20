@@ -241,6 +241,124 @@ header.show .navbar-toggler .navbar-toggler-icon {border-color: transparent;}*/
     justify-content: space-between;
     margin: 0;
 }
+.chart-box-big .box-title h4 span{
+    display: block;
+    color: #4B6361;
+    font-size: 12px;
+    font-weight: 400;
+}
+.chart-box-big .box-title h4 .info-hintbx{
+    margin-left: auto;
+    position: relative;
+}
+.chart-box-big .box-title h4 .info-hintbx img{
+    cursor: pointer;
+}
+.info-hintbx{
+    margin-left: auto;
+    position: relative;
+}
+.info-hintbx img{
+    cursor: pointer;
+}
+.chart-box-big .box-body{
+    margin: 0 auto;
+    display: inline-block;
+    position: relative;
+    width: 100%;
+}
+.chart-box-big .box-body.exitchart {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  min-height: 400px;
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+}
+.chart-box-big .box-body-empty{
+    min-height: 350px;
+    display: flex;
+    flex-flow: column;
+    justify-content: center;
+    align-items: center;
+}
+.chart-box-big .box-body canvas {
+    max-width: 450px; /* Adjust as needed to control the size */
+    margin: auto; /* This centers the canvas in the .box-body */
+    display: block; /* Ensures the canvas respects the max-width */
+}
+.chart-box-big .box-body .scoring canvas {
+    max-width: none;
+    margin: auto;
+    display: block;
+}
+.hint-hoverbox{
+    position: absolute;
+    right: -15px;
+    max-width: 310px;
+    min-width: 310px;
+    width: 100%;
+    border: 1px solid rgba(75, 75, 75, 0.20);
+    border-radius: 8px;
+    background: #fff;
+    z-index:99;
+    opacity: 0;
+    visibility: hidden;
+    transition: .4s linear;
+    -webkit-transition: .4s linear;
+}
+.hint-hoverbox:after{
+    position: absolute;
+    content: '';
+    width: 16px;
+    height: 9px;
+    background-size: 100% 100%;
+    bottom: -8px;
+    right: 15px;
+}
+.chart-box-big .box-title h4 .info-hintbx:hover .hint-hoverbox{
+    opacity: 1;
+    visibility: visible;
+}
+.info-hintbx:hover .hint-hoverbox{
+    opacity: 1;
+    visibility: visible;
+}
+.hint-hoverbox h5{
+    font-size: 16px;
+    font-weight: 500;
+    color: #212529;
+    background: #F5F5F5;
+    border-radius: 8px 8px 0 0;
+    padding: 8px 15px;
+    display: block;
+    border-bottom: 1px solid #E9ECEF;
+    margin: 0;
+}
+.hint-dt{
+    padding: 15px;
+}
+.hint-dt p{
+    font-size: 14px;
+    font-weight: normal;
+    color: #49535C;
+    line-height: 22px;
+    margin: 0 0 10px;
+    text-align: justify;
+}
+.hint-dt a{
+    font-size: 14px;
+    font-weight: 500;
+    color: #055160;
+    display: table;
+    margin: 0;
+}
+.hint-dt a:hover{
+    color: #111;
+}
+
 .chart-box-big .box-body{
     padding: 24px;
 }

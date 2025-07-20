@@ -1,14 +1,19 @@
-# azure.py
+# utils/azure.py
 import logging
+import shutil
 import subprocess
+from typing import List, Any
 from rich.console import Console
-from azure.identity import DefaultAzureCredential, AzureCliCredential
-from azure.mgmt.resource import SubscriptionClient, ResourceManagementClient
+from azure.identity import AzureCliCredential
+from azure.core.exceptions import ClientAuthenticationError
 
 logger = logging.getLogger("main.utils.azure")
 console = Console()
 
-def is_azure_cli_logged_in():
+def is_azure_cli_installed() -> bool:
+    return shutil.which("az") is not None
+
+def is_azure_cli_logged_in() -> bool:
     try:
         # Run the 'az account show' command to check if the user is logged in
         subprocess.run(["az", "account", "show"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -16,7 +21,17 @@ def is_azure_cli_logged_in():
     except subprocess.CalledProcessError:
         return False
 
-def select_subscription(subscriptions):
+def is_azure_cli_token_expired() -> bool:
+    credential = AzureCliCredential()
+    try:
+        credential.get_token("https://management.azure.com/.default")
+        return False  # Token is valid
+    except ClientAuthenticationError as e:
+        if "AADSTS700082" in str(e):
+            return True  # Token expired
+        return False
+
+def select_subscription(subscriptions: List[Any]) -> Any:
     #logger.info("Listing available subscriptions for selection.")
     console.print("Available Subscriptions:")
     for idx, sub in enumerate(subscriptions, start=1):
@@ -33,7 +48,7 @@ def select_subscription(subscriptions):
             logger.warning(f"Invalid subscription selection: {e}")
             console.print(f"[red]{e} Please select a valid number.[/red]")
 
-def select_resource_group(resource_groups):
+def select_resource_group(resource_groups: List[Any]) -> str:
     #logger.info("Listing available resource groups for selection.")
     console.print("Available Resource Groups:")
     for idx, rg in enumerate(resource_groups, start=1):
