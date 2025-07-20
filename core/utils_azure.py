@@ -1,9 +1,10 @@
-#utils_azure.py
+# core/utils_azure.py
 import json
 import os
 import logging
 import sqlite3
-from datetime import date, datetime, timedelta
+from typing import Any, Dict, Set
+from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 from collections import defaultdict
 from azure.identity import ClientSecretCredential
@@ -17,7 +18,7 @@ from .utils_db import connect, load_data
 logger = logging.getLogger("core.engine.azure")
 logging.getLogger("azure").setLevel(logging.WARNING)
 
-def is_resource_inventory_empty(credential, subscription_id, resource_group_name):
+def is_resource_inventory_empty(credential: Any, subscription_id: str, resource_group_name: str) -> bool:
     try:
         resource_client = ResourceManagementClient(credential, subscription_id)
         #logger.info("Checking Azure resource inventory...")
@@ -32,7 +33,7 @@ def is_resource_inventory_empty(credential, subscription_id, resource_group_name
         logger.error(f"Error checking Azure resource inventory: {str(e)}", exc_info=True)
         raise
 
-def build_azure_resource_inventory(cloud_service_provider, provider_details, report_path, raw_data_path):
+def build_azure_resource_inventory(cloud_service_provider: int, provider_details: Dict[str, Any], report_path: str, raw_data_path: str) -> None:
     try:
         # Use DefaultAzureCredential if provided, otherwise fall back to ClientSecretCredential
         credential = provider_details.get("credential") or ClientSecretCredential(
@@ -103,9 +104,9 @@ def build_azure_resource_inventory(cloud_service_provider, provider_details, rep
     except Exception as e:
         logger.error(f"Error fetching Azure resources: {str(e)}", exc_info=True)
 
-def get_missing_months_azure(processed_costs, months_back):
+def get_missing_months_azure(processed_costs: Set[str], months_back: int) -> Set[date]:
     today = date.today()
-    start_date = today.replace(day=1) - relativedelta(months=months_back)
+    start_date = today.replace(day=1) - relativedelta(months=months_back - 1)
     all_months = {(start_date + relativedelta(months=i)).replace(day=1) for i in range(months_back)}
 
     processed_months = set()
@@ -120,7 +121,7 @@ def get_missing_months_azure(processed_costs, months_back):
 
     return all_months - processed_months
 
-def build_azure_cost_inventory(cloud_service_provider, provider_details, report_path, raw_data_path):
+def build_azure_cost_inventory(cloud_service_provider: int, provider_details: Dict[str, Any], report_path: str, raw_data_path: str) -> None:
     try:
         # Use DefaultAzureCredential if provided, otherwise fall back to ClientSecretCredential
         credential = provider_details.get("credential") or ClientSecretCredential(
@@ -133,8 +134,8 @@ def build_azure_cost_inventory(cloud_service_provider, provider_details, report_
         db_path = os.path.join(report_path, "data", "assessment.db")
 
         end_time = date.today()
-        start_time = end_time.replace(day=1) - timedelta(days=180)
-        start_time = start_time.replace(day=1)
+        months_back = 6
+        start_time = end_time.replace(day=1) - relativedelta(months=months_back - 1)
 
         query = QueryDefinition(
             type='Usage',

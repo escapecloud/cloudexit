@@ -1,4 +1,4 @@
-#utils_db.py
+# core/utils_db.py
 import sqlite3
 import logging
 
@@ -57,7 +57,6 @@ def fetch_one(query, params=None, db_path=MASTER_DATABASE):
         raise
 
 def fetch_all(query, params=None, db_path=MASTER_DATABASE):
-    """Fetch all rows matching a query."""
     try:
         conn = connect(db_path)
         cursor = conn.cursor()

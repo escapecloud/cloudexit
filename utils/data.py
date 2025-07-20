@@ -1,9 +1,11 @@
+# utils/data.py
 import os
 import gzip
 import shutil
 import hashlib
 import time
 import requests
+from typing import Optional
 from datetime import datetime, timedelta
 from pathlib import Path
 from requests.exceptions import RequestException, ConnectionError, Timeout
@@ -12,7 +14,7 @@ from requests.exceptions import RequestException, ConnectionError, Timeout
 DATASET_FOLDER = Path("datasets")
 REMOTE_STORAGE_URL = "https://cloudexit-oss-data-eu.fsn1.your-objectstorage.com"
 
-def get_monday_date():
+def get_monday_date() -> str:
     now = datetime.utcnow()
     monday = now - timedelta(days=now.weekday())
 
@@ -22,14 +24,14 @@ def get_monday_date():
     else:
         return monday.strftime("cloudexit-%Y-%m-%d.db.gz")
 
-def compute_file_hash(filepath):
+def compute_file_hash(filepath: str) -> str:
     hash_sha256 = hashlib.sha256()
     with open(filepath, "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
             hash_sha256.update(chunk)
     return hash_sha256.hexdigest()
 
-def download_file(url, destination, retries=3, delay=5):
+def download_file(url: str, destination: str, retries: int = 3, delay: int = 5) -> bool:
     for attempt in range(retries):
         try:
             response = requests.get(url, stream=True, timeout=30)
@@ -54,7 +56,7 @@ def download_file(url, destination, retries=3, delay=5):
     print(f"[ERROR] Unable to download file after {retries} attempts: {url}")
     return False
 
-def fetch_remote_checksum(checksum_url, retries=3, delay=5):
+def fetch_remote_checksum(checksum_url: str, retries: int = 3, delay: int = 5) -> Optional[str]:
     for attempt in range(retries):
         try:
             response = requests.get(checksum_url, timeout=10)
@@ -74,7 +76,7 @@ def fetch_remote_checksum(checksum_url, retries=3, delay=5):
     print(f"[ERROR] Unable to fetch remote checksum after {retries} attempts.")
     return None
 
-def initialize_dataset():
+def initialize_dataset() -> None:
     DATASET_FOLDER.mkdir(exist_ok=True)
 
     latest_file = get_monday_date()

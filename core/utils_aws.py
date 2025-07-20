@@ -1,11 +1,13 @@
-#utils_aws.py
+# core/utils_aws.py
 import boto3
 import botocore
 import json
 import os
 import time
 import logging
-from datetime import date, datetime, timedelta
+import sqlite3
+from typing import Any, Dict, Set, List, Callable
+from datetime import date, datetime
 from collections import defaultdict
 from dateutil.relativedelta import relativedelta
 from botocore.exceptions import NoCredentialsError, ClientError
@@ -14,7 +16,7 @@ from .utils_db import connect, load_data
 
 logger = logging.getLogger("core.engine.aws")
 
-def aws_api_call_with_retry(client, function_name, parameters, max_retries, retry_delay):
+def aws_api_call_with_retry(client: Any, function_name: str, parameters: Dict[str, Any], max_retries: int, retry_delay: int) -> Callable[..., Any]:
     def api_call(*args, **kwargs):
         for attempt in range(max_retries):
             try:
@@ -39,7 +41,7 @@ def aws_api_call_with_retry(client, function_name, parameters, max_retries, retr
 
     return api_call  # Return the callable function
 
-def convert_datetime(obj):
+def convert_datetime(obj: Any) -> Any:
     if isinstance(obj, dict):
         for k, v in obj.items():
             obj[k] = convert_datetime(v)
@@ -50,7 +52,7 @@ def convert_datetime(obj):
         return obj.isoformat()
     return obj
 
-def build_aws_resource_inventory(cloud_service_provider, provider_details, report_path, raw_data_path):
+def build_aws_resource_inventory(cloud_service_provider: int, provider_details: Dict[str, Any], report_path: str, raw_data_path: str) -> None:
     try:
         access_key = provider_details["accessKey"]
         secret_key = provider_details["secretKey"]
@@ -166,7 +168,7 @@ def build_aws_resource_inventory(cloud_service_provider, provider_details, repor
     except Exception as e:
         logger.error(f"Error creating AWS resource inventory: {str(e)}", exc_info=True)
 
-def get_missing_months_aws(processed_costs, max_months):
+def get_missing_months_aws(processed_costs: Set[str], max_months: int) -> List[date]:
     current_date = datetime.utcnow().date().replace(day=1)
     processed_months = {datetime.strptime(month_str, '%Y-%m-%d').date().replace(day=1) for month_str in processed_costs}
     missing_months = []
@@ -178,7 +180,7 @@ def get_missing_months_aws(processed_costs, max_months):
 
     return missing_months
 
-def build_aws_cost_inventory(cloud_service_provider, provider_details, report_path, raw_data_path):
+def build_aws_cost_inventory(cloud_service_provider: int, provider_details: Dict[str, Any], report_path: str, raw_data_path: str) -> None:
     try:
         session = boto3.Session(
             aws_access_key_id=provider_details["accessKey"],
@@ -189,9 +191,8 @@ def build_aws_cost_inventory(cloud_service_provider, provider_details, report_pa
 
         db_path = os.path.join(report_path, "data", "assessment.db")
 
-        end_time = date.today()
-        start_time = end_time.replace(day=1) - timedelta(days=180)
-        start_time = start_time.replace(day=1)
+        end_time = date.today().replace(day=1) + relativedelta(months=1)
+        start_time = end_time - relativedelta(months=6)
 
         cost_and_usage = cost_explorer.get_cost_and_usage(
             TimePeriod={'Start': start_time.strftime('%Y-%m-%d'), 'End': end_time.strftime('%Y-%m-%d')},

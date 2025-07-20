@@ -2,17 +2,28 @@
 
 # Cloud Exit Assessment
 
-**EscapeCloud Platform:** [https://escapecloud.io](https://escapecloud.io/)
-
-**ExitCloud.io (One-Time Assessment):** [https://exitcloud.io](https://exitcloud.io/)
-
-**Read our release blog:**
-[https://escapecloud.io/introducing-cloudexit-open-source-for-smoother-cloud-exit-planning/](https://escapecloud.io/introducing-cloudexit-open-source-for-smoother-cloud-exit-planning/)
-
-**Release Date: November 20th, 2024**
 
 cloudexit is an open-source tool that empowers cloud engineers to conduct comprehensive cloud exit assessments. It helps identify and evaluate the risks associated with their cloud environment while providing actionable insights into the challenges and constraints of transitioning away from their current cloud provider. By leveraging EscapeCloud Community Edition, organizations can better prepare for a potential cloud exit, ensuring a smoother and more informed decision-making process.
 
+**Update: 20-07-2025**
+
+We’re excited to announce the launch of exitcloud.io on September 1st, 2025, bringing together EscapeCloud’s alternative technology dataset with newly developed scoring methodologies. The updated version of CloudExit will allow you to:
+
+- Connect to your exitcloud.io account
+
+- Perform more in-depth assessments using advanced scoring models
+
+- Generate more detailed reports
+
+The Basic assessment will remain available forever, with no account or API key required. *(If you’re interested in participating in our Beta program, please reach out to: beta(@)escapecloud(.)io)*
+
+**ExitCloud - Lightweight Cloud Exit Readiness for MSPs and SMEs**
+
+Link: [https://exitcloud.io](https://exitcloud.io/)
+
+**EscapeCloud - The Cloud Exit Readiness Platform**
+
+Link [https://escapecloud.io](https://escapecloud.io/)
 
 ## Required Packages
 
@@ -49,6 +60,9 @@ python3 main.py aws --config config.json
 # Run with an AWS CLI profile:
 python3 main.py aws --profile PROFILE
 
+# Define assessment name:
+python3 main.py aws --name
+
 # Run with manual input for Azure:
 python3 main.py azure
 
@@ -57,6 +71,9 @@ python3 main.py azure --config config.json
 
 # Run with Azure CLI credentials:
 python3 main.py azure --cli
+
+# Define assessment name:
+python3 main.py azure --name
 ```
 
 The results are saved in the reports folder. Simply open the index.html file in the newly generated folder.
@@ -67,6 +84,9 @@ Each assessment creates a new folder named after its timestamp, containing both 
 
 ## **Config**
 The following parameters are common across configuration files for different cloud providers. They define the scope and context of the cloud exit assessment:
+### **name**
+Assessment Name (Optional)
+
 ### **cloudServiceProvider**
 | Cloud Provider  | Value |
 | ------------- | ------------- |
@@ -83,16 +103,17 @@ The following parameters are common across configuration files for different clo
 | Migration to Alternate Cloud  | 3  |
 
 ### **assessmentType**
-| Type  | Value |
-| ------------- | ------------- |
-| Basic  | 1  |
-| Basic+  | TBD  |
+| Type  | Value | Comment |
+| ------------- | ------------- | ------------- |
+| Basic  | 1  | No API Key required. |
+| Standard  | 2  | API Key required.  |
 
 ### **providerDetails**
 AWS Example Configuration:
 
 ```
 {
+    "name": "DMS System",
     "cloudServiceProvider": 2,
     "exitStrategy": 3,
     "assessmentType": 1,
@@ -110,6 +131,7 @@ AWS Example Configuration:
 Azure Example Configuration:
 ```
 {
+    "name": "DMS System",
     "cloudServiceProvider": 1,
     "exitStrategy": 3,
     "assessmentType": 1,

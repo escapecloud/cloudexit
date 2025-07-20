@@ -1,7 +1,8 @@
-# utils.py
+# utils/utils.py
 import os
 import logging
 import json
+from typing import Optional, Tuple, Dict, Any
 from rich.console import Console
 from rich.style import Style
 from time import sleep
@@ -10,7 +11,7 @@ from datetime import datetime
 logger = logging.getLogger("main.utils")
 console = Console()
 
-def load_config(file_path):
+def load_config(file_path: str) -> Optional[Dict[str, Any]]:
     try:
         #logger.info(f"Attempting to load config file from {file_path}")
         with open(file_path, "r") as f:
@@ -22,7 +23,7 @@ def load_config(file_path):
         console.print(f"[red]Error loading config file: {e}[/red]")
         return None
 
-def prompt_required_inputs():
+def prompt_required_inputs() -> Tuple[int, int]:
     while True:
         try:
             exit_strategy = int(
@@ -38,34 +39,35 @@ def prompt_required_inputs():
             logger.warning(f"Invalid exit strategy input: {e}")
             console.print(f"[red]{e} Please enter 1 or 3.[/red]")
 
-    #while True:
-    #    try:
-    #        assessment_type = int(
-    #            input(
-    #                "Enter Assessment Type (1 for 'Basic', 2 for 'Basic+'): "
-    #            ).strip()
-    #        )
-    #        if assessment_type not in [1, 2]:
-    #            raise ValueError("Invalid assessment type.")
-    #        logger.info(f"Assessment Type selected: {assessment_type}")
-    #        break
-    #    except ValueError as e:
-    #        logger.warning(f"Invalid assessment type input: {e}")
-    #        console.print(f"[red]{e} Please enter 1 or 2.[/red]")
-    #
-    #return exit_strategy, assessment_type
-    return exit_strategy
+    while True:
+        try:
+            assessment_type = int(
+                input(
+                    "Enter Assessment Type (1 for 'Basic', 2 for 'Standard'): "
+                ).strip()
+            )
+            if assessment_type not in [1, 2]:
+                raise ValueError("Invalid assessment type.")
+            #logger.info(f"Assessment Type selected: {assessment_type}")
+            break
+        except ValueError as e:
+            logger.warning(f"Invalid assessment type input: {e}")
+            console.print(f"[red]{e} Please enter 1 or 2.[/red]")
 
-def print_step(description, status="pending", logs=None):
+    return exit_strategy, assessment_type
+
+def print_step(description: str, status: str = "pending", logs: Optional[str] = None) -> None:
     # Define styles for statuses
     ok_style = Style(color="green", bold=True)
     error_style = Style(color="red", bold=True)
+    warning_style = Style(color="yellow", bold=True)
     pending_style = Style(color="yellow", bold=True)
 
     # Map statuses to their visual representation
     status_map = {
         "ok": "[ ok ]",
         "error": "[ error ]",
+        "warning": "[ warn ]",
         "pending": "[ ... ]",
     }
 
@@ -76,6 +78,10 @@ def print_step(description, status="pending", logs=None):
             print_step(description, status="ok")
     elif status == "ok":
         console.print(f"{description:<50} {status_map['ok']}", style=ok_style)
+    elif status == "warning":
+        console.print(f"{description:<50} {status_map['warning']}", style=warning_style)
+        if logs:
+            console.print(f"   ↳ {logs}", style="dim")
     elif status == "error":
         console.print(f"{description:<50} {status_map['error']}", style=error_style)
         if logs:
@@ -113,6 +119,8 @@ def print_help_message():
     console.print("  python3 main.py aws")
     console.print("  python3 main.py aws --config config/aws.json")
     console.print("  python3 main.py aws --profile PROFILE")
+    console.print("  python3 main.py aws --name 'DMS System' ")
     console.print("  python3 main.py azure")
     console.print("  python3 main.py azure --config config/azure.json")
     console.print("  python3 main.py azure --cli")
+    console.print("  python3 main.py azure --name 'DMS System'")

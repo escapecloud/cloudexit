@@ -1,13 +1,11 @@
-#utils.py
+# core/utils.py
 import os
 import shutil
 import logging
-from datetime import datetime
-from collections import defaultdict
 
 logger = logging.getLogger("core.engine.utils")
 
-def copy_assets(report_path):
+def copy_assets(report_path: str) -> None:
     assets_folders = ["css", "img", "icons"]
     assets_path = os.path.join(report_path, "assets")
 

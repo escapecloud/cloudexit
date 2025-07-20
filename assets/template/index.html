@@ -24,7 +24,7 @@
             <div class="top-head">
                 <h4>
                   <img src="assets/img/logo/logo.png" width="30" alt="EscapeCloud" />
-                  EscapeCloud Community Edition - Cloud Exit Assessment Report
+                  {{ name }}
                 </h4>
                 <ul class="main-row">
                     <li class="main-col"><a class="btn1" href="report.pdf" target="_blank">Executive Summary (PDF)</a></li>
@@ -77,7 +77,7 @@
                                         {% if assessment_type == 1 %}
                                           Basic
                                         {% elif assessment_type == 2 %}
-                                          Basic+
+                                          Standard
                                         {% endif %}
                                       </h3>
                                   </div>
@@ -142,6 +142,51 @@
                     </div>
                 </div>
             </div>
+
+            {% if scoring_data %}
+            <div class="row">
+                <div class="col-md-6 col-sm-12">
+                    <div class="chart-box-big">
+                        <div class="box-title">
+                            <h4>Scoring #1 - Exit Score <div class="info-hintbx">
+                                <i class="bi-info-circle"></i>
+
+                                <div class="hint-hoverbox">
+                                    <h5>Exit Score</h5>
+
+                                    <div class="hint-dt">
+                                        <p>This gauge chart represents the EscapeCloud Platforms exit score methodology, based on risk assessment results and the alternative technology landscape. <br><br>It uses a benchmark developed by our experts to quantify the challenges and limitations of exiting the cloud:<br>- Complex (0 - 20)<br>- Challenging (20 - 40)<br>- Manageable (40 - 60)<br>- Smooth Transition (60 - 80)<br>- Seamless (80 - 100)</p>
+                                    </div>
+                                </div>
+                            </div></h4>
+                        </div>
+                        <div class="box-body">
+                            <div class="scoring" id="exitScoreChart" style="width: 100%; height: 100%;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-sm-12">
+                    <div class="chart-box-big">
+                        <div class="box-title">
+                            <h4>Scoring #2 - Vendor Lock-In Score<div class="info-hintbx">
+                                <i class="bi-info-circle"></i>
+
+                                <div class="hint-hoverbox">
+                                    <h5>Vendor Lock-In Score</h5>
+
+                                    <div class="hint-dt">
+                                        <p>This chart represents the EscapeCloud Platforms Vendor Lock-In Score methodology.</p>
+                                    </div>
+                                </div>
+                            </div></h4>
+                        </div>
+                        <div class="box-body exitchart">
+                            <div class="scoring" id="vendorLockInScoreChart" style="width: 100%; height: 100%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
             <div class="evaluation-wrp">
                 <div class="titlebar">
@@ -307,7 +352,7 @@
                                     <div class="box-icon">
                                         <img src="assets/icons/misc/no_image.png" width="16" alt="{{ alt_tech.product_name }}" />
                                     </div>
-                                    <h6>{{ alt_tech.product_name }}</h6>
+                                    <h4>{{ alt_tech.product_name }}</h4>
                                     <p>{{ alt_tech.product_description }}</p>
                                     <ul>
                                         <li>
@@ -549,6 +594,264 @@
                 });
             }
             document.addEventListener('DOMContentLoaded', initializeCostsChart);
+        </script>
+        {% endif %}
+        {% if scoring_data %}
+        <script>
+          const radarSpec = {
+            type: 'radar',
+            //width: 450,
+            height: 350,
+            data: [
+              {
+                id: 'radarData',
+                values: [
+                  { key: 'Human',       value: {{ human       |default(0) }} },
+                  { key: 'Technology',  value: {{ technology  |default(0) }} },
+                  { key: 'Operational', value: {{ operational |default(0) }} }
+                ]
+              }
+            ],
+            categoryField: 'key',
+            valueField: 'value',
+            point: {
+              visible: false
+            },
+            area: {
+              visible: true,
+              style: {
+                fill: 'rgba(5, 81, 96, 0.4)'
+              },
+              state: {
+                hover: {
+                  fillOpacity: 0.5
+                }
+              }
+            },
+            line: {
+              style: {
+                lineWidth: 4,
+                stroke: 'rgba(5, 81, 96, 1)'
+              }
+            },
+            axes: [
+              {
+                orient: 'radius',
+                zIndex: 100,
+                min: 0,
+                max: 5,
+                domainLine: {
+                  visible: false
+                },
+                label: {
+                  visible: true,
+                  space: 0,
+                  style: {
+                    textAlign: 'center',
+                    stroke: '#fff',
+                    lineWidth: 4
+                  }
+                },
+                grid: {
+                  smooth: false,
+                  style: {
+                    lineDash: [0]
+                  }
+                }
+              },
+              {
+                orient: 'angle', // angle axis
+                zIndex: 50,
+                tick: {
+                  visible: false
+                },
+                domainLine: {
+                  visible: false
+                },
+                label: {
+                  space: 20
+                },
+                grid: {
+                  style: {
+                    lineDash: [0]
+                  }
+                }
+              }
+            ]
+          };
+          const gaugeSpec = {
+            width: 300,
+            height: 350,
+            padding: { top: 0, bottom: 0, left: 0, right: 0 },
+            type: 'common',
+            data: [
+              {
+                id: 'pointer',
+                values: [{ type: 'Score', value: {{ exit_score | default(0) | round(0) }} }]
+              },
+              {
+                id: 'segment',
+                values: [
+                  { type: 'Complex', value: 20 },
+                  { type: 'Challenging', value: 40 },
+                  { type: 'Manageable', value: 60 },
+                  { type: 'Smooth Transition', value: 80 },
+                  { type: 'Seamless', value: 100 }
+                ]
+              }
+            ],
+            series: [
+              {
+                type: 'gauge',
+                dataIndex: 1,
+                radiusField: 'type',
+                angleField: 'value',
+                seriesField: 'type',
+                outerRadius: 0.9,
+                innerRadius: 0.65,
+                roundCap: true,
+                segment: {
+                  style: {
+                    cornerRadius: 500,
+                    innerPadding: 5,
+                    outerPadding: 5,
+                    fill: {
+                      type: 'threshold',
+                      field: 'value',
+                      domain: [20, 40, 60, 80, 100],
+                      range: ['#ba1c1d','#ba1c1d', '#ff9533', '#f1ca00', '#76c31d', '#065f43']
+                    }
+                  }
+                },
+                track: {
+                  visible: true,
+                  style: {
+                    cornerRadius: 500,
+                    roundCap: true,
+                    fill: 'rgba(0, 0, 0, 0.1)'
+                  }
+                }
+              },
+              {
+                type: 'gaugePointer',
+                dataIndex: 0,
+                categoryField: 'type',
+                valueField: 'value',
+                innerRadius: 0.45,
+                pin: {
+                  visible: true,
+                  width: 0.04,
+                  height: 0.04,
+                  isOnCenter: false,
+                  style: {
+                    fill: {
+                      type: 'threshold',
+                      field: 'value',
+                      domain: [20, 40, 60, 80, 100],
+                      range: ['#012e53']
+                    }
+                  }
+                },
+                pinBackground: { visible: false },
+                pointer: {
+                  width: 0.2,
+                  height: 0.1,
+                  isOnCenter: false,
+                  style: {
+                    fill: {
+                      type: 'threshold',
+                      field: 'value',
+                      domain: [20, 40, 60, 80, 100],
+                      range: ['#012e53']
+                    }
+                  }
+                },
+                animation: false
+              }
+            ],
+            startAngle: -200,
+            endAngle: 20,
+            axes: [
+              {
+                type: 'linear',
+                orient: 'angle',
+                inside: true,
+                outerRadius: 0.9,
+                innerRadius: 0.6,
+                min: 0,
+                max: 100,
+                grid: { visible: false },
+                tick: { visible: false, tickSize: 0, style: { lineWidth: 4, lineCap: 'round' } },
+                subTick: { visible: false, tickSize: 0, style: { lineWidth: 4, lineCap: 'round' } },
+                label: { visible: false }
+              },
+              {
+                type: 'linear',
+                orient: 'radius',
+                outerRadius: 0.6,
+                grid: { visible: false },
+                label: { visible: false }
+              }
+            ],
+            indicator: [
+              {
+                visible: true,
+                offsetY: '-10%',
+                title: {
+                  style: {
+                    text: '{{ exit_score | default(0) | round(0) }}',
+                    fontSize: 40,
+                    fontWeight: 500,
+                    fontColor: '#012e53'
+                  }
+                },
+                content: [
+                  {
+                    style: {
+                      dy: 10,
+                      text: 'Exit Score',
+                      fontSize: 20
+                    }
+                  }
+                ]
+              },
+              {
+                visible: true,
+                offsetX: '-70%',
+                offsetY: '45%',
+                title: {
+                  style: {
+                    text: '0',
+                    fontSize: 14
+                  }
+                }
+              },
+              {
+                visible: true,
+                offsetX: '70%',
+                offsetY: '45%',
+                title: {
+                  style: {
+                    text: '100',
+                    fontSize: 14
+                  }
+                }
+              }
+            ]
+          };
+
+          const radarContainer = document.getElementById('vendorLockInScoreChart');
+          const gaugeContainer = document.getElementById('exitScoreChart');
+
+          if (radarContainer) {
+            const vendorLockInScoreChart = new VChart.default(radarSpec, { dom: radarContainer });
+            vendorLockInScoreChart.renderSync();
+          }
+
+          if (gaugeContainer) {
+            const exitScoreChart = new VChart.default(gaugeSpec, { dom: gaugeContainer });
+            exitScoreChart.renderSync();
+          }
         </script>
         {% endif %}
         <!-- End script -->

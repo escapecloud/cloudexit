@@ -1,30 +1,28 @@
-#utils_report.py
+# core/utils_report.py
 import os
 import json
 import logging
-import math
-from collections import defaultdict
-from datetime import datetime
+from typing import List, Dict, Any, Optional
 from jinja2 import Template
 
-# ReportLab imports
+# ReportLab
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.colors import HexColor
-from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer,
-                                PageBreak, Image, Table, TableStyle)
-from reportlab.graphics.shapes import Drawing
-from reportlab.graphics.charts.legends import Legend
-from reportlab.graphics.charts.piecharts import Pie
-from reportlab.graphics.charts.barcharts import VerticalBarChart
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Image, Table, TableStyle
 
-# Configure logger for database operations
+# Utils
+from core.utils_report_html import transform_cost_inventory_for_html, transform_risk_inventory_for_html, transform_alt_tech_for_html
+from core.utils_report_json import transform_resource_inventory_for_json, transform_cost_inventory_for_json, transform_risk_inventory_for_json, transform_alt_tech_for_json
+from core.utils_report_pdf import transform_resource_inventory_for_pdf, transform_cost_inventory_for_pdf, transform_risk_inventory_for_pdf, transform_alt_tech_for_pdf, draw_header_footer, draw_risk_chart, draw_cost_chart, draw_vendor_lockin_radar_chart, draw_exitscore_chart
+
+# Configure logger
 logger = logging.getLogger("core.engine.report")
 logger.setLevel(logging.INFO)
 
-def anonymize_string(s, num_visible=4):
+def anonymize_string(s: str, num_visible: int = 4) -> str:
     if not isinstance(s, str):
         return "N/A"
 
@@ -34,111 +32,8 @@ def anonymize_string(s, num_visible=4):
     middle_length = len(s) - 2 * num_visible
     return f"{s[:num_visible]}{'*' * middle_length}{s[-num_visible:]}"
 
-def transform_cost_inventory_for_html(cost_data):
-    months = []
-    cost_values = []
-    total_cost = 0
+def generate_html_report(report_path: str, metadata: Dict[str, Any], resource_type_mapping: Dict[str, Dict[str, Any]], resource_inventory: List[Dict[str, Any]], cost_data: List[Dict[str, Any]], scoring_data: Optional[Dict[str, Any]], risk_data: List[Dict[str, Any]], risk_definitions: List[Dict[str, Any]], alternatives: List[Dict[str, Any]], alternative_technologies: List[Dict[str, Any]], exit_strategy: int) -> str:
 
-    # Map currency codes to their respective symbols
-    currency_symbols = {
-        "USD": "$",
-        "GBP": "£",
-        "EUR": "€"
-    }
-
-    # Convert list to dictionary if necessary
-    if isinstance(cost_data, list):
-        cost_data = {
-            item["month"]: {"cost": item["cost"], "currency": item["currency"]}
-            for item in cost_data
-        }
-
-    # Extract currency from the first entry, assuming all costs use the same currency
-    first_entry = next(iter(cost_data.values()), None)
-    currency_code = first_entry.get("currency", "USD") if first_entry else "USD"
-    currency_symbol = currency_symbols.get(currency_code, currency_code)  # Default to currency_code if no symbol exists
-
-    # Iterate over the cost data, expecting 6 months
-    for month, details in sorted(cost_data.items()):
-        months.append(datetime.strptime(month, "%Y-%m-%d").strftime('%b'))
-        cost_values.append(details["cost"])
-        total_cost += details["cost"]
-
-    total_cost = round(total_cost, 2)
-    return months, cost_values, total_cost, currency_code, currency_symbol
-
-def transform_risk_inventory_for_html(risk_data, risk_definitions, resource_inventory):
-    severity_order = {'high': 1, 'medium': 2, 'low': 3}
-    severity_counts = {'high': 0, 'medium': 0, 'low': 0}
-    sorted_risks = []
-
-    # Map resource IDs to resource names for quick lookup
-    resource_name_map = {str(key): value['name'] for key, value in resource_inventory.items()}
-
-    # Group risks by their risk code and impacted resources
-    risk_map = defaultdict(lambda: {"impacted_resources": set(), "count": 0})
-    for risk_entry in risk_data:
-        risk_code = risk_entry['risk']
-        resource_type = str(risk_entry['resource_type']) if risk_entry['resource_type'] != "null" else None
-
-        if resource_type:
-            # Handle risks with associated resource types
-            resource_name = resource_name_map.get(resource_type, "Unknown Resource")
-            risk_map[risk_code]["impacted_resources"].add(resource_name)
-            risk_map[risk_code]["count"] += 1
-        else:
-            # Handle overall risks with no specific resource type
-            risk_map[risk_code]["impacted_resources"] = []
-            risk_map[risk_code]["count"] = None
-
-    # Process risk definitions
-    for risk_code, risk_info in risk_map.items():
-        risk_definition = next((rd for rd in risk_definitions if rd["id"] == risk_code), None)
-        if not risk_definition:
-            continue
-
-        severity = risk_definition['severity']
-        severity_counts[severity] += 1
-
-        sorted_risks.append({
-            'name': risk_definition['name'],
-            'description': risk_definition['description'],
-            'impacted_resources': list(risk_info["impacted_resources"]),
-            'impacted_resources_count': risk_info["count"],
-            'severity': severity
-        })
-
-    # Sort risks by severity
-    sorted_risks.sort(key=lambda x: severity_order.get(x['severity'], 4))
-
-    return sorted_risks, severity_counts
-
-def transform_alt_tech_for_html(resource_inventory, alternatives, alternative_technologies, exit_strategy):
-    alt_tech_data = []
-    for resource in resource_inventory:
-        resource_type = resource.get("resource_type")
-        relevant_alternatives = [
-            alt for alt in alternatives
-            if str(alt["resource_type"]) == str(resource_type) and str(alt["strategy_type"]) == str(exit_strategy)
-        ]
-        for alt in relevant_alternatives:
-            tech = next(
-                (t for t in alternative_technologies if t["id"] == alt["alternative_technology"] and t["status"] == "t"),
-                None
-            )
-            if tech:
-                alt_tech_data.append({
-                    "resource_type_id": resource_type,
-                    "product_name": tech.get("product_name"),
-                    "product_description": tech.get("product_description"),
-                    "product_url": tech.get("product_url"),
-                    "open_source": tech.get("open_source") == "t",
-                    "support_plan": tech.get("support_plan") == "t",
-                    "status": tech.get("status") == "t",
-                })
-    return alt_tech_data
-
-def generate_html_report(report_path, metadata, resource_type_mapping, resource_inventory,cost_data, risk_data, risk_definitions, alternatives, alternative_technologies, exit_strategy):
     # Transform resource inventory
     resource_inventory_dict = {
         str(item["resource_type"]): {
@@ -176,6 +71,15 @@ def generate_html_report(report_path, metadata, resource_type_mapping, resource_
     # Transform alternative technologies
     alternative_technologies_data = transform_alt_tech_for_html(resource_inventory, alternatives, alternative_technologies, exit_strategy)
 
+    # Scoring Data
+    scoring_context = {
+        "scoring_data": bool(scoring_data),
+        "exit_score": scoring_data.get("exit_score", 0) if scoring_data else 0,
+        "human": scoring_data.get("human_score", 0) if scoring_data else 0,
+        "technology": scoring_data.get("technology_score", 0) if scoring_data else 0,
+        "operational": scoring_data.get("operational_score", 0) if scoring_data else 0,
+    }
+
     # Render the HTML template
     template_path = os.path.join("assets", "template", "index.html")
     with open(template_path, 'r') as file:
@@ -184,6 +88,7 @@ def generate_html_report(report_path, metadata, resource_type_mapping, resource_
     template = Template(template_content)
     html_content = template.render(
         **metadata,
+        **scoring_context,
         risks=risks,
         high_risk_count=severity_counts['high'],
         medium_risk_count=severity_counts['medium'],
@@ -204,110 +109,7 @@ def generate_html_report(report_path, metadata, resource_type_mapping, resource_
 
     return html_path
 
-def transform_resource_inventory_for_json(resource_inventory, resource_type_mapping):
-    resource_inventory_json = []
-    for idx, resource in enumerate(resource_inventory):
-        resource_type = str(resource["resource_type"])
-        resource_info = resource_type_mapping.get(resource_type, {})
-        resource_name = resource_info.get("name", "Unknown Resource")
-        resource_code = resource_info.get("code", "N/A")  # Fetch the 'code' from the mapping
-
-        resource_inventory_json.append({
-            "id": idx + 1,
-            "code": resource_code,  # Include the code field
-            "resource_name": resource_name,
-            "location": resource.get("location", "Unknown"),
-            "count": resource.get("count", 0)
-        })
-    return resource_inventory_json
-
-def transform_cost_inventory_for_json(cost_data):
-    # Sort by date before transformation
-    sorted_cost_data = sorted(cost_data, key=lambda x: datetime.strptime(x["month"], "%Y-%m-%d"))
-
-    cost_inventory = [
-        {
-            "month": item["month"],
-            "cost": round(item["cost"], 2),
-            "currency": item["currency"]
-        }
-        for item in sorted_cost_data
-    ]
-    return cost_inventory
-
-def transform_risk_inventory_for_json(risk_data, risk_definitions, resource_inventory):
-    # Map resource_type to their corresponding resource IDs
-    resource_id_map = {str(value["resource_type"]): key + 1 for key, value in enumerate(resource_inventory)}
-
-    # Group risks by risk.id
-    risk_map = defaultdict(lambda: {
-        "id": None,
-        "name": "",
-        "description": "",
-        "severity": "",
-        "impacted_resources": set(),  # Use a set to avoid duplicates
-        "impacted_resources_count": 0
-    })
-
-    for risk_entry in risk_data:
-        risk_id = risk_entry["risk"]
-        risk_definition = next((rd for rd in risk_definitions if rd["id"] == risk_id), None)
-        if not risk_definition:
-            continue
-
-        resource_type = str(risk_entry["resource_type"])
-        resource_id = resource_id_map.get(resource_type)
-
-        # Initialize risk entry if not already in the map
-        if risk_map[risk_id]["id"] is None:
-            risk_map[risk_id]["id"] = risk_id
-            risk_map[risk_id]["name"] = risk_definition["name"]
-            risk_map[risk_id]["description"] = risk_definition["description"]
-            risk_map[risk_id]["severity"] = risk_definition["severity"]
-
-        # Add impacted resources
-        if resource_id:
-            risk_map[risk_id]["impacted_resources"].add(resource_id)
-
-    # Convert impacted_resources set to a list and compute counts
-    for risk in risk_map.values():
-        risk["impacted_resources"] = list(risk["impacted_resources"])
-        risk["impacted_resources_count"] = len(risk["impacted_resources"]) if risk["impacted_resources"] else None
-
-    return list(risk_map.values())
-
-def transform_alt_tech_for_json(resource_inventory, alternatives, alternative_technologies, exit_strategy):
-    # Map resource_type to resource_id
-    resource_id_map = {str(value["resource_type"]): key + 1 for key, value in enumerate(resource_inventory)}
-
-    # Initialize the grouped alternative technologies
-    grouped_alt_tech_data = {resource_id: [] for resource_id in resource_id_map.values()}
-
-    # Iterate through alternatives to group them by resource_id
-    for alt in alternatives:
-        if str(alt["strategy_type"]) != str(exit_strategy):
-            continue
-
-        tech = next(
-            (t for t in alternative_technologies if t["id"] == alt["alternative_technology"] and t["status"] == "t"),
-            None
-        )
-        if tech:
-            resource_id = resource_id_map.get(str(alt["resource_type"]))
-            if resource_id:
-                grouped_alt_tech_data[resource_id].append({
-                    "id": len(grouped_alt_tech_data[resource_id]) + 1,
-                    "product_name": tech["product_name"],
-                    "product_description": tech["product_description"],
-                    "product_url": tech["product_url"],
-                    "open_source": tech["open_source"] == "t",
-                    "support_plan": tech["support_plan"] == "t"
-                })
-
-    # Return the grouped alternatives
-    return {key: grouped_alt_tech_data[key] for key in sorted(grouped_alt_tech_data.keys())}
-
-def generate_json_report(raw_data_path, metadata, resource_type_mapping, resource_inventory, cost_data, risk_data, risk_definitions, alternatives, alternative_technologies, exit_strategy):
+def generate_json_report(raw_data_path: str, metadata: Dict[str, Any], resource_type_mapping: Dict[str, Dict[str, Any]], resource_inventory: List[Dict[str, Any]], cost_data: List[Dict[str, Any]], scoring_data: Optional[Dict[str, Any]], risk_data: List[Dict[str, Any]], risk_definitions: List[Dict[str, Any]], alternatives: List[Dict[str, Any]], alternative_technologies: List[Dict[str, Any]], exit_strategy: int) -> str:
     # Transform data for JSON
     transformed_resource_inventory = transform_resource_inventory_for_json(resource_inventory, resource_type_mapping)
     transformed_cost_inventory = transform_cost_inventory_for_json(cost_data)
@@ -321,9 +123,20 @@ def generate_json_report(raw_data_path, metadata, resource_type_mapping, resourc
             "resource_inventory": transformed_resource_inventory,
             "cost_inventory": transformed_cost_inventory,
             "risk_inventory": transformed_risk_inventory,
-            "alternative_technologies": transformed_alt_tech,
         }
     }
+
+    # Add scoring_data only if present
+    if scoring_data:
+        report_json["data"]["scoring_data"] = {
+            "exit_score": scoring_data.get("exit_score", 0),
+            "human_score": scoring_data.get("human_score", 0),
+            "technology_score": scoring_data.get("technology_score", 0),
+            "operational_score": scoring_data.get("operational_score", 0),
+        }
+
+    # Add alternative technologies
+    report_json["data"]["alternative_technologies"] = transformed_alt_tech
 
     # Save JSON to file
     json_path = os.path.join(raw_data_path, "assessment_result.json")
@@ -332,295 +145,7 @@ def generate_json_report(raw_data_path, metadata, resource_type_mapping, resourc
 
     return json_path
 
-def transform_resource_inventory_for_pdf(resource_inventory, resource_type_mapping, report_path):
-    resources = []
-    for idx, resource in enumerate(resource_inventory):
-        # Convert resource_type to string for lookup
-        resource_type = str(resource["resource_type"])
-        # Fetch resource info from the mapping
-        resource_info = resource_type_mapping.get(resource_type, {})
-
-        resource_name = resource_info.get("name", "Unknown Resource")
-        # Construct icon_url from the resource_info, default if not found
-        icon_path = "/assets" + resource_info.get("icon", "/icons/default.png")
-
-        # Prepend report_storage to form the full path to the icon
-        icon_url = f"{report_path}{icon_path}"
-
-        resources.append({
-            "id": idx + 1,
-            "resource_name": resource_name,
-            "icon_url": icon_url,
-            "location": resource.get("location", "Unknown"),
-            "count": resource.get("count", 0)
-        })
-
-    return resources
-
-def transform_cost_inventory_for_pdf(cost_data):
-    # Map currency codes to their respective symbols
-    currency_symbols = {
-        "USD": "$",
-        "GBP": "£",
-        "EUR": "€"
-    }
-
-    # Sort cost_data by date ascending
-    sorted_cost_data = sorted(cost_data, key=lambda x: datetime.strptime(x["month"], "%Y-%m-%d"))
-
-    # Take the last 6 months
-    last_six_cost_data = sorted_cost_data[-6:]
-
-    # Extract months and costs
-    months = [datetime.strptime(item["month"], "%Y-%m-%d").strftime('%b') for item in last_six_cost_data]
-    costs = [item["cost"] for item in last_six_cost_data]
-
-    # Determine currency symbol
-    if last_six_cost_data:
-        currency_code = last_six_cost_data[0].get("currency", "USD")
-    else:
-        currency_code = "USD"
-    currency_symbol = currency_symbols.get(currency_code, currency_code)
-
-    return months, costs, currency_symbol
-
-def transform_risk_inventory_for_pdf(risk_data, risk_definitions, resource_inventory):
-    # Create a lookup for risk_definitions by their 'id'
-    risk_def_map = {rd["id"]: rd for rd in risk_definitions}
-
-    # Group risks by their risk code
-    risk_map = {}
-    for entry in risk_data:
-        risk_code = entry["risk"]
-        if risk_code not in risk_map:
-            risk_map[risk_code] = {
-                "impacted_resources_count": 0,
-                "entries": []
-            }
-        # If resource_type is not null, increment impacted_resources_count
-        if entry["resource_type"] is not None and entry["resource_type"] != "null":
-            risk_map[risk_code]["impacted_resources_count"] += 1
-        risk_map[risk_code]["entries"].append(entry)
-
-    # We'll track severity counts as well
-    severity_counts = {'high': 0, 'medium': 0, 'low': 0}
-
-    # Build a final list of risks with name, severity, impacted_resources_count
-    risks = []
-    for risk_code, data in risk_map.items():
-        rd = risk_def_map.get(risk_code)
-        if not rd:
-            continue  # If no definition found, skip
-
-        severity = rd["severity"]  # 'high', 'medium', or 'low'
-        if severity in severity_counts:
-            severity_counts[severity] += 1
-
-        risks.append({
-            "name": rd["name"],
-            "severity": severity,
-            "impacted_resources_count": data["impacted_resources_count"]
-        })
-
-    return risks, severity_counts
-
-def transform_alt_tech_for_pdf(resource_inventory, resource_type_mapping, alternatives, alternative_technologies, exit_strategy, report_path):
-    # Count how many valid alternatives each resource_type has for the given exit_strategy
-    alt_counts = {}
-    for alt in alternatives:
-        if str(alt.get("strategy_type")) == str(exit_strategy):
-            rtype_str = str(alt.get("resource_type"))
-            tech = next((t for t in alternative_technologies if t["id"] == alt["alternative_technology"] and t.get("status") == "t"), None)
-            if tech:
-                alt_counts[rtype_str] = alt_counts.get(rtype_str, 0) + 1
-
-    alt_tech = []
-    for idx, resource in enumerate(resource_inventory):
-        rtype_str = str(resource["resource_type"])
-        rtype_info = resource_type_mapping.get(rtype_str, {})
-        resource_name = rtype_info.get("name", "Unknown Resource")
-
-        icon_path = "/assets" + rtype_info.get("icon", "/icons/default.png")
-        icon_url = f"{report_path}{icon_path}"
-
-        count = alt_counts.get(rtype_str, 0)
-
-        alt_tech.append({
-            "id": idx + 1,
-            "resource_name": resource_name,
-            "icon_url": icon_url,
-            "count": count
-        })
-
-    return alt_tech
-
-def draw_header_footer(report_path,canvas, doc):
-    # Save the state of the canvas to not affect the drawing
-    canvas.saveState()
-    width, height = A4
-
-    # Include the date in the format mm-dd-yyyy
-    current_date = datetime.now().strftime("%m-%d-%Y")
-    left_text_content1 = "EscapeCloud Community Edition - Report"
-    left_text_content2 = f"Date: {current_date}"
-
-    # Define the header content with Paragraphs
-    header_style = ParagraphStyle('HeaderStyle', fontSize=10, textColor=HexColor("#9cafae"))
-    header_data = [
-        [Paragraph(left_text_content1, header_style), "", ""],
-        [Paragraph(left_text_content2, header_style), "", ""]
-    ]
-
-    # Create the header table
-    table = Table(header_data, colWidths=[width - 188 - doc.rightMargin - doc.leftMargin, 10, 150])
-
-    # Define the style for the table
-    table.setStyle(TableStyle([
-        ('SPAN', (1, 0), (1, 1)),  # Merge Column 2 in both rows
-        ('SPAN', (2, 0), (2, 1)),  # Merge Column 3 in both rows
-        ('ALIGN', (0, 0), (0, 0), 'LEFT'),  # Align left_text_content1 to the left
-        ('ALIGN', (0, 1), (0, 1), 'LEFT'),  # Align left_text_content2 to the left
-        ('ALIGN', (2, 0), (2, 1), 'RIGHT'),  # Align logo to the right
-        ('VALIGN', (0, 0), (0, 1), 'TOP'),  # Vertically align to the top
-        ('VALIGN', (2, 0), (2, 1), 'MIDDLE'),  # Vertically align to the middle
-        #('GRID', (0, 0), (-1, -1), 0.5, colors.red),  # Temporary borders for visualization
-    ]))
-    # Build the header table and draw it on the canvas
-    table.wrapOn(canvas, doc.leftMargin, height - doc.topMargin)
-    table.drawOn(canvas, doc.leftMargin, height - doc.topMargin)
-
-    # Add the logo
-    logo_path = f"{report_path}/assets/img/logo/report_logo.png"
-    logo = Image(logo_path, width=150, height=30)
-
-    # Aligning logo vertically with the text
-    logo_y = height - doc.topMargin + 5
-    logo.drawOn(canvas, width - 150 - doc.rightMargin, logo_y)
-
-    # Line below the header
-    canvas.setStrokeColor(HexColor('#115e59'))
-    canvas.setLineWidth(1)
-    line_y = height - doc.topMargin - 10
-    canvas.line(doc.leftMargin, line_y, width - doc.rightMargin, line_y)
-
-    # Footer
-    footer_padding = 15  # Add padding under the page number
-    canvas.setStrokeColor(HexColor('#115e59'))
-    canvas.line(40, 60 + footer_padding, A4[0] - 40, 60 + footer_padding)
-
-    canvas.setFont('Helvetica', 8)
-    canvas.drawString(A4[0] / 2 - 30, 60 + footer_padding - 15, f"Page {doc.page}")
-
-    canvas.setFont('Helvetica-Oblique', 8)
-    canvas.setFillColor(HexColor('#9cafae'))
-    canvas.drawCentredString(A4[0] / 2, 40, "EscapeCloud Community Edition - This report is provided 'As Is,' without any warranty of any kind.")
-    canvas.drawCentredString(A4[0] / 2, 30, "EscapeCloud makes no warranty that the information contained in this report is complete or error-free. Copyright 2024")
-
-    # Restore the state of the canvas
-    canvas.restoreState()
-
-def draw_risk_chart(risk_chart_data):
-    # Define your colors for each severity and their border colors
-    severity_colors = {
-        'high': HexColor('#991b1b'),
-        'medium': HexColor('#ffae1f'),
-        'low': HexColor('#539bff')
-    }
-
-    # Border colors
-    border_colors = {
-        'high': HexColor('#991b1b'),
-        'medium': HexColor('#ffae1f'),
-        'low': HexColor('#539bff')
-    }
-
-    # Create a drawing for the Doughnut chart
-    d = Drawing(300, 200)
-
-    # Create the Pie (Doughnut) chart
-    pie = Pie()
-    pie.x = 100
-    pie.y = 25
-    pie.width = 150
-    pie.height = 150
-    pie.data = list(risk_chart_data.values())
-    pie.innerRadiusFraction = 0.5
-
-    # Assign colors and borders for each severity level
-    for i, severity in enumerate(risk_chart_data.keys()):
-        pie.slices[i].fillColor = severity_colors[severity]
-        pie.slices[i].strokeColor = border_colors[severity]
-        pie.slices[i].strokeWidth = 1  # Set the border width
-
-    # Add the Pie chart to the drawing
-    d.add(pie)
-
-    # Create a Legend with headers
-    legend = Legend()
-    legend.x = 280
-    legend.y = 130
-    legend.dxTextSpace = 10
-    legend.columnMaximum = 6
-    legend.alignment = 'right'
-    legend.subCols[0].minWidth = 60
-    legend.subCols[1].minWidth = 30
-    legend.colorNamePairs = [(severity_colors[severity], (severity, str(risk_chart_data[severity]))) for severity in risk_chart_data.keys()]
-
-    # Configure sub-columns for the legend
-    legend.subCols[0].align = 'left'
-    legend.subCols[1].align = 'right'
-
-    # Add the Legend to the drawing
-    d.add(legend)
-
-    # Create a Legend Header
-    legend_header = Legend()
-    legend_header.x = 280
-    legend_header.y = 150
-    legend_header.dxTextSpace = 10
-    legend_header.colorNamePairs = [(HexColor('#FFFFFF'), ('Severity', 'No.'))]  # Corrected line
-    legend_header.alignment = 'right'
-    legend_header.subCols[0].align = 'left'
-    legend_header.subCols[0].minWidth = 60
-    legend_header.subCols[1].align = 'right'
-    legend_header.subCols[1].minWidth = 30
-
-    # Add the Legend Header to the drawing
-    d.add(legend_header)
-
-    return d
-
-def draw_cost_chart(months, costs):
-    # Create a drawing for the bar chart
-    d = Drawing(7.5*cm, 5*cm)
-
-    # Create a Vertical Bar Chart
-    bar_chart = VerticalBarChart()
-    bar_chart.x = 20
-    bar_chart.y = 20
-    bar_chart.width = 6.5*cm
-    bar_chart.height = 4*cm
-    bar_chart.data = [costs]
-    bar_chart.barWidth = 0.8*cm
-
-    # Style the bars
-    bar_chart.bars[0].fillColor = HexColor('#055160')
-    bar_chart.bars[0].strokeColor = HexColor('#055160')
-
-    # Set the categories (months)
-    bar_chart.categoryAxis.categoryNames = months
-
-    # Calculate valueMax
-    max_cost = max(costs) if costs else 0
-    bar_chart.valueAxis.valueMax = math.ceil(max_cost / 10.0) * 10 if max_cost > 0 else 10
-    bar_chart.valueAxis.valueMin = 0
-
-    # Add the bar chart to the drawing
-    d.add(bar_chart)
-
-    return d
-
-def generate_pdf_report(provider_details, report_path, metadata, resource_type_mapping, resource_inventory, cost_data, risk_data, risk_definitions, alternatives, alternative_technologies, exit_strategy):
+def generate_pdf_report(provider_details: Dict[str, Any], report_path: str, metadata: Dict[str, Any], resource_type_mapping: Dict[str, Any], resource_inventory: List[Dict[str, Any]], cost_data: List[Dict[str, Any]], scoring_data: Optional[Dict[str, Any]], risk_data: List[Dict[str, Any]], risk_definitions: List[Dict[str, Any]], alternatives: List[Dict[str, Any]], alternative_technologies: List[Dict[str, Any]], exit_strategy: int) -> str:
     # Define the PDF path
     pdf_path = os.path.join(report_path, "report.pdf")
 
@@ -666,7 +191,7 @@ def generate_pdf_report(provider_details, report_path, metadata, resource_type_m
 
     type_map = {
         "1": "Basic",
-        "2": "Basic+"
+        "2": "Standard"
     }
 
     # Prepare the summary data
@@ -915,7 +440,100 @@ def generate_pdf_report(provider_details, report_path, metadata, resource_type_m
     content.append(risk_table)
     content.append(PageBreak())
 
-    # Page 3: Resource Inventory
+    # Page 3: EscapeCloud Scoring
+    if metadata.get("assessment_type") == 2:
+        content.append(Spacer(1, header_padding))
+        content.append(Paragraph("EscapeCloud Scoring", styles['Heading1']))
+        content.append(Paragraph("Scoring #1 - Exit Score", styles['Heading2']))
+
+        scoring_block1 = "The following gauge chart visualizes a combined score that reflects both risk assessment results and the evaluation of alternative technologies:"
+
+        content.append(Paragraph(scoring_block1, content_style))
+        content.append(Spacer(1, 12))
+        exit_score = scoring_data.get("exit_score", 0) if scoring_data else 0
+
+        # Define output path for charts
+        chart_output_path = os.path.join(report_path, "assets/charts")
+        os.makedirs(chart_output_path, exist_ok=True)
+
+        exit_score_image_path = draw_exitscore_chart(exit_score, chart_output_path, width=750, height=500)
+
+        # Define the table data
+        exitscore_table_data = [
+            ['', ''],
+            ['Complex (0 - 20)', ''],
+            ['Challenging (20 - 40)', ''],
+            ['Manageable (40 - 60)', ''],
+            ['Smooth Transition (60 - 80)', ''],
+            ['Seamless (80 - 100)', '']
+        ]
+
+        exitscore_table_data[1][1] = Image(exit_score_image_path, width=7.5*cm, height=5*cm)
+
+        # Column widhts
+        exitscore_colWidths = [5*cm, 10.5*cm]
+
+        # Create the table
+        exitscore_table = Table(exitscore_table_data, colWidths=exitscore_colWidths)
+
+        # Style the table
+        exitscore_table_style = TableStyle([
+            ('SPAN', (0,0), (1,0)),
+            ('BACKGROUND', (0,0), (1,0), HexColor('#115e59')),
+            ('TEXTCOLOR', (0,0), (1,0), colors.white),
+            ('FONTNAME', (0,0), (1,0), 'Helvetica-Bold'),
+            ('ALIGN', (0,0), (1,0), 'CENTER'),
+            ('VALIGN', (0,0), (1,0), 'MIDDLE'),
+            ('SPAN', (1,1), (1,5)),
+            ('GRID', (0,0), (-1,-1), 1, colors.black),
+            ('ALIGN', (0,1), (0,5), 'LEFT'),
+            ('VALIGN', (0,1), (0,5), 'MIDDLE'),
+            ('ALIGN', (1,1), (1,1), 'CENTER'),
+            ('VALIGN', (1,1), (1,1), 'MIDDLE')
+        ])
+        exitscore_table.setStyle(exitscore_table_style)
+        content.append(exitscore_table)
+        content.append(Spacer(1, 12))
+
+        content.append(Paragraph("Scoring #2 - Vendor Lock-In Score", styles['Heading2']))
+        scoring_block2 = "The following radar chart visualizes the assessment of alternative technologies across three dimensions: Human (skills availability), Technology (maturity and vendor stability), and Operational (ecosystem and support services) — only where viable alternatives exist:"
+        content.append(Paragraph(scoring_block2, content_style))
+        content.append(Spacer(1, 12))
+
+        human_score = scoring_data.get("human_score", 0) if scoring_data else 0
+        technology_score = scoring_data.get("technology_score", 0) if scoring_data else 0
+        operational_score = scoring_data.get("operational_score", 0) if scoring_data else 0
+
+        vendor_lockin_chart = draw_vendor_lockin_radar_chart(human_score, technology_score, operational_score)
+        content.append(vendor_lockin_chart)
+
+        # Define the table data
+        vendor_lockin_table_data = [
+            ['Human', 'Technology', 'Operational'],
+            [human_score, technology_score, operational_score]
+        ]
+
+        # Column widhts
+        vendor_lockin_colWidths = [5*cm, 5*cm, 5*cm]
+
+        # Create the table
+        vendor_lockin_table = Table(vendor_lockin_table_data, colWidths=vendor_lockin_colWidths)
+
+        # Style the table
+        vendor_lockin_table_style = TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), HexColor('#115e59')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ])
+        vendor_lockin_table.setStyle(vendor_lockin_table_style)
+        content.append(vendor_lockin_table)
+        content.append(PageBreak())
+
+    # Page 4: Resource Inventory
     content.append(Spacer(1, header_padding))
     content.append(Paragraph("Resource Inventory", styles['Heading1']))
     res_block1 = "The Resource Inventory provides a summary of the cloud resources provisioned within the defined scope:"
@@ -976,7 +594,7 @@ def generate_pdf_report(provider_details, report_path, metadata, resource_type_m
     content.append(res_table)
     content.append(PageBreak())
 
-    # Page 4: Alternative Technologies
+    # Page 5: Alternative Technologies
     content.append(Spacer(1, header_padding))
     content.append(Paragraph("Alternative Technologies", styles['Heading1']))
 
@@ -1030,7 +648,6 @@ def generate_pdf_report(provider_details, report_path, metadata, resource_type_m
 
     content.append(alttech_table)
     content.append(PageBreak())
-
 
     # Build the PDF document
     logger.debug("Building the PDF document...")
