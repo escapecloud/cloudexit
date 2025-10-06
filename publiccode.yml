@@ -1,0 +1,38 @@
+publiccodeYmlVersion: "0.4.0"
+name: cloudexit
+url: https://github.com/escapecloud/cloudexit
+landingURL: https://escapecloud.io
+platforms:
+  - linux
+  - mac
+  - windows
+categories:
+  - cloud-management
+developmentStatus: beta
+softwareType: standalone/backend
+
+description:
+  en:
+    shortDescription: Open-source tool for cloud exit assessments
+    longDescription: Open-source tool for cloud exit assessments that helps
+      organizations evaluate risks, dependencies, and alternative strategies
+      before leaving a cloud provider.
+    features:
+      - cloud exit assessment
+      - risk management
+      - alternative technology analysis
+
+legal:
+  license: AGPL-3.0-only
+
+maintenance:
+  type: contract
+  contractors:
+    - name: Bence Daniel Hezso
+      until: 2030-12-31
+      email: hello@escapecloud.io
+
+localisation:
+  localisationReady: false
+  availableLanguages:
+    - en
