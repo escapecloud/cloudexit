@@ -39,7 +39,7 @@ def validate_config(config: Dict[str, Any]) -> bool:
     provider_details = config.get("providerDetails", {})
     if cloud_service_provider == 1:  # Azure
         # Skip validation of clientId and clientSecret if using CLI credentials
-        if isinstance(provider_details.get("credential"), object):  # Assuming it's DefaultAzureCredential
+        if provider_details.get("credential") is not None:
             required_fields = ["tenantId", "subscriptionId", "resourceGroupName"]
         else:
             required_fields = REQUIRED_FIELDS_AZURE
