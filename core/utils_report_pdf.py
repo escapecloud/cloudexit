@@ -21,6 +21,13 @@ from reportlab.graphics.charts.barcharts import VerticalBarChart
 # Plotly
 import plotly.graph_objects as go
 
+from core.utils_report_common import (
+    enrich_resource_inventory,
+    summarize_alternative_technologies,
+    summarize_costs,
+    summarize_risks,
+)
+
 # Configure logger
 logger = logging.getLogger("core.engine.report_pdf")
 logger.setLevel(logging.INFO)
@@ -29,104 +36,42 @@ logger.setLevel(logging.INFO)
 def transform_resource_inventory_for_pdf(
     resource_inventory: list, resource_type_mapping: Dict[str, Any], report_path: str
 ) -> List[Dict[str, Any]]:
-    resources = []
-    for idx, resource in enumerate(resource_inventory):
-        # Convert resource_type to string for lookup
-        resource_type = str(resource["resource_type"])
-        # Fetch resource info from the mapping
-        resource_info = resource_type_mapping.get(resource_type, {})
-
-        resource_name = resource_info.get("name", "Unknown Resource")
-        # Construct icon_url from the resource_info, default if not found
-        icon_path = "/assets" + resource_info.get("icon", "/icons/default.png")
-
-        # Prepend report_storage to form the full path to the icon
-        icon_url = f"{report_path}{icon_path}"
-
-        resources.append(
-            {
-                "id": idx + 1,
-                "resource_name": resource_name,
-                "icon_url": icon_url,
-                "location": resource.get("location", "Unknown"),
-                "count": resource.get("count", 0),
-            }
-        )
-
-    return resources
+    enriched_resources = enrich_resource_inventory(
+        resource_inventory,
+        resource_type_mapping,
+        report_path=report_path,
+    )
+    return [
+        {
+            "id": resource["id"],
+            "resource_name": resource["resource_name"],
+            "icon_url": resource["icon_url"],
+            "location": resource["location"],
+            "count": resource["count"],
+        }
+        for resource in enriched_resources
+    ]
 
 
 def transform_cost_inventory_for_pdf(
     cost_data: list,
 ) -> Tuple[List[str], List[float], str]:
-    # Map currency codes to their respective symbols
-    currency_symbols = {"USD": "$", "GBP": "£", "EUR": "€"}
-
-    # Sort cost_data by date ascending
-    sorted_cost_data = sorted(
-        cost_data, key=lambda x: datetime.strptime(x["month"], "%Y-%m-%d")
-    )
-
-    # Take the last 6 months
-    last_six_cost_data = sorted_cost_data[-6:]
-
-    # Extract months and costs
-    months = [
-        datetime.strptime(item["month"], "%Y-%m-%d").strftime("%b")
-        for item in last_six_cost_data
-    ]
-    costs = [item["cost"] for item in last_six_cost_data]
-
-    # Determine currency symbol
-    if last_six_cost_data:
-        currency_code = last_six_cost_data[0].get("currency", "USD")
-    else:
-        currency_code = "USD"
-    currency_symbol = currency_symbols.get(currency_code, currency_code)
-
+    months, costs, _, _, currency_symbol = summarize_costs(cost_data, last_n=6)
     return months, costs, currency_symbol
 
 
 def transform_risk_inventory_for_pdf(
     risk_data: list, risk_definitions: list, resource_inventory: list
 ) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
-    # Create a lookup for risk_definitions by their 'id'
-    risk_def_map = {rd["id"]: rd for rd in risk_definitions}
-
-    # Group risks by their risk code
-    risk_map = {}
-    for entry in risk_data:
-        risk_code = entry["risk"]
-        if risk_code not in risk_map:
-            risk_map[risk_code] = {"impacted_resources_count": 0, "entries": []}
-        # If resource_type is not null, increment impacted_resources_count
-        if entry["resource_type"] is not None and entry["resource_type"] != "null":
-            risk_map[risk_code]["impacted_resources_count"] += 1
-        risk_map[risk_code]["entries"].append(entry)
-
-    # We'll track severity counts as well
-    severity_counts = {"high": 0, "medium": 0, "low": 0}
-
-    # Build a final list of risks with name, severity, impacted_resources_count
-    risks = []
-    for risk_code, data in risk_map.items():
-        rd = risk_def_map.get(risk_code)
-        if not rd:
-            continue  # If no definition found, skip
-
-        severity = rd["severity"]  # 'high', 'medium', or 'low'
-        if severity in severity_counts:
-            severity_counts[severity] += 1
-
-        risks.append(
-            {
-                "name": rd["name"],
-                "severity": severity,
-                "impacted_resources_count": data["impacted_resources_count"],
-            }
-        )
-
-    return risks, severity_counts
+    risks, severity_counts = summarize_risks(risk_data, risk_definitions)
+    return [
+        {
+            "name": risk["name"],
+            "severity": risk["severity"],
+            "impacted_resources_count": risk["impacted_resources_count"] or 0,
+        }
+        for risk in risks
+    ], severity_counts
 
 
 def transform_alt_tech_for_pdf(
@@ -137,24 +82,12 @@ def transform_alt_tech_for_pdf(
     exit_strategy: int,
     report_path: str,
 ) -> List[Dict[str, Any]]:
-
-    # Count how many valid alternatives each resource_type has for the given exit_strategy
-    alt_counts = {}
-    for alt in alternatives:
-        if str(alt.get("strategy_type")) == str(exit_strategy):
-            rtype_str = str(alt.get("resource_type"))
-            tech = next(
-                (
-                    t
-                    for t in alternative_technologies
-                    if t["id"] == alt["alternative_technology"]
-                    and t.get("status") == "t"
-                ),
-                None,
-            )
-            if tech:
-                alt_counts[rtype_str] = alt_counts.get(rtype_str, 0) + 1
-
+    grouped_alt_tech = summarize_alternative_technologies(
+        resource_inventory,
+        alternatives,
+        alternative_technologies,
+        exit_strategy,
+    )
     alt_tech = []
     for idx, resource in enumerate(resource_inventory):
         rtype_str = str(resource["resource_type"])
@@ -164,7 +97,7 @@ def transform_alt_tech_for_pdf(
         icon_path = "/assets" + rtype_info.get("icon", "/icons/default.png")
         icon_url = f"{report_path}{icon_path}"
 
-        count = alt_counts.get(rtype_str, 0)
+        count = len(grouped_alt_tech.get(rtype_str, []))
 
         alt_tech.append(
             {
