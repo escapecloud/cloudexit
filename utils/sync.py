@@ -19,7 +19,13 @@ def _build_url(host: str) -> str:
     return f"{host}{_ASSESS_PATH}"
 
 
-def submit_assessment(payload: Dict[str, Any], *, host: str | None = None, key: str | None = None, timeout: int = 10) -> Optional[requests.Response]:
+def submit_assessment(
+    payload: Dict[str, Any],
+    *,
+    host: str | None = None,
+    key: str | None = None,
+    timeout: int = 10,
+) -> Optional[requests.Response]:
     host = host or getattr(config, "HOST", "") if config else ""
     if not host:
         logger.warning("HOST not configured – skipping assessment sync.")

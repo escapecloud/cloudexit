@@ -8,7 +8,11 @@ from typing import List, Dict, Any
 logger = logging.getLogger("core.engine.report_json")
 logger.setLevel(logging.INFO)
 
-def transform_resource_inventory_for_json(resource_inventory: List[Dict[str, Any]], resource_type_mapping: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
+
+def transform_resource_inventory_for_json(
+    resource_inventory: List[Dict[str, Any]],
+    resource_type_mapping: Dict[str, Dict[str, Any]],
+) -> List[Dict[str, Any]]:
     resource_inventory_json = []
     for idx, resource in enumerate(resource_inventory):
         resource_type = str(resource["resource_type"])
@@ -16,46 +20,65 @@ def transform_resource_inventory_for_json(resource_inventory: List[Dict[str, Any
         resource_name = resource_info.get("name", "Unknown Resource")
         resource_code = resource_info.get("code", "N/A")
 
-        resource_inventory_json.append({
-            "id": idx + 1,
-            "code": resource_code,
-            "resource_name": resource_name,
-            "location": resource.get("location", "Unknown"),
-            "count": resource.get("count", 0)
-        })
+        resource_inventory_json.append(
+            {
+                "id": idx + 1,
+                "code": resource_code,
+                "resource_name": resource_name,
+                "location": resource.get("location", "Unknown"),
+                "count": resource.get("count", 0),
+            }
+        )
     return resource_inventory_json
 
-def transform_cost_inventory_for_json(cost_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+
+def transform_cost_inventory_for_json(
+    cost_data: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
     # Sort by date before transformation
-    sorted_cost_data = sorted(cost_data, key=lambda x: datetime.strptime(x["month"], "%Y-%m-%d"))
+    sorted_cost_data = sorted(
+        cost_data, key=lambda x: datetime.strptime(x["month"], "%Y-%m-%d")
+    )
 
     cost_inventory = [
         {
             "month": item["month"],
             "cost": round(item["cost"], 2),
-            "currency": item["currency"]
+            "currency": item["currency"],
         }
         for item in sorted_cost_data
     ]
     return cost_inventory
 
-def transform_risk_inventory_for_json(risk_data: List[Dict[str, Any]], risk_definitions: List[Dict[str, Any]], resource_inventory: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+
+def transform_risk_inventory_for_json(
+    risk_data: List[Dict[str, Any]],
+    risk_definitions: List[Dict[str, Any]],
+    resource_inventory: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
     # Map resource_type to their corresponding resource IDs
-    resource_id_map = {str(value["resource_type"]): key + 1 for key, value in enumerate(resource_inventory)}
+    resource_id_map = {
+        str(value["resource_type"]): key + 1
+        for key, value in enumerate(resource_inventory)
+    }
 
     # Group risks by risk.id
-    risk_map = defaultdict(lambda: {
-        "id": None,
-        "name": "",
-        "description": "",
-        "severity": "",
-        "impacted_resources": set(),
-        "impacted_resources_count": 0
-    })
+    risk_map = defaultdict(
+        lambda: {
+            "id": None,
+            "name": "",
+            "description": "",
+            "severity": "",
+            "impacted_resources": set(),
+            "impacted_resources_count": 0,
+        }
+    )
 
     for risk_entry in risk_data:
         risk_id = risk_entry["risk"]
-        risk_definition = next((rd for rd in risk_definitions if rd["id"] == risk_id), None)
+        risk_definition = next(
+            (rd for rd in risk_definitions if rd["id"] == risk_id), None
+        )
         if not risk_definition:
             continue
 
@@ -76,16 +99,29 @@ def transform_risk_inventory_for_json(risk_data: List[Dict[str, Any]], risk_defi
     # Convert impacted_resources set to a list and compute counts
     for risk in risk_map.values():
         risk["impacted_resources"] = list(risk["impacted_resources"])
-        risk["impacted_resources_count"] = len(risk["impacted_resources"]) if risk["impacted_resources"] else None
+        risk["impacted_resources_count"] = (
+            len(risk["impacted_resources"]) if risk["impacted_resources"] else None
+        )
 
     return list(risk_map.values())
 
-def transform_alt_tech_for_json(resource_inventory: List[Dict[str, Any]], alternatives: List[Dict[str, Any]], alternative_technologies: List[Dict[str, Any]], exit_strategy: int) -> Dict[int, List[Dict[str, Any]]]:
+
+def transform_alt_tech_for_json(
+    resource_inventory: List[Dict[str, Any]],
+    alternatives: List[Dict[str, Any]],
+    alternative_technologies: List[Dict[str, Any]],
+    exit_strategy: int,
+) -> Dict[int, List[Dict[str, Any]]]:
     # Map resource_type to resource_id
-    resource_id_map = {str(value["resource_type"]): key + 1 for key, value in enumerate(resource_inventory)}
+    resource_id_map = {
+        str(value["resource_type"]): key + 1
+        for key, value in enumerate(resource_inventory)
+    }
 
     # Initialize the grouped alternative technologies
-    grouped_alt_tech_data = {resource_id: [] for resource_id in resource_id_map.values()}
+    grouped_alt_tech_data = {
+        resource_id: [] for resource_id in resource_id_map.values()
+    }
 
     # Iterate through alternatives to group them by resource_id
     for alt in alternatives:
@@ -93,20 +129,28 @@ def transform_alt_tech_for_json(resource_inventory: List[Dict[str, Any]], altern
             continue
 
         tech = next(
-            (t for t in alternative_technologies if t["id"] == alt["alternative_technology"] and t["status"] == "t"),
-            None
+            (
+                t
+                for t in alternative_technologies
+                if t["id"] == alt["alternative_technology"] and t["status"] == "t"
+            ),
+            None,
         )
         if tech:
             resource_id = resource_id_map.get(str(alt["resource_type"]))
             if resource_id:
-                grouped_alt_tech_data[resource_id].append({
-                    "id": len(grouped_alt_tech_data[resource_id]) + 1,
-                    "product_name": tech["product_name"],
-                    "product_description": tech["product_description"],
-                    "product_url": tech["product_url"],
-                    "open_source": tech["open_source"] == "t",
-                    "support_plan": tech["support_plan"] == "t"
-                })
+                grouped_alt_tech_data[resource_id].append(
+                    {
+                        "id": len(grouped_alt_tech_data[resource_id]) + 1,
+                        "product_name": tech["product_name"],
+                        "product_description": tech["product_description"],
+                        "product_url": tech["product_url"],
+                        "open_source": tech["open_source"] == "t",
+                        "support_plan": tech["support_plan"] == "t",
+                    }
+                )
 
     # Return the grouped alternatives
-    return {key: grouped_alt_tech_data[key] for key in sorted(grouped_alt_tech_data.keys())}
+    return {
+        key: grouped_alt_tech_data[key] for key in sorted(grouped_alt_tech_data.keys())
+    }

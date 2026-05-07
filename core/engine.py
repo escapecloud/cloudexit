@@ -14,14 +14,21 @@ from .utils import copy_assets
 from .utils_aws import build_aws_resource_inventory, build_aws_cost_inventory
 from .utils_azure import build_azure_resource_inventory, build_azure_cost_inventory
 from .utils_db import connect, load_data
-from .utils_report import generate_html_report, generate_pdf_report, generate_json_report
+from .utils_report import (
+    generate_html_report,
+    generate_pdf_report,
+    generate_json_report,
+)
 from .utils_sync import post_assessment
 
 # Configure the logger
 logger = logging.getLogger("core.engine")
 
+
 # Stage 1
-def verify_credentials(cloud_service_provider: int, provider_details: Dict[str, Any]) -> Tuple[bool, str]:
+def verify_credentials(
+    cloud_service_provider: int, provider_details: Dict[str, Any]
+) -> Tuple[bool, str]:
     connection_success = False
     logs = ""
 
@@ -31,41 +38,48 @@ def verify_credentials(cloud_service_provider: int, provider_details: Dict[str, 
             credential = provider_details.get("credential") or ClientSecretCredential(
                 tenant_id=provider_details["tenantId"],
                 client_id=provider_details["clientId"],
-                client_secret=provider_details["clientSecret"]
+                client_secret=provider_details["clientSecret"],
             )
-            resource_client = ResourceManagementClient(credential, provider_details["subscriptionId"])
-            list(resource_client.resource_groups.list())  # Benign call to verify credentials
+            resource_client = ResourceManagementClient(
+                credential, provider_details["subscriptionId"]
+            )
+            list(
+                resource_client.resource_groups.list()
+            )  # Benign call to verify credentials
             connection_success = True
             logs = "Azure connection successful."
         except ClientAuthenticationError as e:
             logs = f"Azure credentials validation failed: {str(e)}"
-            #logger.error(logs)
+            # logger.error(logs)
         except Exception as e:
             logs = f"Azure connection test failed: {str(e)}"
-            #logger.error(logs)
+            # logger.error(logs)
 
     elif cloud_service_provider == 2:  # AWS
         try:
             client = boto3.client(
-                'ec2',
+                "ec2",
                 aws_access_key_id=provider_details["accessKey"],
                 aws_secret_access_key=provider_details["secretKey"],
-                region_name=provider_details["region"]
+                region_name=provider_details["region"],
             )
             client.describe_regions()  # Benign call to verify credentials
             connection_success = True
             logs = "AWS connection successful."
         except NoCredentialsError as e:
             logs = f"AWS credentials validation failed: {str(e)}"
-            #logger.error(logs)
+            # logger.error(logs)
         except Exception as e:
             logs = f"AWS connection test failed: {str(e)}"
-            #logger.error(logs)
+            # logger.error(logs)
 
     return connection_success, logs
 
+
 # Stage 2
-def test_permissions(cloud_service_provider: int, provider_details: Dict[str, Any]) -> Tuple[bool, bool, bool, str]:
+def test_permissions(
+    cloud_service_provider: int, provider_details: Dict[str, Any]
+) -> Tuple[bool, bool, bool, str]:
     permission_valid = False
     permission_reader = False
     permission_cost = False
@@ -77,19 +91,27 @@ def test_permissions(cloud_service_provider: int, provider_details: Dict[str, An
             credential = provider_details.get("credential") or ClientSecretCredential(
                 tenant_id=provider_details["tenantId"],
                 client_id=provider_details["clientId"],
-                client_secret=provider_details["clientSecret"]
+                client_secret=provider_details["clientSecret"],
             )
             resource_group_scope = f"/subscriptions/{provider_details['subscriptionId']}/resourceGroups/{provider_details['resourceGroupName']}"
 
             # Check role assignments
-            auth_client = AuthorizationManagementClient(credential, provider_details["subscriptionId"])
-            role_assignments = auth_client.role_assignments.list_for_scope(scope=resource_group_scope)
+            auth_client = AuthorizationManagementClient(
+                credential, provider_details["subscriptionId"]
+            )
+            role_assignments = auth_client.role_assignments.list_for_scope(
+                scope=resource_group_scope
+            )
 
             for role_assignment in role_assignments:
                 role_definition_id = role_assignment.role_definition_id
-                if role_definition_id.endswith("acdd72a7-3385-48ef-bd42-f606fba81ae7"):  # Reader role
+                if role_definition_id.endswith(
+                    "acdd72a7-3385-48ef-bd42-f606fba81ae7"
+                ):  # Reader role
                     permission_reader = True
-                if role_definition_id.endswith("72fafb9e-0641-4937-9268-a91bfd8191a3"):  # Cost Management Reader
+                if role_definition_id.endswith(
+                    "72fafb9e-0641-4937-9268-a91bfd8191a3"
+                ):  # Cost Management Reader
                     permission_cost = True
 
             if permission_reader and permission_cost:
@@ -112,23 +134,25 @@ def test_permissions(cloud_service_provider: int, provider_details: Dict[str, An
     elif cloud_service_provider == 2:  # AWS
         try:
             sts_client = boto3.client(
-                'sts',
+                "sts",
                 aws_access_key_id=provider_details["accessKey"],
                 aws_secret_access_key=provider_details["secretKey"],
-                region_name=provider_details["region"]
+                region_name=provider_details["region"],
             )
             identity = sts_client.get_caller_identity()
-            user_arn = identity['Arn']
-            user_name = user_arn.split('/')[-1]
+            user_arn = identity["Arn"]
+            user_name = user_arn.split("/")[-1]
 
             iam_client = boto3.client(
-                'iam',
+                "iam",
                 aws_access_key_id=provider_details["accessKey"],
                 aws_secret_access_key=provider_details["secretKey"],
-                region_name=provider_details["region"]
+                region_name=provider_details["region"],
             )
             policies = iam_client.list_attached_user_policies(UserName=user_name)
-            policy_names = [policy['PolicyName'] for policy in policies['AttachedPolicies']]
+            policy_names = [
+                policy["PolicyName"] for policy in policies["AttachedPolicies"]
+            ]
 
             permission_reader = "ViewOnlyAccess" in policy_names
             permission_cost = "AWSBillingReadOnlyAccess" in policy_names
@@ -154,17 +178,27 @@ def test_permissions(cloud_service_provider: int, provider_details: Dict[str, An
 
     return permission_valid, permission_reader, permission_cost, logs
 
+
 # Stage 3
-def create_resource_inventory(cloud_service_provider: int, provider_details: Dict[str, Any], report_path: str, raw_data_path: str) -> Dict[str, Any]:
+def create_resource_inventory(
+    cloud_service_provider: int,
+    provider_details: Dict[str, Any],
+    report_path: str,
+    raw_data_path: str,
+) -> Dict[str, Any]:
     # Copy assets and datasets folders data
     copy_assets(report_path)
 
     try:
 
         if cloud_service_provider == 1:  # Azure
-            build_azure_resource_inventory(cloud_service_provider, provider_details, report_path, raw_data_path)
+            build_azure_resource_inventory(
+                cloud_service_provider, provider_details, report_path, raw_data_path
+            )
         elif cloud_service_provider == 2:  # AWS
-            build_aws_resource_inventory(cloud_service_provider, provider_details, report_path, raw_data_path)
+            build_aws_resource_inventory(
+                cloud_service_provider, provider_details, report_path, raw_data_path
+            )
 
         return {"success": True, "logs": "Resource inventory created successfully."}
 
@@ -173,13 +207,23 @@ def create_resource_inventory(cloud_service_provider: int, provider_details: Dic
         # Do not raise the exception here; just return the error information
         return {"success": False, "logs": str(e)}
 
+
 # Stage 4
-def create_cost_inventory(cloud_service_provider: int, provider_details: Dict[str, Any], report_path: str, raw_data_path: str) -> Dict[str, Any]:
+def create_cost_inventory(
+    cloud_service_provider: int,
+    provider_details: Dict[str, Any],
+    report_path: str,
+    raw_data_path: str,
+) -> Dict[str, Any]:
     try:
         if cloud_service_provider == 1:  # Azure
-            build_azure_cost_inventory(cloud_service_provider, provider_details, report_path, raw_data_path)
+            build_azure_cost_inventory(
+                cloud_service_provider, provider_details, report_path, raw_data_path
+            )
         elif cloud_service_provider == 2:  # AWS
-            build_aws_cost_inventory(cloud_service_provider, provider_details, report_path, raw_data_path)
+            build_aws_cost_inventory(
+                cloud_service_provider, provider_details, report_path, raw_data_path
+            )
 
         return {"success": True, "logs": "Cost inventory created successfully."}
 
@@ -187,12 +231,23 @@ def create_cost_inventory(cloud_service_provider: int, provider_details: Dict[st
         logger.error(f"Error creating cost inventory: {str(e)}", exc_info=True)
         return {"success": False, "logs": str(e)}
 
+
 # Stage 5 - Online
-def sync_assessment(report_path: str, name: str, started_at: int, metadata: Dict[str, Any], mode: str, token: Optional[str]) -> Dict[str, Any]:
+def sync_assessment(
+    report_path: str,
+    name: str,
+    started_at: int,
+    metadata: Dict[str, Any],
+    mode: str,
+    token: Optional[str],
+) -> Dict[str, Any]:
     if mode != "online" or not token:
-        return {"success": True, "online": False,
-                "payload": None,
-                "logs": "offline – sync skipped."}
+        return {
+            "success": True,
+            "online": False,
+            "payload": None,
+            "logs": "offline – sync skipped.",
+        }
 
     result = post_assessment(
         name=name,
@@ -221,7 +276,6 @@ def sync_assessment(report_path: str, name: str, started_at: int, metadata: Dict
             else:
                 rows.append(("null", rid))
 
-
         db_path = os.path.join(report_path, "data", "assessment.db")
         with connect(db_path=db_path) as conn:
             cursor = conn.cursor()
@@ -230,7 +284,7 @@ def sync_assessment(report_path: str, name: str, started_at: int, metadata: Dict
                 INSERT INTO risk_inventory (resource_type, risk)
                 VALUES (?, ?)
                 """,
-                rows
+                rows,
             )
             conn.commit()
 
@@ -253,8 +307,8 @@ def sync_assessment(report_path: str, name: str, started_at: int, metadata: Dict
                         int(scoring["exit_score"]),
                         int(scoring["human_score"]),
                         int(scoring["technology_score"]),
-                        int(scoring["operational_score"])
-                    )
+                        int(scoring["operational_score"]),
+                    ),
                 )
                 conn.commit()
                 logger.debug("Scoring data saved to local DB.")
@@ -265,13 +319,15 @@ def sync_assessment(report_path: str, name: str, started_at: int, metadata: Dict
 
     return result
 
+
 # Stage 5 - Offline
-def perform_risk_assessment(exit_strategy: int, report_path: str, mode: str) -> Dict[str, Any]:
+def perform_risk_assessment(
+    exit_strategy: int, report_path: str, mode: str
+) -> Dict[str, Any]:
 
     if mode != "offline":
         logger.debug("Online mode – skipping local risk assessment.")
-        return {"success": True,
-                "logs": "online mode – local risk skipped."}
+        return {"success": True, "logs": "online mode – local risk skipped."}
 
     try:
         # Define the database path
@@ -289,24 +345,35 @@ def perform_risk_assessment(exit_strategy: int, report_path: str, mode: str) -> 
         total_resource_count = sum(item["count"] for item in resource_inventory)
 
         # Calculate total number of distinct resource types
-        distinct_resource_types = set(item["resource_type"] for item in resource_inventory)
+        distinct_resource_types = set(
+            item["resource_type"] for item in resource_inventory
+        )
         total_resource_types = len(distinct_resource_types)
 
         # Process each resource by `resource_type`
         for resource_data in resource_inventory:
-            resource_type_id = str(resource_data["resource_type"])  # Convert to string for consistent comparison
+            resource_type_id = str(
+                resource_data["resource_type"]
+            )  # Convert to string for consistent comparison
 
             # Filter alternatives for the current resource_type and exit strategy
             relevant_alternatives = [
-                alt for alt in alternatives
-                if str(alt["resource_type"]) == resource_type_id and str(alt["strategy_type"]) == str(exit_strategy)
+                alt
+                for alt in alternatives
+                if str(alt["resource_type"]) == resource_type_id
+                and str(alt["strategy_type"]) == str(exit_strategy)
             ]
             alternative_count = len(relevant_alternatives)
 
             # Count alternatives with support
             support_count = sum(
-                1 for alt in relevant_alternatives
-                if any(tech["id"] == alt["alternative_technology"] and tech["support_plan"] == "t" for tech in alternative_technologies)
+                1
+                for alt in relevant_alternatives
+                if any(
+                    tech["id"] == alt["alternative_technology"]
+                    and tech["support_plan"] == "t"
+                    for tech in alternative_technologies
+                )
             )
 
             # Determine risks based on criteria, using resource_type_id in output
@@ -339,7 +406,7 @@ def perform_risk_assessment(exit_strategy: int, report_path: str, mode: str) -> 
                 INSERT INTO risk_inventory (resource_type, risk)
                 VALUES (?, ?)
                 """,
-                [(entry["resource_type"], entry["risk"]) for entry in risk_inventory]
+                [(entry["resource_type"], entry["risk"]) for entry in risk_inventory],
             )
             conn.commit()
 
@@ -349,8 +416,17 @@ def perform_risk_assessment(exit_strategy: int, report_path: str, mode: str) -> 
         logger.error(f"Error performing risk assessment: {str(e)}", exc_info=True)
         return {"success": False, "logs": str(e)}
 
+
 # Stage 6
-def generate_report(cloud_service_provider: int, provider_details: Dict[str, Any], exit_strategy: int, assessment_type: int, name: str, report_path: str, raw_data_path: str) -> Dict[str, Any]:
+def generate_report(
+    cloud_service_provider: int,
+    provider_details: Dict[str, Any],
+    exit_strategy: int,
+    assessment_type: int,
+    name: str,
+    report_path: str,
+    raw_data_path: str,
+) -> Dict[str, Any]:
     try:
         db_path = os.path.join(report_path, "data", "assessment.db")
 
@@ -384,7 +460,9 @@ def generate_report(cloud_service_provider: int, provider_details: Dict[str, Any
             elif len(scoring_data) == 0:
                 scoring_data = None
             else:
-                logger.warning("Unexpected multiple rows in scoring_data: %d", len(scoring_data))
+                logger.warning(
+                    "Unexpected multiple rows in scoring_data: %d", len(scoring_data)
+                )
                 scoring_data = scoring_data[0]
 
         # Generate Outputs
@@ -392,20 +470,48 @@ def generate_report(cloud_service_provider: int, provider_details: Dict[str, Any
 
         # Generate HTML report
         reports["HTML"] = generate_html_report(
-            report_path, metadata, resource_type_mapping, resource_inventory,
-            cost_data, scoring_data, risk_data, risk_definitions, alternatives, alternative_technologies, exit_strategy
+            report_path,
+            metadata,
+            resource_type_mapping,
+            resource_inventory,
+            cost_data,
+            scoring_data,
+            risk_data,
+            risk_definitions,
+            alternatives,
+            alternative_technologies,
+            exit_strategy,
         )
 
         # Generate PDF report
         reports["PDF"] = generate_pdf_report(
-            provider_details, report_path, metadata, resource_type_mapping, resource_inventory,
-            cost_data, scoring_data, risk_data, risk_definitions, alternatives, alternative_technologies, exit_strategy
+            provider_details,
+            report_path,
+            metadata,
+            resource_type_mapping,
+            resource_inventory,
+            cost_data,
+            scoring_data,
+            risk_data,
+            risk_definitions,
+            alternatives,
+            alternative_technologies,
+            exit_strategy,
         )
 
         # Generate JSON report
         reports["JSON"] = generate_json_report(
-            raw_data_path, metadata, resource_type_mapping, resource_inventory,
-            cost_data, scoring_data, risk_data, risk_definitions, alternatives, alternative_technologies, exit_strategy
+            raw_data_path,
+            metadata,
+            resource_type_mapping,
+            resource_inventory,
+            cost_data,
+            scoring_data,
+            risk_data,
+            risk_definitions,
+            alternatives,
+            alternative_technologies,
+            exit_strategy,
         )
 
         return {"success": True, "reports": reports}

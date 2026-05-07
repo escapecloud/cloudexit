@@ -16,6 +16,7 @@ To generate a key:
 
 Please do not modify CLI_VERSION; it is used for debugging purposes.
 """
+
 CLI_VERSION = "v1.0.0"
 
 HOST = ""

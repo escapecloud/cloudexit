@@ -5,6 +5,7 @@ import logging
 
 logger = logging.getLogger("core.engine.utils")
 
+
 def copy_assets(report_path: str) -> None:
     assets_folders = ["css", "img", "icons"]
     assets_path = os.path.join(report_path, "assets")
