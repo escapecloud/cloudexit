@@ -17,16 +17,28 @@ logger.setLevel(logging.INFO)
 
 _ASSESS_PATH = "/api/v1/assessments/"
 
+
 def _assess_url(host: str) -> str:
     host = host.strip().rstrip("/")
     if not host.startswith("http"):
         host = f"https://{host}"
     return f"{host}{_ASSESS_PATH}"
 
-def _build_payload(*,report_path: str, name: str, started_at: int, exit_strategy: int, cloud_service_provider: int, assessment_type: int) -> Dict[str, Any]:
+
+def _build_payload(
+    *,
+    report_path: str,
+    name: str,
+    started_at: int,
+    exit_strategy: int,
+    cloud_service_provider: int,
+    assessment_type: int,
+) -> Dict[str, Any]:
     db_path = os.path.join(report_path, "data", "assessment.db")
 
-    resource_rows: List[Dict[str, Any]] = load_data("resource_inventory", db_path=db_path)
+    resource_rows: List[Dict[str, Any]] = load_data(
+        "resource_inventory", db_path=db_path
+    )
     cost_rows: List[Dict[str, Any]] = load_data("cost_inventory", db_path=db_path)
 
     res_payload = [
@@ -71,7 +83,16 @@ def _build_payload(*,report_path: str, name: str, started_at: int, exit_strategy
     logger.debug("Outgoing payload:\n%s", json.dumps(payload, indent=2))
     return payload
 
-def post_assessment(*, name: str, started_at: int, report_path: str, meta: Dict[str, int], token: str, timeout: int = 10) -> Dict[str, Any]:
+
+def post_assessment(
+    *,
+    name: str,
+    started_at: int,
+    report_path: str,
+    meta: Dict[str, int],
+    token: str,
+    timeout: int = 10,
+) -> Dict[str, Any]:
     host = getattr(config, "HOST", "").strip()
     if not host:
         return {"success": False, "payload": None, "logs": "HOST missing in config.py"}

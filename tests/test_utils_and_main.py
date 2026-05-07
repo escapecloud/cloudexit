@@ -49,7 +49,9 @@ class RunAssessmentPreValidationTests(unittest.TestCase):
         }
 
         with (
-            patch("main.validate_config", side_effect=ValueError("bad config")) as mock_validate,
+            patch(
+                "main.validate_config", side_effect=ValueError("bad config")
+            ) as mock_validate,
             patch("main.resolve_mode") as mock_resolve_mode,
             patch("main.create_directory") as mock_create_directory,
             patch("main.verify_credentials") as mock_verify_credentials,

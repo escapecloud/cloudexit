@@ -11,17 +11,19 @@ from datetime import datetime
 logger = logging.getLogger("main.utils")
 console = Console()
 
+
 def load_config(file_path: str) -> Optional[Dict[str, Any]]:
     try:
-        #logger.info(f"Attempting to load config file from {file_path}")
+        # logger.info(f"Attempting to load config file from {file_path}")
         with open(file_path, "r") as f:
             config = json.load(f)
-        #logger.info("Config file loaded successfully.")
+        # logger.info("Config file loaded successfully.")
         return config
     except Exception as e:
         logger.error(f"Error loading config file: {e}", exc_info=True)
         console.print(f"[red]Error loading config file: {e}[/red]")
         return None
+
 
 def prompt_required_inputs() -> Tuple[int, int]:
     while True:
@@ -33,7 +35,7 @@ def prompt_required_inputs() -> Tuple[int, int]:
             )
             if exit_strategy not in [1, 3]:
                 raise ValueError("Invalid exit strategy.")
-            #logger.info(f"Exit Strategy selected: {exit_strategy}")
+            # logger.info(f"Exit Strategy selected: {exit_strategy}")
             break
         except ValueError as e:
             logger.warning(f"Invalid exit strategy input: {e}")
@@ -48,7 +50,7 @@ def prompt_required_inputs() -> Tuple[int, int]:
             )
             if assessment_type not in [1, 2]:
                 raise ValueError("Invalid assessment type.")
-            #logger.info(f"Assessment Type selected: {assessment_type}")
+            # logger.info(f"Assessment Type selected: {assessment_type}")
             break
         except ValueError as e:
             logger.warning(f"Invalid assessment type input: {e}")
@@ -56,13 +58,14 @@ def prompt_required_inputs() -> Tuple[int, int]:
 
     return exit_strategy, assessment_type
 
-def print_step(description: str, status: str = "pending", logs: Optional[str] = None) -> None:
+
+def print_step(
+    description: str, status: str = "pending", logs: Optional[str] = None
+) -> None:
     # Define styles for statuses
     ok_style = Style(color="green", bold=True)
     error_style = Style(color="red", bold=True)
     warning_style = Style(color="yellow", bold=True)
-    pending_style = Style(color="yellow", bold=True)
-
     # Map statuses to their visual representation
     status_map = {
         "ok": "[ ok ]",
@@ -73,7 +76,10 @@ def print_step(description: str, status: str = "pending", logs: Optional[str] = 
 
     # Handle the pending status with a spinner
     if status == "pending":
-        with console.status(f"{description:<50} [yellow]{status_map['pending']}[/yellow]", spinner="dots"):
+        with console.status(
+            f"{description:<50} [yellow]{status_map['pending']}[/yellow]",
+            spinner="dots",
+        ):
             sleep(2)
             print_step(description, status="ok")
     elif status == "ok":
@@ -99,6 +105,7 @@ ascii_art = r"""
 
 """
 
+
 def create_directory(base_path="reports"):
     # Generate the main directory with a timestamp
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -112,6 +119,7 @@ def create_directory(base_path="reports"):
     os.makedirs(raw_data_path, exist_ok=True)
 
     return directory_path, raw_data_path
+
 
 def print_help_message():
     console.print("EscapeCloud - Community Edition", style="bold cyan")

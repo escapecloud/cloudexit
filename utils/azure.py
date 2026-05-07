@@ -10,16 +10,24 @@ from azure.core.exceptions import ClientAuthenticationError
 logger = logging.getLogger("main.utils.azure")
 console = Console()
 
+
 def is_azure_cli_installed() -> bool:
     return shutil.which("az") is not None
+
 
 def is_azure_cli_logged_in() -> bool:
     try:
         # Run the 'az account show' command to check if the user is logged in
-        subprocess.run(["az", "account", "show"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(
+            ["az", "account", "show"],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
         return True
     except subprocess.CalledProcessError:
         return False
+
 
 def is_azure_cli_token_expired() -> bool:
     credential = AzureCliCredential()
@@ -31,8 +39,9 @@ def is_azure_cli_token_expired() -> bool:
             return True  # Token expired
         return False
 
+
 def select_subscription(subscriptions: List[Any]) -> Any:
-    #logger.info("Listing available subscriptions for selection.")
+    # logger.info("Listing available subscriptions for selection.")
     console.print("Available Subscriptions:")
     for idx, sub in enumerate(subscriptions, start=1):
         console.print(f"{idx}. {sub.display_name} ({sub.subscription_id})")
@@ -42,14 +51,15 @@ def select_subscription(subscriptions: List[Any]) -> Any:
             if not (1 <= selection <= len(subscriptions)):
                 raise ValueError("Invalid subscription selection.")
             selected_subscription = subscriptions[selection - 1]
-            #logger.info(f"Subscription selected: {selected_subscription.display_name} ({selected_subscription.subscription_id})")
+            # logger.info(f"Subscription selected: {selected_subscription.display_name} ({selected_subscription.subscription_id})")
             return selected_subscription
         except ValueError as e:
             logger.warning(f"Invalid subscription selection: {e}")
             console.print(f"[red]{e} Please select a valid number.[/red]")
 
+
 def select_resource_group(resource_groups: List[Any]) -> str:
-    #logger.info("Listing available resource groups for selection.")
+    # logger.info("Listing available resource groups for selection.")
     console.print("Available Resource Groups:")
     for idx, rg in enumerate(resource_groups, start=1):
         console.print(f"{idx}. {rg.name}")
@@ -59,7 +69,7 @@ def select_resource_group(resource_groups: List[Any]) -> str:
             if not (1 <= selection <= len(resource_groups)):
                 raise ValueError("Invalid resource group selection.")
             selected_resource_group = resource_groups[selection - 1].name
-            #logger.info(f"Resource Group selected: {selected_resource_group}")
+            # logger.info(f"Resource Group selected: {selected_resource_group}")
             return selected_resource_group
         except ValueError as e:
             logger.warning(f"Invalid resource group selection: {e}")

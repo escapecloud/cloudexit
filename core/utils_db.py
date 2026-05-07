@@ -9,6 +9,7 @@ logger.setLevel(logging.INFO)
 # Default master database
 MASTER_DATABASE = "datasets/data.db"
 
+
 def connect(db_path=MASTER_DATABASE):
     try:
         conn = sqlite3.connect(db_path)
@@ -16,6 +17,7 @@ def connect(db_path=MASTER_DATABASE):
     except sqlite3.Error as e:
         logger.error(f"Error connecting to database: {e}")
         raise
+
 
 def load_data(table_name, db_path=MASTER_DATABASE):
     try:
@@ -30,6 +32,7 @@ def load_data(table_name, db_path=MASTER_DATABASE):
         logger.error(f"Error loading data from table '{table_name}': {e}")
         raise
 
+
 def execute_query(query, params=None, db_path=MASTER_DATABASE):
     try:
         conn = connect(db_path)
@@ -43,6 +46,7 @@ def execute_query(query, params=None, db_path=MASTER_DATABASE):
         logger.error(f"Error executing query: {e}")
         raise
 
+
 def fetch_one(query, params=None, db_path=MASTER_DATABASE):
     try:
         conn = connect(db_path)
@@ -55,6 +59,7 @@ def fetch_one(query, params=None, db_path=MASTER_DATABASE):
     except sqlite3.Error as e:
         logger.error(f"Error fetching data: {e}")
         raise
+
 
 def fetch_all(query, params=None, db_path=MASTER_DATABASE):
     try:

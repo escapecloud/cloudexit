@@ -14,6 +14,7 @@ from requests.exceptions import RequestException, ConnectionError, Timeout
 DATASET_FOLDER = Path("datasets")
 REMOTE_STORAGE_URL = "https://cloudexit-oss-data-eu.fsn1.your-objectstorage.com"
 
+
 def get_monday_date() -> str:
     now = datetime.utcnow()
     monday = now - timedelta(days=now.weekday())
@@ -24,12 +25,14 @@ def get_monday_date() -> str:
     else:
         return monday.strftime("cloudexit-%Y-%m-%d.db.gz")
 
+
 def compute_file_hash(filepath: str) -> str:
     hash_sha256 = hashlib.sha256()
     with open(filepath, "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
             hash_sha256.update(chunk)
     return hash_sha256.hexdigest()
+
 
 def download_file(url: str, destination: str, retries: int = 3, delay: int = 5) -> bool:
     for attempt in range(retries):
@@ -44,9 +47,13 @@ def download_file(url: str, destination: str, retries: int = 3, delay: int = 5) 
             return True
 
         except ConnectionError:
-            print(f"[ERROR] Connection failed while downloading {url}. Retrying ({attempt + 1}/{retries})...")
+            print(
+                f"[ERROR] Connection failed while downloading {url}. Retrying ({attempt + 1}/{retries})..."
+            )
         except Timeout:
-            print(f"[ERROR] Request timed out while downloading {url}. Retrying ({attempt + 1}/{retries})...")
+            print(
+                f"[ERROR] Request timed out while downloading {url}. Retrying ({attempt + 1}/{retries})..."
+            )
         except RequestException as e:
             print(f"[ERROR] Failed to download {url}: {e}")
             break
@@ -56,7 +63,10 @@ def download_file(url: str, destination: str, retries: int = 3, delay: int = 5) 
     print(f"[ERROR] Unable to download file after {retries} attempts: {url}")
     return False
 
-def fetch_remote_checksum(checksum_url: str, retries: int = 3, delay: int = 5) -> Optional[str]:
+
+def fetch_remote_checksum(
+    checksum_url: str, retries: int = 3, delay: int = 5
+) -> Optional[str]:
     for attempt in range(retries):
         try:
             response = requests.get(checksum_url, timeout=10)
@@ -64,9 +74,13 @@ def fetch_remote_checksum(checksum_url: str, retries: int = 3, delay: int = 5) -
             return response.text.strip().split()[0]
 
         except ConnectionError:
-            print(f"[ERROR] Connection failed when fetching {checksum_url}. Retrying ({attempt + 1}/{retries})...")
+            print(
+                f"[ERROR] Connection failed when fetching {checksum_url}. Retrying ({attempt + 1}/{retries})..."
+            )
         except Timeout:
-            print(f"[ERROR] Request timed out when fetching {checksum_url}. Retrying ({attempt + 1}/{retries})...")
+            print(
+                f"[ERROR] Request timed out when fetching {checksum_url}. Retrying ({attempt + 1}/{retries})..."
+            )
         except RequestException as e:
             print(f"[ERROR] Failed to fetch {checksum_url}: {e}")
             break
@@ -75,6 +89,7 @@ def fetch_remote_checksum(checksum_url: str, retries: int = 3, delay: int = 5) -
 
     print(f"[ERROR] Unable to fetch remote checksum after {retries} attempts.")
     return None
+
 
 def initialize_dataset() -> None:
     DATASET_FOLDER.mkdir(exist_ok=True)
@@ -109,7 +124,9 @@ def initialize_dataset() -> None:
                 print("[INFO] Local dataset is up-to-date. No download needed.")
                 return
             else:
-                print("[INFO] Local dataset is outdated. Removing old files and downloading new dataset...")
+                print(
+                    "[INFO] Local dataset is outdated. Removing old files and downloading new dataset..."
+                )
 
                 # Remove all old compressed and extracted files
                 for file in DATASET_FOLDER.glob("cloudexit-*.db.gz"):
@@ -119,9 +136,13 @@ def initialize_dataset() -> None:
 
         # Download and extract dataset
         if download_file(latest_file_url, local_compressed_path):
-            print(f"[INFO] Download successful. Extracting dataset from {latest_file}...")
+            print(
+                f"[INFO] Download successful. Extracting dataset from {latest_file}..."
+            )
 
-            with gzip.open(local_compressed_path, "rb") as f_in, open(local_db_path, "wb") as f_out:
+            with gzip.open(local_compressed_path, "rb") as f_in, open(
+                local_db_path, "wb"
+            ) as f_out:
                 shutil.copyfileobj(f_in, f_out)
 
             print("[INFO] Dataset updated successfully.")

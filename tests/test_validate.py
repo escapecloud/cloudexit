@@ -65,7 +65,9 @@ class ValidateConfigTests(unittest.TestCase):
         del config["providerDetails"]["clientId"]
         del config["providerDetails"]["clientSecret"]
 
-        with self.assertRaisesRegex(ValueError, "Missing required fields in providerDetails"):
+        with self.assertRaisesRegex(
+            ValueError, "Missing required fields in providerDetails"
+        ):
             validate_config(config)
 
     def test_rejects_invalid_assessment_type(self):
@@ -86,7 +88,9 @@ class ValidateConfigTests(unittest.TestCase):
         config = build_aws_config()
         config["name"] = "Bad/Name"
 
-        with self.assertRaisesRegex(ValueError, "Assessment name contains invalid characters"):
+        with self.assertRaisesRegex(
+            ValueError, "Assessment name contains invalid characters"
+        ):
             validate_config(config)
 
     def test_rejects_too_long_name(self):
