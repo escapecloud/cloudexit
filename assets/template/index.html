@@ -98,7 +98,7 @@
                       {% elif cloud_service_provider == 2 %}
                       <svg
                         width="35"
-                        height="20"
+                        height="15"
                         viewBox="0 0 35 20"
                         fill="none"
                         xmlns="http://www.w3.org/2000/svg"
@@ -171,11 +171,9 @@
                   <canvas id="risksChart" width="300" height="250"></canvas>
                 </div>
                 {% else %}
-                <div
-                  class="d-flex align-items-center justify-content-center h-100 text-center"
-                >
-                  <div>
-                    <i class="bi bi-pie-chart-fill d-block mb-2"></i>
+                <div class="chart-empty-state">
+                  <div class="chart-empty-state-inner">
+                    <i class="bi bi-pie-chart-fill"></i>
                     <p>No risk data available.</p>
                   </div>
                 </div>
@@ -201,11 +199,9 @@
                   <canvas id="costsChart" width="300" height="250"></canvas>
                 </div>
                 {% else %}
-                <div
-                  class="d-flex align-items-center justify-content-center h-100 text-center"
-                >
-                  <div>
-                    <i class="bi bi-bar-chart-fill d-block mb-2"></i>
+                <div class="chart-empty-state">
+                  <div class="chart-empty-state-inner">
+                    <i class="bi bi-bar-chart-fill"></i>
                     <p>No cost data available.</p>
                   </div>
                 </div>
@@ -215,7 +211,7 @@
           </div>
         </div>
 
-        {% if scoring_data %}
+        {% if assessment_type == 2 %}
         <div class="mt-1 row g-3">
           <div class="col-md-6">
             <div class="bg-white shadow-s rounded-4 h-100 scoring-card">
@@ -250,6 +246,7 @@
                 </div>
               </div>
               <div class="divider-border"></div>
+              {% if scoring_data %}
               <div class="scoring-inner py-4">
                 <div class="chart-wrapper">
                   <div
@@ -259,6 +256,14 @@
                   ></div>
                 </div>
               </div>
+              {% else %}
+              <div class="chart-empty-state scoring-empty-state">
+                <div class="chart-empty-state-inner">
+                  <i class="bi bi-speedometer2"></i>
+                  <p>No exit score data available.</p>
+                </div>
+              </div>
+              {% endif %}
             </div>
           </div>
 
@@ -290,6 +295,7 @@
                 </div>
               </div>
               <div class="divider-border"></div>
+              {% if scoring_data %}
               <div class="py-4 scoring-inner">
                 <div
                   class="scoring"
@@ -297,6 +303,14 @@
                   style="width: 100%; height: 100%;"
                 ></div>
               </div>
+              {% else %}
+              <div class="chart-empty-state scoring-empty-state">
+                <div class="chart-empty-state-inner">
+                  <i class="bi bi-stack"></i>
+                  <p>No vendor lock-in score data available.</p>
+                </div>
+              </div>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -490,6 +504,7 @@
                 <h3>
                   Alternative Technologies ({{ alternative_technologies | length }})
                 </h3>
+                {% if alternative_technologies %}
                 <div class="d-flex align-items-center gap-3 flex-wrap">
                   <div>
                     <input
@@ -573,6 +588,7 @@
                     </ul>
                   </div>
                 </div>
+                {% endif %}
               </div>
               <div class="divider-border"></div>
 
@@ -701,10 +717,16 @@
                       </div>
                     </div>
                     {% endfor %} {% else %}
-                    <div class="col-12 text-center py-4">
-                      <p>
-                        No alternative technologies are available for this assessment.
-                      </p>
+                    <div class="col-12">
+                      <div class="chart-empty-state alt-tech-empty-state">
+                        <div class="chart-empty-state-inner">
+                          <i class="bi bi-search"></i>
+                          <p>
+                            No alternative technologies are available for this
+                            assessment.
+                          </p>
+                        </div>
+                      </div>
                     </div>
                     {% endif %}
                   </div>

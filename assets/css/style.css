@@ -244,6 +244,12 @@ main {
   /* padding: 16px 24px; */
 }
 
+.risk-dashboard {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
 .risk-count h2 {
   color: var(--neutral-600);
   font-size: var(--text-label);
@@ -267,10 +273,46 @@ main {
   -webkit-box-align: center;
   -ms-flex-align: center;
   align-items: center;
+  flex: 1;
 }
 
 .chart-box {
     height: 350px;
+}
+
+.chart-empty-state {
+  flex: 1;
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.chart-empty-state-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.chart-empty-state i {
+  font-size: 28px;
+  line-height: 1;
+  color: var(--neutral-900);
+}
+
+.chart-empty-state p {
+  margin: 0;
+  color: var(--neutral-700);
+}
+
+.alt-tech-empty-state {
+  min-height: 260px;
+}
+
+.scoring-empty-state {
+  min-height: 300px;
 }
 
 .scoring-card {
