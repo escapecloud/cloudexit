@@ -127,10 +127,13 @@ def build_azure_resource_inventory(
 
     except ClientAuthenticationError as e:
         logger.error(f"Azure authentication error: {str(e)}", exc_info=True)
+        raise
     except sqlite3.Error as e:
         logger.error(f"SQLite error: {str(e)}", exc_info=True)
+        raise
     except Exception as e:
         logger.error(f"Error fetching Azure resources: {str(e)}", exc_info=True)
+        raise
 
 
 def get_missing_months_azure(processed_costs: set[str], months_back: int) -> set[date]:
@@ -254,6 +257,7 @@ def build_azure_cost_inventory(
 
     except sqlite3.Error as e:
         logger.error(f"SQLite error: {str(e)}", exc_info=True)
+        raise
     except Exception as e:
         logger.error(f"Error creating Azure cost inventory: {str(e)}", exc_info=True)
         raise
