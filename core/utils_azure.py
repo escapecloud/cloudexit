@@ -204,6 +204,7 @@ def build_azure_cost_inventory(
             json.dump(cost_data.as_dict(), raw_file, indent=4)
 
         # Insert structured cost data into SQLite
+        currency = "USD"
         with connect(db_path=db_path) as conn:
             cursor = conn.cursor()
 

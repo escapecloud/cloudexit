@@ -254,6 +254,7 @@ def build_aws_cost_inventory(
             json.dump(cost_and_usage, raw_file, indent=4)
 
         # Insert structured data into SQLite
+        currency = "USD"
         with connect(db_path=db_path) as conn:
             cursor = conn.cursor()
 
@@ -311,10 +312,6 @@ def build_aws_cost_inventory(
 
     except sqlite3.Error as e:
         logger.error(f"SQLite error: {str(e)}", exc_info=True)
-    except Exception as e:
-        logger.error(f"Error creating AWS cost inventory: {str(e)}", exc_info=True)
-        raise
-
     except Exception as e:
         logger.error(f"Error creating AWS cost inventory: {str(e)}", exc_info=True)
         raise
