@@ -196,7 +196,7 @@ def draw_header_footer(report_path: str, canvas, doc) -> None:
     canvas.drawCentredString(
         A4[0] / 2,
         30,
-        "EscapeCloud makes no warranty that the information contained in this report is complete or error-free. Copyright 2024-2025",
+        "EscapeCloud makes no warranty that the information contained in this report is complete or error-free. Copyright 2024-2026",
     )
 
     # Restore the state of the canvas
