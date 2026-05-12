@@ -562,7 +562,7 @@ def run_assessment(config, provider_name):
         if pdf_report_path:
             console.print(f"PDF Report: {pdf_report_path}", style="cyan")
         json_report_path = report_status.get("reports", {}).get("JSON")
-        if html_report_path:
+        if json_report_path:
             console.print(f"JSON Report: {json_report_path}", style="cyan")
         console.print("-------------------------------------------")
 
