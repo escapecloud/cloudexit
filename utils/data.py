@@ -6,7 +6,7 @@ import hashlib
 import time
 import requests
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from requests.exceptions import RequestException, ConnectionError, Timeout
 
@@ -16,7 +16,7 @@ REMOTE_STORAGE_URL = "https://cloudexit-oss-data-eu.fsn1.your-objectstorage.com"
 
 
 def get_monday_date() -> str:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     monday = now - timedelta(days=now.weekday())
 
     if now.weekday() == 0 and now.hour < 8:

@@ -2,7 +2,7 @@
 import logging
 import os
 import boto3
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Tuple
 from azure.identity import ClientSecretCredential
 from azure.mgmt.resource import ResourceManagementClient
@@ -443,7 +443,7 @@ def generate_report(
         scoring_data = load_data("scoring_data", db_path=db_path)
 
         # Timestamp
-        timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
         metadata = {
             "name": name,

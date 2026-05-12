@@ -7,7 +7,7 @@ import time
 import logging
 import sqlite3
 from typing import Any, Dict, Set, List, Callable
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from collections import defaultdict
 from dateutil.relativedelta import relativedelta
 from botocore.exceptions import NoCredentialsError, ClientError
@@ -199,7 +199,7 @@ def build_aws_resource_inventory(
 
 
 def get_missing_months_aws(processed_costs: Set[str], max_months: int) -> List[date]:
-    current_date = datetime.utcnow().date().replace(day=1)
+    current_date = datetime.now(timezone.utc).date().replace(day=1)
     processed_months = {
         datetime.strptime(month_str, "%Y-%m-%d").date().replace(day=1)
         for month_str in processed_costs
