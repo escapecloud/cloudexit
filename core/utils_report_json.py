@@ -1,6 +1,6 @@
 # core/utils_report_json.py
 import logging
-from typing import List, Dict, Any
+from typing import Any
 
 from core.utils_report_common import (
     enrich_resource_inventory,
@@ -15,9 +15,9 @@ logger.setLevel(logging.INFO)
 
 
 def transform_resource_inventory_for_json(
-    resource_inventory: List[Dict[str, Any]],
-    resource_type_mapping: Dict[str, Dict[str, Any]],
-) -> List[Dict[str, Any]]:
+    resource_inventory: list[dict[str, Any]],
+    resource_type_mapping: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
     enriched_resources = enrich_resource_inventory(
         resource_inventory, resource_type_mapping
     )
@@ -34,8 +34,8 @@ def transform_resource_inventory_for_json(
 
 
 def transform_cost_inventory_for_json(
-    cost_data: List[Dict[str, Any]],
-) -> List[Dict[str, Any]]:
+    cost_data: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     sorted_cost_data = sort_cost_data(cost_data)
 
     cost_inventory = [
@@ -50,10 +50,10 @@ def transform_cost_inventory_for_json(
 
 
 def transform_risk_inventory_for_json(
-    risk_data: List[Dict[str, Any]],
-    risk_definitions: List[Dict[str, Any]],
-    resource_inventory: List[Dict[str, Any]],
-) -> List[Dict[str, Any]]:
+    risk_data: list[dict[str, Any]],
+    risk_definitions: list[dict[str, Any]],
+    resource_inventory: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     resource_id_map = {
         str(value["resource_type"]): key + 1
         for key, value in enumerate(resource_inventory)
@@ -77,11 +77,11 @@ def transform_risk_inventory_for_json(
 
 
 def transform_alt_tech_for_json(
-    resource_inventory: List[Dict[str, Any]],
-    alternatives: List[Dict[str, Any]],
-    alternative_technologies: List[Dict[str, Any]],
+    resource_inventory: list[dict[str, Any]],
+    alternatives: list[dict[str, Any]],
+    alternative_technologies: list[dict[str, Any]],
     exit_strategy: int,
-) -> Dict[int, List[Dict[str, Any]]]:
+) -> dict[int, list[dict[str, Any]]]:
     resource_id_map = {
         str(value["resource_type"]): key + 1
         for key, value in enumerate(resource_inventory)

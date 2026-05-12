@@ -2,7 +2,7 @@
 import logging
 import shutil
 import subprocess
-from typing import List, Any
+from typing import Any
 from rich.console import Console
 from azure.identity import AzureCliCredential
 from azure.core.exceptions import ClientAuthenticationError
@@ -40,7 +40,7 @@ def is_azure_cli_token_expired() -> bool:
         return False
 
 
-def select_subscription(subscriptions: List[Any]) -> Any:
+def select_subscription(subscriptions: list[Any]) -> Any:
     # logger.info("Listing available subscriptions for selection.")
     console.print("Available Subscriptions:")
     for idx, sub in enumerate(subscriptions, start=1):
@@ -58,7 +58,7 @@ def select_subscription(subscriptions: List[Any]) -> Any:
             console.print(f"[red]{e} Please select a valid number.[/red]")
 
 
-def select_resource_group(resource_groups: List[Any]) -> str:
+def select_resource_group(resource_groups: list[Any]) -> str:
     # logger.info("Listing available resource groups for selection.")
     console.print("Available Resource Groups:")
     for idx, rg in enumerate(resource_groups, start=1):

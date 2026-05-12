@@ -6,8 +6,9 @@ import os
 import time
 import logging
 import sqlite3
-from typing import Any, Dict, Set, List, Callable
-from datetime import date, datetime
+from collections.abc import Callable
+from typing import Any
+from datetime import date, datetime, timezone
 from collections import defaultdict
 from dateutil.relativedelta import relativedelta
 from botocore.exceptions import NoCredentialsError, ClientError
@@ -20,7 +21,7 @@ logger = logging.getLogger("core.engine.aws")
 def aws_api_call_with_retry(
     client: Any,
     function_name: str,
-    parameters: Dict[str, Any],
+    parameters: dict[str, Any],
     max_retries: int,
     retry_delay: int,
 ) -> Callable[..., Any]:
@@ -63,7 +64,7 @@ def convert_datetime(obj: Any) -> Any:
 
 def build_aws_resource_inventory(
     cloud_service_provider: int,
-    provider_details: Dict[str, Any],
+    provider_details: dict[str, Any],
     report_path: str,
     raw_data_path: str,
 ) -> None:
@@ -198,8 +199,8 @@ def build_aws_resource_inventory(
         logger.error(f"Error creating AWS resource inventory: {str(e)}", exc_info=True)
 
 
-def get_missing_months_aws(processed_costs: Set[str], max_months: int) -> List[date]:
-    current_date = datetime.utcnow().date().replace(day=1)
+def get_missing_months_aws(processed_costs: set[str], max_months: int) -> list[date]:
+    current_date = datetime.now(timezone.utc).date().replace(day=1)
     processed_months = {
         datetime.strptime(month_str, "%Y-%m-%d").date().replace(day=1)
         for month_str in processed_costs
@@ -216,7 +217,7 @@ def get_missing_months_aws(processed_costs: Set[str], max_months: int) -> List[d
 
 def build_aws_cost_inventory(
     cloud_service_provider: int,
-    provider_details: Dict[str, Any],
+    provider_details: dict[str, Any],
     report_path: str,
     raw_data_path: str,
 ) -> None:

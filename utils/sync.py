@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 import requests
 import config
-from typing import Optional, Dict, Any
+from typing import Any
 from utils.auth import get_jwt_token
 
 logger = logging.getLogger("main.utils.sync")
@@ -20,12 +20,12 @@ def _build_url(host: str) -> str:
 
 
 def submit_assessment(
-    payload: Dict[str, Any],
+    payload: dict[str, Any],
     *,
     host: str | None = None,
     key: str | None = None,
     timeout: int = 10,
-) -> Optional[requests.Response]:
+) -> requests.Response | None:
     host = host or getattr(config, "HOST", "") if config else ""
     if not host:
         logger.warning("HOST not configured – skipping assessment sync.")

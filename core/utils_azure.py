@@ -3,7 +3,7 @@ import json
 import os
 import logging
 import sqlite3
-from typing import Any, Dict, Set
+from typing import Any
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 from collections import defaultdict
@@ -43,7 +43,7 @@ def is_resource_inventory_empty(
 
 def build_azure_resource_inventory(
     cloud_service_provider: int,
-    provider_details: Dict[str, Any],
+    provider_details: dict[str, Any],
     report_path: str,
     raw_data_path: str,
 ) -> None:
@@ -133,7 +133,7 @@ def build_azure_resource_inventory(
         logger.error(f"Error fetching Azure resources: {str(e)}", exc_info=True)
 
 
-def get_missing_months_azure(processed_costs: Set[str], months_back: int) -> Set[date]:
+def get_missing_months_azure(processed_costs: set[str], months_back: int) -> set[date]:
     today = date.today()
     start_date = today.replace(day=1) - relativedelta(months=months_back - 1)
     all_months = {
@@ -158,7 +158,7 @@ def get_missing_months_azure(processed_costs: Set[str], months_back: int) -> Set
 
 def build_azure_cost_inventory(
     cloud_service_provider: int,
-    provider_details: Dict[str, Any],
+    provider_details: dict[str, Any],
     report_path: str,
     raw_data_path: str,
 ) -> None:
