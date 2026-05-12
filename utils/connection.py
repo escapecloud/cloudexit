@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import logging
 import requests
-from typing import Tuple, Optional
 
 logger = logging.getLogger("main.utils.connection")
 
@@ -24,7 +23,7 @@ def _build_url(host: str) -> str:
 
 def get_jwt_token(
     host: str | None = None, key: str | None = None, *, timeout: int = 10
-) -> Optional[str]:
+) -> str | None:
     host = host or getattr(config, "HOST", "") if config else ""
     key = key or getattr(config, "KEY", "") if config else ""
 
@@ -63,7 +62,7 @@ def get_jwt_token(
     return None
 
 
-def resolve_mode() -> Tuple[str, Optional[str]]:
+def resolve_mode() -> tuple[str, str | None]:
     host = getattr(config, "HOST", "") if config else ""
     key = getattr(config, "KEY", "") if config else ""
 

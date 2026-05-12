@@ -7,7 +7,7 @@ import os
 import time
 import config
 import requests
-from typing import Any, Dict, List
+from typing import Any
 
 from core.utils_db import load_data
 
@@ -33,13 +33,13 @@ def _build_payload(
     exit_strategy: int,
     cloud_service_provider: int,
     assessment_type: int,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     db_path = os.path.join(report_path, "data", "assessment.db")
 
-    resource_rows: List[Dict[str, Any]] = load_data(
+    resource_rows: list[dict[str, Any]] = load_data(
         "resource_inventory", db_path=db_path
     )
-    cost_rows: List[Dict[str, Any]] = load_data("cost_inventory", db_path=db_path)
+    cost_rows: list[dict[str, Any]] = load_data("cost_inventory", db_path=db_path)
 
     res_payload = [
         {
@@ -61,7 +61,7 @@ def _build_payload(
     engine_version = getattr(config, "CLI_VERSION", "v1.0.0").strip()
     now = int(time.time())
 
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "id": os.urandom(16).hex(),
         "object": "event",
         "cli_version": engine_version,
@@ -89,10 +89,10 @@ def post_assessment(
     name: str,
     started_at: int,
     report_path: str,
-    meta: Dict[str, int],
+    meta: dict[str, int],
     token: str,
     timeout: int = 10,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     host = getattr(config, "HOST", "").strip()
     if not host:
         return {"success": False, "payload": None, "logs": "HOST missing in config.py"}

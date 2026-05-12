@@ -1,6 +1,6 @@
 # core/utils_report_html.py
 import logging
-from typing import List, Dict, Any, Tuple
+from typing import Any
 
 from core.utils_report_common import (
     summarize_alternative_technologies,
@@ -14,16 +14,16 @@ logger.setLevel(logging.INFO)
 
 
 def transform_cost_inventory_for_html(
-    cost_data: List[Dict[str, Any]],
-) -> Tuple[List[str], List[float], float, str, str]:
+    cost_data: list[dict[str, Any]],
+) -> tuple[list[str], list[float], float, str, str]:
     return summarize_costs(cost_data)
 
 
 def transform_risk_inventory_for_html(
-    risk_data: List[Dict[str, Any]],
-    risk_definitions: List[Dict[str, Any]],
-    resource_inventory: Dict[str, Dict[str, Any]],
-) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
+    risk_data: list[dict[str, Any]],
+    risk_definitions: list[dict[str, Any]],
+    resource_inventory: dict[str, dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, int]]:
     severity_order = {"high": 1, "medium": 2, "low": 3}
     resource_name_map = {
         str(key): value["name"] for key, value in resource_inventory.items()
@@ -38,11 +38,11 @@ def transform_risk_inventory_for_html(
 
 
 def transform_alt_tech_for_html(
-    resource_inventory: List[Dict[str, Any]],
-    alternatives: List[Dict[str, Any]],
-    alternative_technologies: List[Dict[str, Any]],
+    resource_inventory: list[dict[str, Any]],
+    alternatives: list[dict[str, Any]],
+    alternative_technologies: list[dict[str, Any]],
     exit_strategy: int,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     alt_tech_data = []
     grouped_alt_tech = summarize_alternative_technologies(
         resource_inventory,

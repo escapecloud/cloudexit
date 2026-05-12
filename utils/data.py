@@ -5,7 +5,7 @@ import shutil
 import hashlib
 import time
 import requests
-from typing import Optional
+
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from requests.exceptions import RequestException, ConnectionError, Timeout
@@ -66,7 +66,7 @@ def download_file(url: str, destination: str, retries: int = 3, delay: int = 5) 
 
 def fetch_remote_checksum(
     checksum_url: str, retries: int = 3, delay: int = 5
-) -> Optional[str]:
+) -> str | None:
     for attempt in range(retries):
         try:
             response = requests.get(checksum_url, timeout=10)

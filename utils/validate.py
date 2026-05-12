@@ -1,5 +1,5 @@
 # utils/validate.py
-from typing import Dict, Any
+from typing import Any
 from .constants import REGION_CHOICES, REQUIRED_FIELDS_AZURE, REQUIRED_FIELDS_AWS
 
 
@@ -9,7 +9,7 @@ def validate_region(region: str) -> None:
         raise ValueError(f"Invalid AWS region. Choose from: {', '.join(valid_regions)}")
 
 
-def validate_config(config: Dict[str, Any]) -> bool:
+def validate_config(config: dict[str, Any]) -> bool:
     try:
         # Cast key values to integers to handle string input gracefully
         assessment_type = int(config.get("assessmentType", 0))

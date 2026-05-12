@@ -3,7 +3,7 @@ import os
 import math
 import logging
 from datetime import datetime
-from typing import List, Dict, Any, Tuple
+from typing import Any
 from math import cos, sin, radians
 
 # ReportLab
@@ -34,8 +34,8 @@ logger.setLevel(logging.INFO)
 
 
 def transform_resource_inventory_for_pdf(
-    resource_inventory: list, resource_type_mapping: Dict[str, Any], report_path: str
-) -> List[Dict[str, Any]]:
+    resource_inventory: list, resource_type_mapping: dict[str, Any], report_path: str
+) -> list[dict[str, Any]]:
     enriched_resources = enrich_resource_inventory(
         resource_inventory,
         resource_type_mapping,
@@ -55,14 +55,14 @@ def transform_resource_inventory_for_pdf(
 
 def transform_cost_inventory_for_pdf(
     cost_data: list,
-) -> Tuple[List[str], List[float], str]:
+) -> tuple[list[str], list[float], str]:
     months, costs, _, _, currency_symbol = summarize_costs(cost_data, last_n=6)
     return months, costs, currency_symbol
 
 
 def transform_risk_inventory_for_pdf(
     risk_data: list, risk_definitions: list, resource_inventory: list
-) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
+) -> tuple[list[dict[str, Any]], dict[str, int]]:
     risks, severity_counts = summarize_risks(risk_data, risk_definitions)
     return [
         {
@@ -76,12 +76,12 @@ def transform_risk_inventory_for_pdf(
 
 def transform_alt_tech_for_pdf(
     resource_inventory: list,
-    resource_type_mapping: Dict[str, Any],
+    resource_type_mapping: dict[str, Any],
     alternatives: list,
     alternative_technologies: list,
     exit_strategy: int,
     report_path: str,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     grouped_alt_tech = summarize_alternative_technologies(
         resource_inventory,
         alternatives,
@@ -203,7 +203,7 @@ def draw_header_footer(report_path: str, canvas, doc) -> None:
     canvas.restoreState()
 
 
-def draw_risk_chart(risk_chart_data: Dict[str, int]) -> Drawing:
+def draw_risk_chart(risk_chart_data: dict[str, int]) -> Drawing:
     # Define colors for each severity and their border colors
     severity_colors = {
         "high": HexColor("#991b1b"),
@@ -280,7 +280,7 @@ def draw_risk_chart(risk_chart_data: Dict[str, int]) -> Drawing:
     return d
 
 
-def draw_cost_chart(months: List[str], costs: List[float]) -> Drawing:
+def draw_cost_chart(months: list[str], costs: list[float]) -> Drawing:
     # Create a drawing for the bar chart
     d = Drawing(7.5 * cm, 5 * cm)
 

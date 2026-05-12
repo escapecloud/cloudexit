@@ -2,7 +2,7 @@
 import os
 import logging
 import json
-from typing import Optional, Tuple, Dict, Any
+from typing import Any
 from rich.console import Console
 from rich.style import Style
 from time import sleep
@@ -12,7 +12,7 @@ logger = logging.getLogger("main.utils")
 console = Console()
 
 
-def load_config(file_path: str) -> Optional[Dict[str, Any]]:
+def load_config(file_path: str) -> dict[str, Any] | None:
     try:
         # logger.info(f"Attempting to load config file from {file_path}")
         with open(file_path, "r") as f:
@@ -25,7 +25,7 @@ def load_config(file_path: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def prompt_required_inputs() -> Tuple[int, int]:
+def prompt_required_inputs() -> tuple[int, int]:
     while True:
         try:
             exit_strategy = int(
@@ -60,7 +60,7 @@ def prompt_required_inputs() -> Tuple[int, int]:
 
 
 def print_step(
-    description: str, status: str = "pending", logs: Optional[str] = None
+    description: str, status: str = "pending", logs: str | None = None
 ) -> None:
     # Define styles for statuses
     ok_style = Style(color="green", bold=True)

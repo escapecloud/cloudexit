@@ -2,7 +2,7 @@
 import os
 import json
 import logging
-from typing import List, Dict, Any, Optional
+from typing import Any
 from jinja2 import Template
 
 # ReportLab
@@ -63,15 +63,15 @@ def anonymize_string(s: str, num_visible: int = 4) -> str:
 
 def generate_html_report(
     report_path: str,
-    metadata: Dict[str, Any],
-    resource_type_mapping: Dict[str, Dict[str, Any]],
-    resource_inventory: List[Dict[str, Any]],
-    cost_data: List[Dict[str, Any]],
-    scoring_data: Optional[Dict[str, Any]],
-    risk_data: List[Dict[str, Any]],
-    risk_definitions: List[Dict[str, Any]],
-    alternatives: List[Dict[str, Any]],
-    alternative_technologies: List[Dict[str, Any]],
+    metadata: dict[str, Any],
+    resource_type_mapping: dict[str, dict[str, Any]],
+    resource_inventory: list[dict[str, Any]],
+    cost_data: list[dict[str, Any]],
+    scoring_data: dict[str, Any] | None,
+    risk_data: list[dict[str, Any]],
+    risk_definitions: list[dict[str, Any]],
+    alternatives: list[dict[str, Any]],
+    alternative_technologies: list[dict[str, Any]],
     exit_strategy: int,
 ) -> str:
 
@@ -161,15 +161,15 @@ def generate_html_report(
 
 def generate_json_report(
     raw_data_path: str,
-    metadata: Dict[str, Any],
-    resource_type_mapping: Dict[str, Dict[str, Any]],
-    resource_inventory: List[Dict[str, Any]],
-    cost_data: List[Dict[str, Any]],
-    scoring_data: Optional[Dict[str, Any]],
-    risk_data: List[Dict[str, Any]],
-    risk_definitions: List[Dict[str, Any]],
-    alternatives: List[Dict[str, Any]],
-    alternative_technologies: List[Dict[str, Any]],
+    metadata: dict[str, Any],
+    resource_type_mapping: dict[str, dict[str, Any]],
+    resource_inventory: list[dict[str, Any]],
+    cost_data: list[dict[str, Any]],
+    scoring_data: dict[str, Any] | None,
+    risk_data: list[dict[str, Any]],
+    risk_definitions: list[dict[str, Any]],
+    alternatives: list[dict[str, Any]],
+    alternative_technologies: list[dict[str, Any]],
     exit_strategy: int,
 ) -> str:
     # Transform data for JSON
@@ -215,17 +215,17 @@ def generate_json_report(
 
 
 def generate_pdf_report(
-    provider_details: Dict[str, Any],
+    provider_details: dict[str, Any],
     report_path: str,
-    metadata: Dict[str, Any],
-    resource_type_mapping: Dict[str, Any],
-    resource_inventory: List[Dict[str, Any]],
-    cost_data: List[Dict[str, Any]],
-    scoring_data: Optional[Dict[str, Any]],
-    risk_data: List[Dict[str, Any]],
-    risk_definitions: List[Dict[str, Any]],
-    alternatives: List[Dict[str, Any]],
-    alternative_technologies: List[Dict[str, Any]],
+    metadata: dict[str, Any],
+    resource_type_mapping: dict[str, Any],
+    resource_inventory: list[dict[str, Any]],
+    cost_data: list[dict[str, Any]],
+    scoring_data: dict[str, Any] | None,
+    risk_data: list[dict[str, Any]],
+    risk_definitions: list[dict[str, Any]],
+    alternatives: list[dict[str, Any]],
+    alternative_technologies: list[dict[str, Any]],
     exit_strategy: int,
 ) -> str:
     # Define the PDF path

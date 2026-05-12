@@ -1,6 +1,6 @@
 from collections import defaultdict
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 CURRENCY_SYMBOLS = {
     "USD": "$",
@@ -9,13 +9,13 @@ CURRENCY_SYMBOLS = {
 }
 
 
-def sort_cost_data(cost_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def sort_cost_data(cost_data: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(cost_data, key=lambda x: datetime.strptime(x["month"], "%Y-%m-%d"))
 
 
 def summarize_costs(
-    cost_data: List[Dict[str, Any]], *, last_n: Optional[int] = None
-) -> Tuple[List[str], List[float], float, str, str]:
+    cost_data: list[dict[str, Any]], *, last_n: int | None = None
+) -> tuple[list[str], list[float], float, str, str]:
     sorted_costs = sort_cost_data(cost_data)
     if last_n is not None:
         sorted_costs = sorted_costs[-last_n:]
@@ -37,12 +37,12 @@ def summarize_costs(
 
 
 def summarize_risks(
-    risk_data: List[Dict[str, Any]],
-    risk_definitions: List[Dict[str, Any]],
+    risk_data: list[dict[str, Any]],
+    risk_definitions: list[dict[str, Any]],
     *,
-    resource_name_map: Optional[Dict[str, str]] = None,
-    resource_id_map: Optional[Dict[str, int]] = None,
-) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
+    resource_name_map: dict[str, str] | None = None,
+    resource_id_map: dict[str, int] | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, int]]:
     risk_def_map = {rd["id"]: rd for rd in risk_definitions}
     severity_counts = {"high": 0, "medium": 0, "low": 0}
 
@@ -115,18 +115,18 @@ def summarize_risks(
 
 
 def summarize_alternative_technologies(
-    resource_inventory: List[Dict[str, Any]],
-    alternatives: List[Dict[str, Any]],
-    alternative_technologies: List[Dict[str, Any]],
+    resource_inventory: list[dict[str, Any]],
+    alternatives: list[dict[str, Any]],
+    alternative_technologies: list[dict[str, Any]],
     exit_strategy: int,
-) -> Dict[str, List[Dict[str, Any]]]:
+) -> dict[str, list[dict[str, Any]]]:
     active_technologies = {
         tech["id"]: tech
         for tech in alternative_technologies
         if tech.get("status") == "t"
     }
 
-    grouped_alt_tech: Dict[str, List[Dict[str, Any]]] = {
+    grouped_alt_tech: dict[str, list[dict[str, Any]]] = {
         str(resource["resource_type"]): [] for resource in resource_inventory
     }
 
@@ -154,11 +154,11 @@ def summarize_alternative_technologies(
 
 
 def enrich_resource_inventory(
-    resource_inventory: List[Dict[str, Any]],
-    resource_type_mapping: Dict[str, Dict[str, Any]],
+    resource_inventory: list[dict[str, Any]],
+    resource_type_mapping: dict[str, dict[str, Any]],
     *,
-    report_path: Optional[str] = None,
-) -> List[Dict[str, Any]]:
+    report_path: str | None = None,
+) -> list[dict[str, Any]]:
     enriched_resources = []
     for idx, resource in enumerate(resource_inventory):
         resource_type = str(resource["resource_type"])

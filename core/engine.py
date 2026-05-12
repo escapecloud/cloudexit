@@ -3,7 +3,7 @@ import logging
 import os
 import boto3
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 from azure.identity import ClientSecretCredential
 from azure.mgmt.resource import ResourceManagementClient
 from azure.core.exceptions import ClientAuthenticationError
@@ -27,8 +27,8 @@ logger = logging.getLogger("core.engine")
 
 # Stage 1
 def verify_credentials(
-    cloud_service_provider: int, provider_details: Dict[str, Any]
-) -> Tuple[bool, str]:
+    cloud_service_provider: int, provider_details: dict[str, Any]
+) -> tuple[bool, str]:
     connection_success = False
     logs = ""
 
@@ -78,8 +78,8 @@ def verify_credentials(
 
 # Stage 2
 def test_permissions(
-    cloud_service_provider: int, provider_details: Dict[str, Any]
-) -> Tuple[bool, bool, bool, str]:
+    cloud_service_provider: int, provider_details: dict[str, Any]
+) -> tuple[bool, bool, bool, str]:
     permission_valid = False
     permission_reader = False
     permission_cost = False
@@ -182,10 +182,10 @@ def test_permissions(
 # Stage 3
 def create_resource_inventory(
     cloud_service_provider: int,
-    provider_details: Dict[str, Any],
+    provider_details: dict[str, Any],
     report_path: str,
     raw_data_path: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     # Copy assets and datasets folders data
     copy_assets(report_path)
 
@@ -211,10 +211,10 @@ def create_resource_inventory(
 # Stage 4
 def create_cost_inventory(
     cloud_service_provider: int,
-    provider_details: Dict[str, Any],
+    provider_details: dict[str, Any],
     report_path: str,
     raw_data_path: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     try:
         if cloud_service_provider == 1:  # Azure
             build_azure_cost_inventory(
@@ -237,10 +237,10 @@ def sync_assessment(
     report_path: str,
     name: str,
     started_at: int,
-    metadata: Dict[str, Any],
+    metadata: dict[str, Any],
     mode: str,
-    token: Optional[str],
-) -> Dict[str, Any]:
+    token: str | None,
+) -> dict[str, Any]:
     if mode != "online" or not token:
         return {
             "success": True,
@@ -323,7 +323,7 @@ def sync_assessment(
 # Stage 5 - Offline
 def perform_risk_assessment(
     exit_strategy: int, report_path: str, mode: str
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
 
     if mode != "offline":
         logger.debug("Online mode – skipping local risk assessment.")
@@ -420,13 +420,13 @@ def perform_risk_assessment(
 # Stage 6
 def generate_report(
     cloud_service_provider: int,
-    provider_details: Dict[str, Any],
+    provider_details: dict[str, Any],
     exit_strategy: int,
     assessment_type: int,
     name: str,
     report_path: str,
     raw_data_path: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     try:
         db_path = os.path.join(report_path, "data", "assessment.db")
 
