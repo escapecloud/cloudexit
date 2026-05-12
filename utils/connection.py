@@ -16,7 +16,9 @@ _AUTH_PATH = "/api/v1/auth/token/"
 
 def _build_url(host: str) -> str:
     host = host.strip().rstrip("/")
-    if not host.startswith("http"):
+    if host.startswith("http://"):
+        host = "https://" + host[len("http://") :]
+    elif not host.startswith("https://"):
         host = f"https://{host}"
     return f"{host}{_AUTH_PATH}"
 
