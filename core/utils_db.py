@@ -9,6 +9,17 @@ logger.setLevel(logging.INFO)
 # Default master database
 MASTER_DATABASE = "datasets/data.db"
 
+ALLOWED_TABLES = {
+    "resourcetype",
+    "resource_inventory",
+    "cost_inventory",
+    "risk_inventory",
+    "scoring_data",
+    "alternative",
+    "alternativetechnology",
+    "risk",
+}
+
 
 def connect(db_path=MASTER_DATABASE):
     try:
@@ -20,6 +31,8 @@ def connect(db_path=MASTER_DATABASE):
 
 
 def load_data(table_name, db_path=MASTER_DATABASE):
+    if table_name not in ALLOWED_TABLES:
+        raise ValueError(f"Disallowed table name: {table_name}")
     try:
         conn = connect(db_path)
         cursor = conn.cursor()

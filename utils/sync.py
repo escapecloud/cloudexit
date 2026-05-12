@@ -14,7 +14,9 @@ _ASSESS_PATH = "/api/v1/assessments/"
 
 def _build_url(host: str) -> str:
     host = host.strip().rstrip("/")
-    if not host.startswith("http"):
+    if host.startswith("http://"):
+        host = "https://" + host[len("http://") :]
+    elif not host.startswith("https://"):
         host = f"https://{host}"
     return f"{host}{_ASSESS_PATH}"
 

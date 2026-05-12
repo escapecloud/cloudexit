@@ -3,7 +3,7 @@ import os
 import json
 import logging
 from typing import Any
-from jinja2 import Template
+from jinja2 import Environment
 
 # ReportLab
 from reportlab.lib.pagesizes import A4
@@ -134,7 +134,8 @@ def generate_html_report(
     with open(template_path, "r") as file:
         template_content = file.read()
 
-    template = Template(template_content)
+    env = Environment(autoescape=True)
+    template = env.from_string(template_content)
     html_content = template.render(
         **metadata,
         **scoring_context,
