@@ -12,6 +12,9 @@ It provides a structured, repeatable way to understand:
 
 cloudexit runs **locally by default**, with no account required.
 
+
+![Cloud providers](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.escapecloud.io%2Fpublic%2Fbadges%2Fcloud-providers&style=flat-square) ![AWS services](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.escapecloud.io%2Fpublic%2Fbadges%2Faws-services&style=flat-square) ![Azure services](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.escapecloud.io%2Fpublic%2Fbadges%2Fazure-services&style=flat-square) ![Alternative technologies](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.escapecloud.io%2Fpublic%2Fbadges%2Falternative-technologies&style=flat-square)
+
 ---
 
 ## How cloudexit fits into the EscapeCloud ecosystem
