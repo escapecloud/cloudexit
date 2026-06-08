@@ -437,6 +437,9 @@ def generate_report(
         risk_definitions = load_data("risk", db_path=db_path)
         alternatives = load_data("alternative", db_path=db_path)
         alternative_technologies = load_data("alternativetechnology", db_path=db_path)
+        alternative_technology_organizations = load_data(
+            "alternativetechnologyorganization", db_path=db_path
+        )
         resource_inventory = load_data("resource_inventory", db_path=db_path)
         cost_data = load_data("cost_inventory", db_path=db_path)
         risk_data = load_data("risk_inventory", db_path=db_path)
@@ -481,6 +484,7 @@ def generate_report(
             alternatives,
             alternative_technologies,
             exit_strategy,
+            alternative_technology_organizations,
         )
 
         # Generate PDF report

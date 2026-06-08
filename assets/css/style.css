@@ -804,11 +804,11 @@ main {
   width: 20px;
   left: 2px;
   bottom: 2px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Ccircle cx='10' cy='10' r='10' fill='%23E5EBEB'/%3E%3Cpath d='M6.5 6.5L13.5 13.5M13.5 6.5L6.5 13.5' stroke='%234B6361' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Ccircle cx='10' cy='10' r='9.25' fill='white' stroke='%23D1DBDB' stroke-width='1.5'/%3E%3Cpath d='M6.5 6.5L13.5 13.5M13.5 6.5L6.5 13.5' stroke='%234B6361' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
 }
 
 .toggle-slider:before {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Ccircle cx='10' cy='10' r='10' fill='%23E5EBEB'/%3E%3Cpath d='M6.5 6.5L13.5 13.5M13.5 6.5L6.5 13.5' stroke='%234B6361' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Ccircle cx='10' cy='10' r='9.25' fill='white' stroke='%23D1DBDB' stroke-width='1.5'/%3E%3Cpath d='M6.5 6.5L13.5 13.5M13.5 6.5L6.5 13.5' stroke='%234B6361' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: center;
   background-size: 20px 20px;
@@ -822,7 +822,7 @@ input:checked + .toggle-slider:before {
   -webkit-transform: translateX(20px);
   -ms-transform: translateX(20px);
   transform: translateX(20px);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Ccircle cx='10' cy='10' r='10' fill='%230D948B'/%3E%3Cpath d='M5.5 10.5L8.5 13.5L14.5 7.5' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Ccircle cx='10' cy='10' r='9.25' fill='white' stroke='%230D948B' stroke-width='1.5'/%3E%3Cpath d='M5.5 10.5L8.5 13.5L14.5 7.5' stroke='%230D948B' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: center;
   background-size: 20px 20px;
@@ -910,7 +910,7 @@ td button {
   font-size: var(--text-body);
   font-style: normal;
   font-weight: 400;
-  border-radius: 16px;
+  border-radius: 8px;
   border: 1px solid var(--neutral-300);
   background: var(--white);
   -webkit-transition: border-color 0.3s ease, box-shadow 0.3s ease;
@@ -918,6 +918,16 @@ td button {
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
   -webkit-box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.form-select {
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6L8 10L12 6' stroke='%23115E59' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px 16px;
+  padding-right: 40px;
 }
 
 .form-control:focus,

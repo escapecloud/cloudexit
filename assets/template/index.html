@@ -553,6 +553,7 @@
                       </div>
                       <div class="drop-body">
                         <div class="form-group mb-3">
+                          <label for="resourceTypeSelect" class="form-label mb-2">Resource</label>
                           <select class="form-select" id="resourceTypeSelect">
                             <option value="all" selected>Select Resource Type</option>
                             {% for resource in resource_inventory %}
@@ -560,6 +561,17 @@
                               {{ resource.name | trim }}
                             </option>
                             {% endfor %}
+                          </select>
+                        </div>
+                        <div class="form-group mb-3">
+                          <label for="regionSelect" class="form-label mb-2">Region</label>
+                          <select class="form-select" id="regionSelect">
+                            <option value="all" selected>All Regions</option>
+                            <option value="european-union">European Union</option>
+                            <option value="united-kingdom">United Kingdom</option>
+                            <option value="switzerland">Switzerland</option>
+                            <option value="united-states">United States</option>
+                            <option value="other">Other</option>
                           </select>
                         </div>
                         <div class="form-toggle-switch mb-3 d-flex justify-content-between align-items-center">
@@ -596,24 +608,37 @@
                 <div class="p-3 p-lg-4">
                   <div class="row gapy-3" id="alt-tech-grid">
                     {% if alternative_technologies %} {% for alt_tech in
-                    alternative_technologies %} {% set alt_resource = namespace(name="Resource Type " ~ alt_tech.resource_type_id) %}
-                    {% for resource in resource_inventory %}
-                      {% if resource.resource_type|string == alt_tech.resource_type_id|string %}
-                        {% set alt_resource.name = resource.name %}
-                      {% endif %}
-                    {% endfor %}
+                    alternative_technologies %}
                     <div
                       class="col-lg-6 alt-tech-item alt-tech-card-item"
                       data-resource-type="{{ alt_tech.resource_type_id }}"
                       data-open-source="{{ 'true' if alt_tech.open_source else 'false' }}"
                       data-enterprise-support="{{ 'true' if alt_tech.support_plan else 'false' }}"
+                      data-org-region="{{ alt_tech.organization_region }}"
+                      data-org-country="{{ alt_tech.organization_country_code }}"
                     >
                       <div class="p-3 p-lg-4 rounded-4 alttech-card">
                         <div
                           class="d-flex align-items-center justify-content-between alttech-title"
                         >
                           <div>
-                            <h6 class="mb-1">Category: {{ alt_resource.name }}</h6>
+                            <h6 class="mb-1 d-flex align-items-center gap-2 flex-wrap">
+                              <i class="bi bi-building"></i>
+                              <span>{{ alt_tech.organization_name }}</span>
+                              {% if alt_tech.organization_url %}
+                              <a
+                                href="{{ alt_tech.organization_url }}{% if '?' in alt_tech.organization_url %}&{% else %}?{% endif %}utm_source=escapecloud&utm_medium=referral"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label="Visit {{ alt_tech.organization_name }}"
+                                class="d-inline-flex align-items-center text-decoration-none"
+                              >
+                                <i class="bi bi-box-arrow-up-right"></i>
+                              </a>
+                              {% endif %}
+                              <span class="text-muted">|</span>
+                              <span>{% if alt_tech.organization_flag %}{{ alt_tech.organization_flag }} {% endif %}{{ alt_tech.organization_country_code }} • {{ alt_tech.organization_region_label }}</span>
+                            </h6>
                             <h3 class="mb-0">{{ alt_tech.product_name }}</h3>
                           </div>
                         </div>
@@ -816,6 +841,7 @@
           const applyFiltersBtn = document.getElementById("applyFilters");
           const clearFiltersBtn = document.getElementById("clearFilters");
           const resourceTypeSelect = document.getElementById("resourceTypeSelect");
+          const regionSelect = document.getElementById("regionSelect");
           const openSourceSwitch = document.getElementById("openSourceSwitch");
           const enterpriseSupportSwitch = document.getElementById(
             "enterpriseSupportSwitch"
@@ -828,6 +854,7 @@
             applyFiltersBtn &&
             clearFiltersBtn &&
             resourceTypeSelect &&
+            regionSelect &&
             openSourceSwitch &&
             enterpriseSupportSwitch &&
             searchInput &&
@@ -866,6 +893,7 @@
 
             function applyAlternativeFilters() {
               const selectedResourceType = resourceTypeSelect.value;
+              const selectedRegion = regionSelect.value;
               const isOpenSource = openSourceSwitch.checked;
               const hasEnterpriseSupport = enterpriseSupportSwitch.checked;
               const searchQuery = searchInput.value.trim().toLowerCase();
@@ -874,6 +902,9 @@
                 const matchesResourceType =
                   selectedResourceType === "all" ||
                   box.dataset.resourceType === selectedResourceType;
+                const matchesRegion =
+                  selectedRegion === "all" ||
+                  box.dataset.orgRegion === selectedRegion;
                 const matchesOpenSource =
                   !isOpenSource || box.dataset.openSource === "true";
                 const matchesEnterpriseSupport =
@@ -883,6 +914,7 @@
 
                 box.dataset.filtered =
                   matchesResourceType &&
+                  matchesRegion &&
                   matchesOpenSource &&
                   matchesEnterpriseSupport &&
                   matchesSearch
@@ -899,6 +931,7 @@
 
             clearFiltersBtn.addEventListener("click", function () {
               resourceTypeSelect.value = "all";
+              regionSelect.value = "all";
               openSourceSwitch.checked = false;
               enterpriseSupportSwitch.checked = false;
               searchInput.value = "";

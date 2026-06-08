@@ -73,6 +73,7 @@ def generate_html_report(
     alternatives: list[dict[str, Any]],
     alternative_technologies: list[dict[str, Any]],
     exit_strategy: int,
+    alternative_technology_organizations: list[dict[str, Any]] | None = None,
 ) -> str:
 
     # Transform resource inventory
@@ -117,7 +118,11 @@ def generate_html_report(
 
     # Transform alternative technologies
     alternative_technologies_data = transform_alt_tech_for_html(
-        resource_inventory, alternatives, alternative_technologies, exit_strategy
+        resource_inventory,
+        alternatives,
+        alternative_technologies,
+        exit_strategy,
+        alternative_technology_organizations=alternative_technology_organizations,
     )
 
     # Scoring Data
