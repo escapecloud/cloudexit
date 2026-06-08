@@ -42,6 +42,7 @@ def transform_alt_tech_for_html(
     alternatives: list[dict[str, Any]],
     alternative_technologies: list[dict[str, Any]],
     exit_strategy: int,
+    alternative_technology_organizations: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     alt_tech_data = []
     grouped_alt_tech = summarize_alternative_technologies(
@@ -49,6 +50,7 @@ def transform_alt_tech_for_html(
         alternatives,
         alternative_technologies,
         exit_strategy,
+        alternative_technology_organizations=alternative_technology_organizations,
     )
     for resource in resource_inventory:
         resource_type = str(resource.get("resource_type"))

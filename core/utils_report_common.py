@@ -8,6 +8,73 @@ CURRENCY_SYMBOLS = {
     "EUR": "€",
 }
 
+EU_COUNTRY_CODES = {
+    "AT",
+    "BE",
+    "BG",
+    "HR",
+    "CY",
+    "CZ",
+    "DK",
+    "EE",
+    "FI",
+    "FR",
+    "DE",
+    "GR",
+    "HU",
+    "IE",
+    "IT",
+    "LV",
+    "LT",
+    "LU",
+    "MT",
+    "NL",
+    "PL",
+    "PT",
+    "RO",
+    "SK",
+    "SI",
+    "ES",
+    "SE",
+}
+
+REGION_LABELS = {
+    "european-union": "European Union",
+    "united-kingdom": "United Kingdom",
+    "switzerland": "Switzerland",
+    "united-states": "United States",
+    "other": "Other",
+}
+
+
+def normalize_country_code(country_code: Any) -> str | None:
+    if not isinstance(country_code, str):
+        return None
+    normalized = country_code.strip().upper()
+    return normalized if len(normalized) == 2 and normalized.isalpha() else None
+
+
+def country_code_to_region(country_code: Any) -> str:
+    normalized = normalize_country_code(country_code)
+    if not normalized:
+        return "other"
+    if normalized in EU_COUNTRY_CODES:
+        return "european-union"
+    if normalized == "GB":
+        return "united-kingdom"
+    if normalized == "CH":
+        return "switzerland"
+    if normalized == "US":
+        return "united-states"
+    return "other"
+
+
+def country_code_to_flag(country_code: Any) -> str:
+    normalized = normalize_country_code(country_code)
+    if not normalized:
+        return ""
+    return chr(127397 + ord(normalized[0])) + chr(127397 + ord(normalized[1]))
+
 
 def sort_cost_data(cost_data: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(cost_data, key=lambda x: datetime.strptime(x["month"], "%Y-%m-%d"))
@@ -119,6 +186,7 @@ def summarize_alternative_technologies(
     alternatives: list[dict[str, Any]],
     alternative_technologies: list[dict[str, Any]],
     exit_strategy: int,
+    alternative_technology_organizations: list[dict[str, Any]] | None = None,
 ) -> dict[str, list[dict[str, Any]]]:
     active_technologies = {
         tech["id"]: tech
@@ -129,6 +197,9 @@ def summarize_alternative_technologies(
     grouped_alt_tech: dict[str, list[dict[str, Any]]] = {
         str(resource["resource_type"]): [] for resource in resource_inventory
     }
+    organization_by_id = {
+        org["id"]: org for org in (alternative_technology_organizations or [])
+    }
 
     for alt in alternatives:
         if str(alt["strategy_type"]) != str(exit_strategy):
@@ -138,6 +209,11 @@ def summarize_alternative_technologies(
         tech = active_technologies.get(alt["alternative_technology"])
         if not tech or resource_type not in grouped_alt_tech:
             continue
+        organization = organization_by_id.get(tech.get("organization_id"))
+        organization_country_code = normalize_country_code(
+            organization.get("country_code") if organization else None
+        )
+        organization_region = country_code_to_region(organization_country_code)
 
         grouped_alt_tech[resource_type].append(
             {
@@ -147,6 +223,16 @@ def summarize_alternative_technologies(
                 "open_source": tech["open_source"] == "t",
                 "support_plan": tech["support_plan"] == "t",
                 "status": tech["status"] == "t",
+                "organization_name": (
+                    organization.get("name") if organization else "Unknown Organization"
+                ),
+                "organization_url": organization.get("url") if organization else None,
+                "organization_country_code": organization_country_code or "N/A",
+                "organization_region": organization_region,
+                "organization_region_label": REGION_LABELS.get(
+                    organization_region, "Other"
+                ),
+                "organization_flag": country_code_to_flag(organization_country_code),
             }
         )
 

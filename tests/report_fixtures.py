@@ -57,6 +57,17 @@ def build_report_fixture():
             "open_source": "t",
             "support_plan": "t",
             "status": "t",
+            "organization_id": 10,
+        }
+    ]
+    alternative_technology_organizations = [
+        {
+            "id": 10,
+            "name": "OpenInfra Foundation",
+            "url": "https://openinfra.org/",
+            "country_code": "US",
+            "stability_tier": 5,
+            "years_in_business": 14,
         }
     ]
     return {
@@ -69,6 +80,7 @@ def build_report_fixture():
         "risk_data": risk_data,
         "alternatives": alternatives,
         "alternative_technologies": alternative_technologies,
+        "alternative_technology_organizations": alternative_technology_organizations,
         "exit_strategy": 1,
     }
 
@@ -96,6 +108,7 @@ def build_empty_report_fixture():
         "risk_data": [],
         "alternatives": [],
         "alternative_technologies": [],
+        "alternative_technology_organizations": [],
         "exit_strategy": 1,
     }
 

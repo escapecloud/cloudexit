@@ -33,6 +33,7 @@ class ReportPipelineSmokeTests(unittest.TestCase):
                 fixture["alternatives"],
                 fixture["alternative_technologies"],
                 fixture["exit_strategy"],
+                fixture["alternative_technology_organizations"],
             )
 
             self.assertTrue(Path(html_path).exists())
@@ -41,6 +42,9 @@ class ReportPipelineSmokeTests(unittest.TestCase):
         self.assertIn("Smoke Test Assessment", html)
         self.assertIn("Amazon Web Services", html)
         self.assertIn("OpenStack", html)
+        self.assertIn("OpenInfra Foundation", html)
+        self.assertIn("All Regions", html)
+        self.assertIn("data-org-region", html)
         self.assertIn("EC2 Instance", html)
 
     def test_generate_html_report_renders_empty_state_output(self):
@@ -59,6 +63,7 @@ class ReportPipelineSmokeTests(unittest.TestCase):
                 fixture["alternatives"],
                 fixture["alternative_technologies"],
                 fixture["exit_strategy"],
+                fixture["alternative_technology_organizations"],
             )
 
             self.assertTrue(Path(html_path).exists())

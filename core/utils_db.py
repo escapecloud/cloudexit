@@ -17,6 +17,7 @@ ALLOWED_TABLES = {
     "scoring_data",
     "alternative",
     "alternativetechnology",
+    "alternativetechnologyorganization",
     "risk",
 }
 

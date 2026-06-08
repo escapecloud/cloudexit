@@ -86,6 +86,7 @@ def build_alternative_technologies():
             "open_source": "t",
             "support_plan": "t",
             "status": "t",
+            "organization_id": 10,
         },
         {
             "id": 2,
@@ -95,6 +96,7 @@ def build_alternative_technologies():
             "open_source": "t",
             "support_plan": "f",
             "status": "t",
+            "organization_id": 20,
         },
         {
             "id": 3,
@@ -104,6 +106,23 @@ def build_alternative_technologies():
             "open_source": "t",
             "support_plan": "t",
             "status": "f",
+        },
+    ]
+
+
+def build_alternative_technology_organizations():
+    return [
+        {
+            "id": 10,
+            "name": "OpenInfra Foundation",
+            "url": "https://openinfra.org/",
+            "country_code": "US",
+        },
+        {
+            "id": 20,
+            "name": "European Storage Collective",
+            "url": "https://example.eu/",
+            "country_code": "DE",
         },
     ]
 
@@ -151,6 +170,7 @@ class HtmlTransformTests(unittest.TestCase):
             build_alternatives(),
             build_alternative_technologies(),
             exit_strategy=1,
+            alternative_technology_organizations=build_alternative_technology_organizations(),
         )
 
         self.assertEqual(len(transformed), 2)
@@ -158,6 +178,9 @@ class HtmlTransformTests(unittest.TestCase):
         self.assertEqual(transformed[1]["product_name"], "MinIO")
         self.assertTrue(transformed[0]["open_source"])
         self.assertFalse(transformed[1]["support_plan"])
+        self.assertEqual(transformed[0]["organization_name"], "OpenInfra Foundation")
+        self.assertEqual(transformed[0]["organization_region"], "united-states")
+        self.assertEqual(transformed[1]["organization_region"], "european-union")
 
 
 class JsonTransformTests(unittest.TestCase):
