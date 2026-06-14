@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import requests
 
 logger = logging.getLogger("main.utils.connection")
@@ -26,8 +27,16 @@ def _build_url(host: str) -> str:
 def get_jwt_token(
     host: str | None = None, key: str | None = None, *, timeout: int = 10
 ) -> str | None:
-    host = host or getattr(config, "HOST", "") if config else ""
-    key = key or getattr(config, "KEY", "") if config else ""
+    host = (
+        host
+        or os.environ.get("HOST", "").strip()
+        or (getattr(config, "HOST", "") if config else "")
+    )
+    key = (
+        key
+        or os.environ.get("KEY", "").strip()
+        or (getattr(config, "KEY", "") if config else "")
+    )
 
     if not host:
         logger.debug("HOST empty – skipping ExitCloud authentication.")
@@ -65,8 +74,12 @@ def get_jwt_token(
 
 
 def resolve_mode() -> tuple[str, str | None]:
-    host = getattr(config, "HOST", "") if config else ""
-    key = getattr(config, "KEY", "") if config else ""
+    host = os.environ.get("HOST", "").strip() or (
+        getattr(config, "HOST", "") if config else ""
+    )
+    key = os.environ.get("KEY", "").strip() or (
+        getattr(config, "KEY", "") if config else ""
+    )
 
     if not host:
         logger.debug("HOST empty – running in offline mode.")

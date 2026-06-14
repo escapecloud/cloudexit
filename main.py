@@ -37,8 +37,11 @@ from utils.utils import (
     prompt_required_inputs,
     print_help_message,
     print_step,
+    require_env,
+    require_env_int,
 )
 from utils.validate import validate_region, validate_config
+from utils import codes
 
 # Configure the root logger to ensure logs propagate from all modules
 logging.basicConfig(
@@ -78,6 +81,78 @@ def handle_aws(args):
             config["name"] = (
                 f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}"
             )
+
+    elif args.non_interactive:
+        exit_strategy = require_env_int(
+            "ESC_EXIT_STRATEGY", "exit strategy (1 or 3)", {1, 3}
+        )
+        assessment_type = require_env_int(
+            "ESC_ASSESSMENT_TYPE", "assessment type (1 or 2)", {1, 2}
+        )
+
+        if args.profile:
+            if not is_aws_cli_installed():
+                console.print(
+                    "[red]AWS CLI is not installed. Install it from https://aws.amazon.com/cli/[/red]"
+                )
+                sys.exit(codes.CONFIG)
+            if not is_aws_profile_valid(args.profile):
+                console.print(
+                    f"[red]AWS profile '{args.profile}' is not configured. "
+                    f"Use `aws configure --profile {args.profile}`.[/red]"
+                )
+                sys.exit(codes.CONFIG)
+            try:
+                session = boto3.Session(profile_name=args.profile)
+                credentials = session.get_credentials()
+                if credentials is None:
+                    console.print(
+                        f"[red]AWS profile '{args.profile}' has no valid credentials.[/red]"
+                    )
+                    sys.exit(codes.CONFIG)
+                region = session.region_name or "us-east-1"
+            except (NoCredentialsError, ProfileNotFound) as e:
+                console.print(f"[red]AWS profile error: {str(e)}.[/red]")
+                sys.exit(codes.CONFIG)
+            config = {
+                "name": (
+                    args.name.strip()
+                    if args.name
+                    else f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                ),
+                "cloudServiceProvider": cloud_provider,
+                "exitStrategy": exit_strategy,
+                "assessmentType": assessment_type,
+                "providerDetails": {
+                    "accessKey": credentials.access_key,
+                    "secretKey": credentials.secret_key,
+                    "region": region,
+                },
+            }
+        else:
+            access_key = require_env("AWS_ACCESS_KEY_ID", "AWS access key")
+            secret_key = require_env("AWS_SECRET_ACCESS_KEY", "AWS secret key")
+            region = require_env("AWS_DEFAULT_REGION", "AWS region")
+            try:
+                validate_region(region)
+            except ValueError as e:
+                console.print(f"[red]AWS_DEFAULT_REGION: {e}[/red]")
+                sys.exit(codes.CONFIG)
+            config = {
+                "name": (
+                    args.name.strip()
+                    if args.name
+                    else f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                ),
+                "cloudServiceProvider": cloud_provider,
+                "exitStrategy": exit_strategy,
+                "assessmentType": assessment_type,
+                "providerDetails": {
+                    "accessKey": access_key,
+                    "secretKey": secret_key,
+                    "region": region,
+                },
+            }
 
     elif args.profile:
         # Check if aws cli available
@@ -190,6 +265,69 @@ def handle_azure(args):
             config["name"] = (
                 f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}"
             )
+
+    elif args.non_interactive:
+        exit_strategy = require_env_int(
+            "ESC_EXIT_STRATEGY", "exit strategy (1 or 3)", {1, 3}
+        )
+        assessment_type = require_env_int(
+            "ESC_ASSESSMENT_TYPE", "assessment type (1 or 2)", {1, 2}
+        )
+        subscription_id = require_env("ESC_SUBSCRIPTION_ID", "Azure subscription ID")
+        resource_group = require_env("ESC_RESOURCE_GROUP", "Azure resource group")
+
+        if args.cli:
+            if not is_azure_cli_installed():
+                console.print(
+                    "[red]Azure CLI is not installed. Install it from https://aka.ms/install-azure-cli.[/red]"
+                )
+                sys.exit(codes.CONFIG)
+            if not is_azure_cli_logged_in():
+                console.print(
+                    "[red]You are not logged in to Azure CLI. Please run 'az login' and try again.[/red]"
+                )
+                sys.exit(codes.CONFIG)
+            if is_azure_cli_token_expired():
+                console.print(
+                    "[red]Your Azure CLI token has expired. Please run:[/red]"
+                )
+                console.print(
+                    "[bold cyan]az login --scope https://management.azure.com/.default[/bold cyan]"
+                )
+                sys.exit(codes.CONFIG)
+            tenant_id = require_env("AZURE_TENANT_ID", "Azure tenant ID")
+            credential = DefaultAzureCredential()
+        else:
+            tenant_id = require_env("AZURE_TENANT_ID", "Azure tenant ID")
+            client_id = require_env("AZURE_CLIENT_ID", "Azure client ID")
+            client_secret = require_env("AZURE_CLIENT_SECRET", "Azure client secret")
+            credential = ClientSecretCredential(
+                tenant_id=tenant_id,
+                client_id=client_id,
+                client_secret=client_secret,
+            )
+
+        config = {
+            "name": (
+                args.name.strip()
+                if args.name
+                else f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            ),
+            "cloudServiceProvider": cloud_provider,
+            "exitStrategy": exit_strategy,
+            "assessmentType": assessment_type,
+            "providerDetails": {
+                "credential": credential,
+                "tenantId": tenant_id,
+                "subscriptionId": subscription_id,
+                "resourceGroupName": resource_group,
+                **(
+                    {}
+                    if args.cli
+                    else {"clientId": client_id, "clientSecret": client_secret}
+                ),
+            },
+        }
 
     elif args.cli:
         # logger.info("Azure --cli argument detected. Using Azure CLI credentials.")
@@ -342,7 +480,7 @@ def run_assessment(config, provider_name):
             print_step("Configuration successfully validated.", status="ok")
         except ValueError as e:
             print_step("Configuration validation failed.", status="error", logs=str(e))
-            return
+            sys.exit(codes.CONFIG)
 
         # Detect ExitCloud Integration
         mode, jwt = resolve_mode()
@@ -363,7 +501,7 @@ def run_assessment(config, provider_name):
             print_step("Directory successfully created.", status="ok")
         except RuntimeError as e:
             print_step("Directory creation failed.", status="error", logs=str(e))
-            return
+            sys.exit(codes.CONFIG)
 
         # Handle the result
         provider_name = (
@@ -385,7 +523,7 @@ def run_assessment(config, provider_name):
             print_step(f"Connecting to {provider_name}...", status="error")
             console.print(f"   ↳ {logs}", style="dim")
             logger.error(f"Credential verification failed: {logs}")
-            return
+            sys.exit(codes.CREDENTIALS)
         console.print("-------------------------------------------")
 
         # Stage 2: Test Permissions
@@ -427,7 +565,7 @@ def run_assessment(config, provider_name):
         # Exit if permissions are invalid
         if not permission_valid:
             logger.error(f"Permission validation failed: {logs}")
-            return
+            sys.exit(codes.PERMISSIONS)
 
         console.print("-------------------------------------------")
 
@@ -455,7 +593,7 @@ def run_assessment(config, provider_name):
                 status="error",
                 logs=result["logs"],
             )
-            return
+            sys.exit(codes.RESOURCE_INVENTORY)
 
         console.print("-------------------------------------------")
 
@@ -482,7 +620,7 @@ def run_assessment(config, provider_name):
                 status="error",
                 logs=cost_result["logs"],
             )
-            return
+            sys.exit(codes.COST_INVENTORY)
 
         console.print("-------------------------------------------")
 
@@ -510,6 +648,8 @@ def run_assessment(config, provider_name):
 
             status = "ok" if sync_result["success"] else "error"
             print_step("Sync assessment...", status=status, logs=sync_result["logs"])
+            if not sync_result["success"]:
+                sys.exit(codes.RISK_ASSESSMENT)
 
         elif mode == "offline":
             console.print("Stage #5 – Offline Risk Assessment", style="bold")
@@ -525,6 +665,8 @@ def run_assessment(config, provider_name):
             print_step(
                 "Performing risk assessment...", status=status, logs=risk_result["logs"]
             )
+            if not risk_result["success"]:
+                sys.exit(codes.RISK_ASSESSMENT)
 
         console.print("-------------------------------------------")
 
@@ -550,7 +692,7 @@ def run_assessment(config, provider_name):
             print_step(
                 "Generating report...", status="error", logs=report_status["logs"]
             )
-            return
+            sys.exit(codes.REPORT)
 
         # Output the report path after the separator
         console.print("-------------------------------------------")
@@ -568,6 +710,7 @@ def run_assessment(config, provider_name):
 
     except Exception as e:
         console.print(f"[red]Unexpected error: {e}[/red]")
+        sys.exit(codes.UNEXPECTED)
 
 
 def parse_arguments():
@@ -605,6 +748,11 @@ def parse_arguments():
     aws_parser.add_argument(
         "--name", type=str, help="Assessment Name (Optional / Max. 50 characters)."
     )
+    aws_parser.add_argument(
+        "--non-interactive",
+        action="store_true",
+        help="Run without prompts; read all inputs from environment variables (for CI use).",
+    )
 
     # Subparser for Azure
     azure_parser = subparsers.add_parser("azure", help="Perform an Azure assessment.")
@@ -619,6 +767,11 @@ def parse_arguments():
     )
     azure_parser.add_argument(
         "--name", type=str, help="Assessment Name (Optional / Max. 50 characters)."
+    )
+    azure_parser.add_argument(
+        "--non-interactive",
+        action="store_true",
+        help="Run without prompts; read all inputs from environment variables (for CI use).",
     )
 
     return parser.parse_args()
