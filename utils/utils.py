@@ -1,5 +1,6 @@
 # utils/utils.py
 import os
+import sys
 import logging
 import json
 from typing import Any
@@ -7,6 +8,8 @@ from rich.console import Console
 from rich.style import Style
 from time import sleep
 from datetime import datetime
+
+from utils import codes
 
 logger = logging.getLogger("main.utils")
 console = Console()
@@ -119,6 +122,32 @@ def create_directory(base_path="reports"):
     os.makedirs(raw_data_path, exist_ok=True)
 
     return directory_path, raw_data_path
+
+
+def require_env(var: str, description: str) -> str:
+    """Return the value of an env var, or exit with CONFIG if it is unset/empty."""
+    value = os.environ.get(var, "").strip()
+    if not value:
+        console.print(
+            f"[red]--non-interactive requires {description}. "
+            f"Set the {var} environment variable.[/red]"
+        )
+        sys.exit(codes.CONFIG)
+    return value
+
+
+def require_env_int(var: str, description: str, valid: set) -> int:
+    """Return an env var parsed as int, validated against an allowed set."""
+    raw = require_env(var, description)
+    try:
+        value = int(raw)
+    except ValueError:
+        console.print(f"[red]{var} must be an integer, got: {raw!r}[/red]")
+        sys.exit(codes.CONFIG)
+    if value not in valid:
+        console.print(f"[red]{var} must be one of {sorted(valid)}, got: {value}[/red]")
+        sys.exit(codes.CONFIG)
+    return value
 
 
 def print_help_message():
