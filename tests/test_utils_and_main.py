@@ -443,7 +443,7 @@ class ResolveModeEnvVarTests(unittest.TestCase):
 
     def test_falls_back_to_config_when_env_not_set(self):
         fake_config = types.SimpleNamespace(HOST="", KEY="")
-        env = {k: v for k, v in os.environ.items() if k not in ("ESC_HOST", "ESC_KEY")}
+        env = {k: v for k, v in os.environ.items() if k not in ("HOST", "KEY")}
         with (
             patch("utils.connection.config", fake_config),
             patch.dict(os.environ, env, clear=True),

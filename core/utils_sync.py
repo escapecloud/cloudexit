@@ -95,9 +95,13 @@ def post_assessment(
     token: str,
     timeout: int = 10,
 ) -> dict[str, Any]:
-    host = getattr(config, "HOST", "").strip()
+    host = os.environ.get("HOST", "").strip() or getattr(config, "HOST", "").strip()
     if not host:
-        return {"success": False, "payload": None, "logs": "HOST missing in config.py"}
+        return {
+            "success": False,
+            "payload": None,
+            "logs": "HOST missing in environment and config.py",
+        }
 
     url = _assess_url(host)
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
