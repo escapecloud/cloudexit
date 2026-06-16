@@ -15,9 +15,14 @@ class PostAssessmentHostResolutionTests(unittest.TestCase):
 
         with (
             patch.dict(os.environ, {"HOST": "env.exitcloud.io"}, clear=False),
-            patch("core.utils_sync.config", types.SimpleNamespace(HOST="", CLI_VERSION="v1")),
+            patch(
+                "core.utils_sync.config",
+                types.SimpleNamespace(HOST="", CLI_VERSION="v1"),
+            ),
             patch("core.utils_sync._build_payload", return_value={"sample": "payload"}),
-            patch("core.utils_sync.requests.post", return_value=fake_response) as mock_post,
+            patch(
+                "core.utils_sync.requests.post", return_value=fake_response
+            ) as mock_post,
         ):
             result = post_assessment(
                 name="Demo",
@@ -33,14 +38,15 @@ class PostAssessmentHostResolutionTests(unittest.TestCase):
 
         self.assertTrue(result["success"])
         called_url = mock_post.call_args.args[0]
-        self.assertEqual(
-            called_url, "https://env.exitcloud.io/api/v1/assessments/"
-        )
+        self.assertEqual(called_url, "https://env.exitcloud.io/api/v1/assessments/")
 
     def test_returns_clear_error_when_host_missing_everywhere(self):
         with (
             patch.dict(os.environ, {}, clear=True),
-            patch("core.utils_sync.config", types.SimpleNamespace(HOST="", CLI_VERSION="v1")),
+            patch(
+                "core.utils_sync.config",
+                types.SimpleNamespace(HOST="", CLI_VERSION="v1"),
+            ),
         ):
             result = post_assessment(
                 name="Demo",
