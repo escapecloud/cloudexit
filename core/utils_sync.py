@@ -86,6 +86,31 @@ def _build_payload(
     return payload
 
 
+def write_assessment_payload(
+    raw_data_path: str,
+    *,
+    report_path: str,
+    name: str,
+    started_at: int,
+    exit_strategy: int,
+    cloud_service_provider: int,
+    assessment_type: int,
+) -> str:
+    payload = _build_payload(
+        report_path=report_path,
+        name=name,
+        started_at=started_at,
+        exit_strategy=exit_strategy,
+        cloud_service_provider=cloud_service_provider,
+        assessment_type=assessment_type,
+    )
+    payload_path = os.path.join(raw_data_path, "payload.json")
+    with open(payload_path, "w", encoding="utf-8") as payload_file:
+        json.dump(payload, payload_file, indent=2)
+        payload_file.write("\n")
+    return payload_path
+
+
 def post_assessment(
     *,
     name: str,
