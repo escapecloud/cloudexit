@@ -20,6 +20,7 @@ from core.engine import (
     sync_assessment,
     generate_report,
 )
+from core.utils_sync import write_assessment_payload
 from utils.azure import (
     select_subscription,
     select_resource_group,
@@ -241,7 +242,7 @@ def handle_aws(args):
             return
 
     # Run the AWS assessment pipeline
-    run_assessment(config, "aws")
+    run_assessment(config, "aws", dry_run=args.dry_run)
 
 
 def handle_azure(args):
@@ -464,10 +465,10 @@ def handle_azure(args):
 
     # Run the Azure assessment pipeline
     # logger.info("Starting Azure assessment pipeline.")
-    run_assessment(config, "azure")
+    run_assessment(config, "azure", dry_run=args.dry_run)
 
 
-def run_assessment(config, provider_name):
+def run_assessment(config, provider_name, *, dry_run=False):
     # Record the assessment start time to propagate across stages
     started_at = int(time.time())
 
@@ -484,7 +485,9 @@ def run_assessment(config, provider_name):
 
         # Detect ExitCloud Integration
         mode, jwt = resolve_mode()
-        if mode == "online":
+        if dry_run:
+            print_step("Dry run mode – no remote sync.", status="ok")
+        elif mode == "online":
             print_step("ExitCloud integration configured.", status="ok")
         else:
             print_step("ExitCloud integration not configured.", status="warning")
@@ -629,8 +632,37 @@ def run_assessment(config, provider_name):
             or f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}"
         )
 
+        payload_path = None
+        if dry_run:
+            payload_path = write_assessment_payload(
+                raw_data_path,
+                report_path=report_path,
+                name=name,
+                started_at=started_at,
+                exit_strategy=config["exitStrategy"],
+                cloud_service_provider=config["cloudServiceProvider"],
+                assessment_type=config["assessmentType"],
+            )
+
         # Stage 5 – Online / Offline Risk Assessment
-        if mode == "online":
+        if dry_run or mode == "offline":
+            console.print("Stage #5 – Offline Risk Assessment", style="bold")
+
+            with console.status("Performing risk assessment...", spinner="dots"):
+                risk_result = perform_risk_assessment(
+                    exit_strategy=config["exitStrategy"],
+                    report_path=report_path,
+                    mode="offline",
+                )
+
+            status = "ok" if risk_result["success"] else "error"
+            print_step(
+                "Performing risk assessment...", status=status, logs=risk_result["logs"]
+            )
+            if not risk_result["success"]:
+                sys.exit(codes.RISK_ASSESSMENT)
+
+        elif mode == "online":
             console.print("Stage #5 – Online Risk Assessment", style="bold")
 
             sync_result = sync_assessment(
@@ -649,23 +681,6 @@ def run_assessment(config, provider_name):
             status = "ok" if sync_result["success"] else "error"
             print_step("Sync assessment...", status=status, logs=sync_result["logs"])
             if not sync_result["success"]:
-                sys.exit(codes.RISK_ASSESSMENT)
-
-        elif mode == "offline":
-            console.print("Stage #5 – Offline Risk Assessment", style="bold")
-
-            with console.status("Performing risk assessment...", spinner="dots"):
-                risk_result = perform_risk_assessment(
-                    exit_strategy=config["exitStrategy"],
-                    report_path=report_path,
-                    mode=mode,
-                )
-
-            status = "ok" if risk_result["success"] else "error"
-            print_step(
-                "Performing risk assessment...", status=status, logs=risk_result["logs"]
-            )
-            if not risk_result["success"]:
                 sys.exit(codes.RISK_ASSESSMENT)
 
         console.print("-------------------------------------------")
@@ -697,6 +712,8 @@ def run_assessment(config, provider_name):
         # Output the report path after the separator
         console.print("-------------------------------------------")
         console.print("Outputs:", style="bold")
+        if payload_path:
+            console.print(f"Payload: {payload_path}", style="cyan")
         html_report_path = report_status.get("reports", {}).get("HTML")
         if html_report_path:
             console.print(f"HTML Report: {html_report_path}", style="cyan")
@@ -726,6 +743,8 @@ def parse_arguments():
             "  python3 main.py azure --config config.json # Use a configuration file for Azure\n"
             "  python3 main.py azure --cli                # Use Azure CLI credentials\n"
             "  python3 main.py azure --name 'DMS System'  # Use a pre-defined assessment name\n"
+            "  python3 main.py aws --config config.json --dry-run  # Local report + payload.json, no remote sync\n"
+            "  python3 main.py azure --config config.json --dry-run\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -753,6 +772,14 @@ def parse_arguments():
         action="store_true",
         help="Run without prompts; read all inputs from environment variables (for CI use).",
     )
+    aws_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help=(
+            "Run a local assessment and also write raw_data/payload.json without "
+            "remote sync."
+        ),
+    )
 
     # Subparser for Azure
     azure_parser = subparsers.add_parser("azure", help="Perform an Azure assessment.")
@@ -772,6 +799,14 @@ def parse_arguments():
         "--non-interactive",
         action="store_true",
         help="Run without prompts; read all inputs from environment variables (for CI use).",
+    )
+    azure_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help=(
+            "Run a local assessment and also write raw_data/payload.json without "
+            "remote sync."
+        ),
     )
 
     return parser.parse_args()

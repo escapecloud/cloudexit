@@ -5,7 +5,7 @@ import types
 import unittest
 from argparse import Namespace
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 import main
 from utils import codes
@@ -294,6 +294,83 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
 
         self.assertIsNone(result)
 
+    def test_dry_run_writes_payload_generates_report_and_skips_sync(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            raw_data_path = os.path.join(tmp_dir, "raw_data")
+            os.makedirs(raw_data_path, exist_ok=True)
+            payload_path = os.path.join(raw_data_path, "payload.json")
+            config = VALID_CONFIG.copy()
+            config["assessmentType"] = 2
+
+            with (
+                patch("main.validate_config"),
+                patch("main.resolve_mode", return_value=("online", "jwt-token")),
+                patch(
+                    "main.create_directory",
+                    return_value=(tmp_dir, raw_data_path),
+                ),
+                patch("main.verify_credentials", return_value=(True, "ok")),
+                patch("main.test_permissions", return_value=(True, True, True, "ok")),
+                patch(
+                    "main.create_resource_inventory",
+                    return_value={"success": True, "logs": ""},
+                ),
+                patch(
+                    "main.create_cost_inventory",
+                    return_value={"success": True, "logs": ""},
+                ),
+                patch(
+                    "main.write_assessment_payload",
+                    return_value=payload_path,
+                ) as mock_write,
+                patch(
+                    "main.perform_risk_assessment",
+                    return_value={"success": True, "logs": ""},
+                ) as mock_risk,
+                patch(
+                    "main.generate_report",
+                    return_value={
+                        "success": True,
+                        "reports": {
+                            "HTML": f"{tmp_dir}/index.html",
+                            "PDF": f"{tmp_dir}/report.pdf",
+                        },
+                    },
+                ) as mock_report,
+                patch("main.sync_assessment") as mock_sync,
+                patch("main.print_step"),
+                patch("main.console.print"),
+            ):
+                main.run_assessment(config, "aws", dry_run=True)
+
+            mock_write.assert_called_once_with(
+                raw_data_path,
+                report_path=tmp_dir,
+                name=config["name"],
+                started_at=ANY,
+                exit_strategy=config["exitStrategy"],
+                cloud_service_provider=config["cloudServiceProvider"],
+                assessment_type=2,
+            )
+            mock_risk.assert_called_once_with(
+                exit_strategy=config["exitStrategy"],
+                report_path=tmp_dir,
+                mode="offline",
+            )
+            mock_report.assert_called_once()
+            mock_sync.assert_not_called()
+
+    def test_dry_run_flag_passed_from_handle_aws(self):
+        with (
+            patch.dict(os.environ, NonInteractiveAWSTests._BASE_ENV, clear=False),
+            patch("main.validate_region"),
+            patch("main.run_assessment") as mock_run,
+            patch("main.console.print"),
+        ):
+            main.handle_aws(_ni_aws_args(dry_run=True))
+
+        mock_run.assert_called_once_with(ANY, "aws", dry_run=True)
+
 
 def _ni_aws_args(**kwargs):
     """Build a Namespace that looks like 'aws --non-interactive' with optional overrides."""
@@ -302,6 +379,7 @@ def _ni_aws_args(**kwargs):
         profile=None,
         name=None,
         non_interactive=True,
+        dry_run=False,
     )
     defaults.update(kwargs)
     return Namespace(**defaults)
@@ -314,6 +392,7 @@ def _ni_azure_args(**kwargs):
         cli=False,
         name=None,
         non_interactive=True,
+        dry_run=False,
     )
     defaults.update(kwargs)
     return Namespace(**defaults)
