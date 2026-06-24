@@ -32,7 +32,8 @@ cloudexit is the **Community / Open Source edition** of the EscapeCloud ecosyste
 
 cloudexit can be used:
 - fully offline (Basic assessment)
-- or connected to a platform (exitcloud.io / escapecloud.io) for richer reports and scoring
+- connected to a platform (exitcloud.io / escapecloud.io) for richer reports and scoring
+- in CI/CD via the [cloudexit GitHub Action](https://github.com/marketplace/actions/github-action-for-cloudexit) for automated assessments
 
 ---
 
