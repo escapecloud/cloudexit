@@ -425,6 +425,21 @@ class NonInteractiveAWSTests(unittest.TestCase):
         )
         self.assertEqual(config_arg["providerDetails"]["region"], "eu-central-1")
 
+    def test_includes_optional_session_token_from_env(self):
+        env = {**self._BASE_ENV, "AWS_SESSION_TOKEN": "sts-session-token"}
+        with (
+            patch.dict(os.environ, env, clear=False),
+            patch("main.validate_region"),
+            patch("main.run_assessment") as mock_run,
+            patch("main.console.print"),
+        ):
+            main.handle_aws(_ni_aws_args())
+
+        config_arg = mock_run.call_args[0][0]
+        self.assertEqual(
+            config_arg["providerDetails"]["sessionToken"], "sts-session-token"
+        )
+
     def test_missing_exit_strategy_exits_config(self):
         env = {k: v for k, v in self._BASE_ENV.items() if k != "ESC_EXIT_STRATEGY"}
         with (

@@ -4,6 +4,7 @@ import argparse
 import boto3
 import time
 import sys
+import os
 from rich.console import Console
 from datetime import datetime
 from botocore.exceptions import NoCredentialsError, ProfileNotFound
@@ -115,6 +116,13 @@ def handle_aws(args):
             except (NoCredentialsError, ProfileNotFound) as e:
                 console.print(f"[red]AWS profile error: {str(e)}.[/red]")
                 sys.exit(codes.CONFIG)
+            provider_details = {
+                "accessKey": credentials.access_key,
+                "secretKey": credentials.secret_key,
+                "region": region,
+            }
+            if getattr(credentials, "token", None):
+                provider_details["sessionToken"] = credentials.token
             config = {
                 "name": (
                     args.name.strip()
@@ -124,21 +132,25 @@ def handle_aws(args):
                 "cloudServiceProvider": cloud_provider,
                 "exitStrategy": exit_strategy,
                 "assessmentType": assessment_type,
-                "providerDetails": {
-                    "accessKey": credentials.access_key,
-                    "secretKey": credentials.secret_key,
-                    "region": region,
-                },
+                "providerDetails": provider_details,
             }
         else:
             access_key = require_env("AWS_ACCESS_KEY_ID", "AWS access key")
             secret_key = require_env("AWS_SECRET_ACCESS_KEY", "AWS secret key")
             region = require_env("AWS_DEFAULT_REGION", "AWS region")
+            session_token = os.environ.get("AWS_SESSION_TOKEN", "").strip()
             try:
                 validate_region(region)
             except ValueError as e:
                 console.print(f"[red]AWS_DEFAULT_REGION: {e}[/red]")
                 sys.exit(codes.CONFIG)
+            provider_details = {
+                "accessKey": access_key,
+                "secretKey": secret_key,
+                "region": region,
+            }
+            if session_token:
+                provider_details["sessionToken"] = session_token
             config = {
                 "name": (
                     args.name.strip()
@@ -148,11 +160,7 @@ def handle_aws(args):
                 "cloudServiceProvider": cloud_provider,
                 "exitStrategy": exit_strategy,
                 "assessmentType": assessment_type,
-                "providerDetails": {
-                    "accessKey": access_key,
-                    "secretKey": secret_key,
-                    "region": region,
-                },
+                "providerDetails": provider_details,
             }
 
     elif args.profile:
@@ -185,6 +193,13 @@ def handle_aws(args):
             # logger.info(f"Using AWS profile '{args.profile}' with region '{region}'.")
 
             exit_strategy, assessment_type = prompt_required_inputs()
+            provider_details = {
+                "accessKey": credentials.access_key,
+                "secretKey": credentials.secret_key,
+                "region": region,
+            }
+            if getattr(credentials, "token", None):
+                provider_details["sessionToken"] = credentials.token
             config = {
                 "name": (
                     args.name.strip()
@@ -194,11 +209,7 @@ def handle_aws(args):
                 "cloudServiceProvider": cloud_provider,
                 "exitStrategy": exit_strategy,
                 "assessmentType": assessment_type,
-                "providerDetails": {
-                    "accessKey": credentials.access_key,
-                    "secretKey": credentials.secret_key,
-                    "region": region,
-                },
+                "providerDetails": provider_details,
             }
         except (NoCredentialsError, ProfileNotFound) as e:
             # logger.error(f"AWS profile error: {e}", exc_info=True)

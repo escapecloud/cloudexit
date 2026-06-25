@@ -61,6 +61,7 @@ def verify_credentials(
                 "ec2",
                 aws_access_key_id=provider_details["accessKey"],
                 aws_secret_access_key=provider_details["secretKey"],
+                aws_session_token=provider_details.get("sessionToken"),
                 region_name=provider_details["region"],
             )
             client.describe_regions()  # Benign call to verify credentials
@@ -137,6 +138,7 @@ def test_permissions(
                 "sts",
                 aws_access_key_id=provider_details["accessKey"],
                 aws_secret_access_key=provider_details["secretKey"],
+                aws_session_token=provider_details.get("sessionToken"),
                 region_name=provider_details["region"],
             )
             identity = sts_client.get_caller_identity()
@@ -147,6 +149,7 @@ def test_permissions(
                 "iam",
                 aws_access_key_id=provider_details["accessKey"],
                 aws_secret_access_key=provider_details["secretKey"],
+                aws_session_token=provider_details.get("sessionToken"),
                 region_name=provider_details["region"],
             )
             policies = iam_client.list_attached_user_policies(UserName=user_name)

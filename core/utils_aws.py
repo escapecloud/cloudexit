@@ -76,6 +76,7 @@ def build_aws_resource_inventory(
         session = boto3.Session(
             aws_access_key_id=access_key,
             aws_secret_access_key=secret_key,
+            aws_session_token=provider_details.get("sessionToken"),
             region_name=region,
         )
 
@@ -225,6 +226,7 @@ def build_aws_cost_inventory(
         session = boto3.Session(
             aws_access_key_id=provider_details["accessKey"],
             aws_secret_access_key=provider_details["secretKey"],
+            aws_session_token=provider_details.get("sessionToken"),
             region_name=provider_details["region"],
         )
         cost_explorer = session.client("ce", region_name="us-east-1")
