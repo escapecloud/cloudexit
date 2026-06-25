@@ -287,6 +287,9 @@ def handle_azure(args):
         )
         subscription_id = require_env("ESC_SUBSCRIPTION_ID", "Azure subscription ID")
         resource_group = require_env("ESC_RESOURCE_GROUP", "Azure resource group")
+        tenant_id = require_env("AZURE_TENANT_ID", "Azure tenant ID")
+        client_id = os.environ.get("AZURE_CLIENT_ID", "").strip()
+        client_secret = os.environ.get("AZURE_CLIENT_SECRET", "").strip()
 
         if args.cli:
             if not is_azure_cli_installed():
@@ -307,17 +310,37 @@ def handle_azure(args):
                     "[bold cyan]az login --scope https://management.azure.com/.default[/bold cyan]"
                 )
                 sys.exit(codes.CONFIG)
-            tenant_id = require_env("AZURE_TENANT_ID", "Azure tenant ID")
             credential = DefaultAzureCredential()
         else:
-            tenant_id = require_env("AZURE_TENANT_ID", "Azure tenant ID")
-            client_id = require_env("AZURE_CLIENT_ID", "Azure client ID")
-            client_secret = require_env("AZURE_CLIENT_SECRET", "Azure client secret")
-            credential = ClientSecretCredential(
-                tenant_id=tenant_id,
-                client_id=client_id,
-                client_secret=client_secret,
-            )
+            if client_secret:
+                if not client_id:
+                    console.print(
+                        "[red]--non-interactive with AZURE_CLIENT_SECRET also requires AZURE_CLIENT_ID.[/red]"
+                    )
+                    sys.exit(codes.CONFIG)
+                credential = ClientSecretCredential(
+                    tenant_id=tenant_id,
+                    client_id=client_id,
+                    client_secret=client_secret,
+                )
+            else:
+                if not client_id:
+                    console.print(
+                        "[red]--non-interactive Azure OIDC requires AZURE_CLIENT_ID when AZURE_CLIENT_SECRET is not set.[/red]"
+                    )
+                    sys.exit(codes.CONFIG)
+                credential = DefaultAzureCredential()
+
+        provider_details = {
+            "credential": credential,
+            "tenantId": tenant_id,
+            "subscriptionId": subscription_id,
+            "resourceGroupName": resource_group,
+        }
+        if client_id:
+            provider_details["clientId"] = client_id
+        if not args.cli and client_secret:
+            provider_details["clientSecret"] = client_secret
 
         config = {
             "name": (
@@ -328,17 +351,7 @@ def handle_azure(args):
             "cloudServiceProvider": cloud_provider,
             "exitStrategy": exit_strategy,
             "assessmentType": assessment_type,
-            "providerDetails": {
-                "credential": credential,
-                "tenantId": tenant_id,
-                "subscriptionId": subscription_id,
-                "resourceGroupName": resource_group,
-                **(
-                    {}
-                    if args.cli
-                    else {"clientId": client_id, "clientSecret": client_secret}
-                ),
-            },
+            "providerDetails": provider_details,
         }
 
     elif args.cli:
