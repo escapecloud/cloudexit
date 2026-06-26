@@ -4,6 +4,7 @@ import argparse
 import boto3
 import time
 import sys
+import os
 from rich.console import Console
 from datetime import datetime
 from botocore.exceptions import NoCredentialsError, ProfileNotFound
@@ -115,6 +116,13 @@ def handle_aws(args):
             except (NoCredentialsError, ProfileNotFound) as e:
                 console.print(f"[red]AWS profile error: {str(e)}.[/red]")
                 sys.exit(codes.CONFIG)
+            provider_details = {
+                "accessKey": credentials.access_key,
+                "secretKey": credentials.secret_key,
+                "region": region,
+            }
+            if getattr(credentials, "token", None):
+                provider_details["sessionToken"] = credentials.token
             config = {
                 "name": (
                     args.name.strip()
@@ -124,21 +132,25 @@ def handle_aws(args):
                 "cloudServiceProvider": cloud_provider,
                 "exitStrategy": exit_strategy,
                 "assessmentType": assessment_type,
-                "providerDetails": {
-                    "accessKey": credentials.access_key,
-                    "secretKey": credentials.secret_key,
-                    "region": region,
-                },
+                "providerDetails": provider_details,
             }
         else:
             access_key = require_env("AWS_ACCESS_KEY_ID", "AWS access key")
             secret_key = require_env("AWS_SECRET_ACCESS_KEY", "AWS secret key")
             region = require_env("AWS_DEFAULT_REGION", "AWS region")
+            session_token = os.environ.get("AWS_SESSION_TOKEN", "").strip()
             try:
                 validate_region(region)
             except ValueError as e:
                 console.print(f"[red]AWS_DEFAULT_REGION: {e}[/red]")
                 sys.exit(codes.CONFIG)
+            provider_details = {
+                "accessKey": access_key,
+                "secretKey": secret_key,
+                "region": region,
+            }
+            if session_token:
+                provider_details["sessionToken"] = session_token
             config = {
                 "name": (
                     args.name.strip()
@@ -148,11 +160,7 @@ def handle_aws(args):
                 "cloudServiceProvider": cloud_provider,
                 "exitStrategy": exit_strategy,
                 "assessmentType": assessment_type,
-                "providerDetails": {
-                    "accessKey": access_key,
-                    "secretKey": secret_key,
-                    "region": region,
-                },
+                "providerDetails": provider_details,
             }
 
     elif args.profile:
@@ -185,6 +193,13 @@ def handle_aws(args):
             # logger.info(f"Using AWS profile '{args.profile}' with region '{region}'.")
 
             exit_strategy, assessment_type = prompt_required_inputs()
+            provider_details = {
+                "accessKey": credentials.access_key,
+                "secretKey": credentials.secret_key,
+                "region": region,
+            }
+            if getattr(credentials, "token", None):
+                provider_details["sessionToken"] = credentials.token
             config = {
                 "name": (
                     args.name.strip()
@@ -194,11 +209,7 @@ def handle_aws(args):
                 "cloudServiceProvider": cloud_provider,
                 "exitStrategy": exit_strategy,
                 "assessmentType": assessment_type,
-                "providerDetails": {
-                    "accessKey": credentials.access_key,
-                    "secretKey": credentials.secret_key,
-                    "region": region,
-                },
+                "providerDetails": provider_details,
             }
         except (NoCredentialsError, ProfileNotFound) as e:
             # logger.error(f"AWS profile error: {e}", exc_info=True)
@@ -276,6 +287,9 @@ def handle_azure(args):
         )
         subscription_id = require_env("ESC_SUBSCRIPTION_ID", "Azure subscription ID")
         resource_group = require_env("ESC_RESOURCE_GROUP", "Azure resource group")
+        tenant_id = require_env("AZURE_TENANT_ID", "Azure tenant ID")
+        client_id = os.environ.get("AZURE_CLIENT_ID", "").strip()
+        client_secret = os.environ.get("AZURE_CLIENT_SECRET", "").strip()
 
         if args.cli:
             if not is_azure_cli_installed():
@@ -296,17 +310,37 @@ def handle_azure(args):
                     "[bold cyan]az login --scope https://management.azure.com/.default[/bold cyan]"
                 )
                 sys.exit(codes.CONFIG)
-            tenant_id = require_env("AZURE_TENANT_ID", "Azure tenant ID")
             credential = DefaultAzureCredential()
         else:
-            tenant_id = require_env("AZURE_TENANT_ID", "Azure tenant ID")
-            client_id = require_env("AZURE_CLIENT_ID", "Azure client ID")
-            client_secret = require_env("AZURE_CLIENT_SECRET", "Azure client secret")
-            credential = ClientSecretCredential(
-                tenant_id=tenant_id,
-                client_id=client_id,
-                client_secret=client_secret,
-            )
+            if client_secret:
+                if not client_id:
+                    console.print(
+                        "[red]--non-interactive with AZURE_CLIENT_SECRET also requires AZURE_CLIENT_ID.[/red]"
+                    )
+                    sys.exit(codes.CONFIG)
+                credential = ClientSecretCredential(
+                    tenant_id=tenant_id,
+                    client_id=client_id,
+                    client_secret=client_secret,
+                )
+            else:
+                if not client_id:
+                    console.print(
+                        "[red]--non-interactive Azure OIDC requires AZURE_CLIENT_ID when AZURE_CLIENT_SECRET is not set.[/red]"
+                    )
+                    sys.exit(codes.CONFIG)
+                credential = DefaultAzureCredential()
+
+        provider_details = {
+            "credential": credential,
+            "tenantId": tenant_id,
+            "subscriptionId": subscription_id,
+            "resourceGroupName": resource_group,
+        }
+        if client_id:
+            provider_details["clientId"] = client_id
+        if not args.cli and client_secret:
+            provider_details["clientSecret"] = client_secret
 
         config = {
             "name": (
@@ -317,17 +351,7 @@ def handle_azure(args):
             "cloudServiceProvider": cloud_provider,
             "exitStrategy": exit_strategy,
             "assessmentType": assessment_type,
-            "providerDetails": {
-                "credential": credential,
-                "tenantId": tenant_id,
-                "subscriptionId": subscription_id,
-                "resourceGroupName": resource_group,
-                **(
-                    {}
-                    if args.cli
-                    else {"clientId": client_id, "clientSecret": client_secret}
-                ),
-            },
+            "providerDetails": provider_details,
         }
 
     elif args.cli:

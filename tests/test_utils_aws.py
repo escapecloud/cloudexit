@@ -196,6 +196,48 @@ class AwsApiCallWithRetryTests(unittest.TestCase):
 class BuildAwsCostInventoryErrorTests(unittest.TestCase):
     @patch("core.utils_aws.connect")
     @patch("core.utils_aws.boto3.Session")
+    def test_passes_session_token_to_boto3_session(
+        self, mock_session_cls, mock_connect
+    ):
+        mock_session = MagicMock()
+        mock_session_cls.return_value = mock_session
+        mock_ce = MagicMock()
+        mock_session.client.return_value = mock_ce
+        mock_ce.get_cost_and_usage.return_value = {"ResultsByTime": []}
+
+        mock_conn = MagicMock()
+        mock_connect.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        mock_connect.return_value.__exit__ = MagicMock(return_value=False)
+
+        from core.utils_aws import build_aws_cost_inventory
+
+        with tempfile.TemporaryDirectory() as tmp:
+            report_path = os.path.join(tmp, "report")
+            raw_data_path = os.path.join(tmp, "raw")
+            os.makedirs(os.path.join(report_path, "data"), exist_ok=True)
+            os.makedirs(raw_data_path, exist_ok=True)
+
+            build_aws_cost_inventory(
+                2,
+                {
+                    "accessKey": "AK",
+                    "secretKey": "SK",
+                    "sessionToken": "TOKEN",
+                    "region": "us-east-1",
+                },
+                report_path,
+                raw_data_path,
+            )
+
+        mock_session_cls.assert_called_once_with(
+            aws_access_key_id="AK",
+            aws_secret_access_key="SK",
+            aws_session_token="TOKEN",
+            region_name="us-east-1",
+        )
+
+    @patch("core.utils_aws.connect")
+    @patch("core.utils_aws.boto3.Session")
     def test_sqlite_error_is_logged_but_not_reraised(
         self, mock_session_cls, mock_connect
     ):

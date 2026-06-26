@@ -425,6 +425,21 @@ class NonInteractiveAWSTests(unittest.TestCase):
         )
         self.assertEqual(config_arg["providerDetails"]["region"], "eu-central-1")
 
+    def test_includes_optional_session_token_from_env(self):
+        env = {**self._BASE_ENV, "AWS_SESSION_TOKEN": "sts-session-token"}
+        with (
+            patch.dict(os.environ, env, clear=False),
+            patch("main.validate_region"),
+            patch("main.run_assessment") as mock_run,
+            patch("main.console.print"),
+        ):
+            main.handle_aws(_ni_aws_args())
+
+        config_arg = mock_run.call_args[0][0]
+        self.assertEqual(
+            config_arg["providerDetails"]["sessionToken"], "sts-session-token"
+        )
+
     def test_missing_exit_strategy_exits_config(self):
         env = {k: v for k, v in self._BASE_ENV.items() if k != "ESC_EXIT_STRATEGY"}
         with (
@@ -483,6 +498,42 @@ class NonInteractiveAzureTests(unittest.TestCase):
         self.assertEqual(config_arg["providerDetails"]["tenantId"], "tenant-id-123")
         self.assertEqual(config_arg["providerDetails"]["subscriptionId"], "sub-id-789")
         self.assertEqual(config_arg["providerDetails"]["resourceGroupName"], "my-rg")
+
+    def test_uses_default_credential_when_client_secret_missing(self):
+        env = {k: v for k, v in self._BASE_ENV.items() if k != "AZURE_CLIENT_SECRET"}
+        mock_credential = MagicMock()
+        with (
+            patch.dict(os.environ, env, clear=False),
+            patch("main.DefaultAzureCredential", return_value=mock_credential),
+            patch("main.ClientSecretCredential") as mock_client_secret_cred,
+            patch("main.run_assessment") as mock_run,
+            patch("main.console.print"),
+        ):
+            main.handle_azure(_ni_azure_args())
+
+        mock_client_secret_cred.assert_not_called()
+        mock_run.assert_called_once()
+        config_arg = mock_run.call_args[0][0]
+        self.assertEqual(config_arg["providerDetails"]["credential"], mock_credential)
+        self.assertEqual(config_arg["providerDetails"]["tenantId"], "tenant-id-123")
+        self.assertEqual(config_arg["providerDetails"]["subscriptionId"], "sub-id-789")
+        self.assertEqual(config_arg["providerDetails"]["resourceGroupName"], "my-rg")
+        self.assertEqual(config_arg["providerDetails"]["clientId"], "client-id-456")
+        self.assertNotIn("clientSecret", config_arg["providerDetails"])
+
+    def test_missing_client_id_for_oidc_exits_config(self):
+        env = {
+            k: v
+            for k, v in self._BASE_ENV.items()
+            if k not in ("AZURE_CLIENT_SECRET", "AZURE_CLIENT_ID")
+        }
+        with (
+            patch.dict(os.environ, env, clear=False),
+            patch("main.console.print"),
+        ):
+            with self.assertRaises(SystemExit) as ctx:
+                main.handle_azure(_ni_azure_args())
+        self.assertEqual(ctx.exception.code, codes.CONFIG)
 
     def test_missing_subscription_id_exits_config(self):
         env = {k: v for k, v in self._BASE_ENV.items() if k != "ESC_SUBSCRIPTION_ID"}

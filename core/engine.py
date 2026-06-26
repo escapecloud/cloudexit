@@ -2,7 +2,7 @@
 import logging
 import os
 import boto3
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any
 from azure.identity import ClientSecretCredential
 from azure.mgmt.resource import ResourceManagementClient
@@ -61,6 +61,7 @@ def verify_credentials(
                 "ec2",
                 aws_access_key_id=provider_details["accessKey"],
                 aws_secret_access_key=provider_details["secretKey"],
+                aws_session_token=provider_details.get("sessionToken"),
                 region_name=provider_details["region"],
             )
             client.describe_regions()  # Benign call to verify credentials
@@ -137,35 +138,97 @@ def test_permissions(
                 "sts",
                 aws_access_key_id=provider_details["accessKey"],
                 aws_secret_access_key=provider_details["secretKey"],
+                aws_session_token=provider_details.get("sessionToken"),
                 region_name=provider_details["region"],
             )
             identity = sts_client.get_caller_identity()
-            user_arn = identity["Arn"]
-            user_name = user_arn.split("/")[-1]
+            caller_arn = identity.get("Arn", "")
 
-            iam_client = boto3.client(
-                "iam",
-                aws_access_key_id=provider_details["accessKey"],
-                aws_secret_access_key=provider_details["secretKey"],
-                region_name=provider_details["region"],
-            )
-            policies = iam_client.list_attached_user_policies(UserName=user_name)
-            policy_names = [
-                policy["PolicyName"] for policy in policies["AttachedPolicies"]
-            ]
+            # IAM users keep existing policy-name validation for backwards compatibility.
+            if ":user/" in caller_arn:
+                user_name = caller_arn.split("/")[-1]
+                iam_client = boto3.client(
+                    "iam",
+                    aws_access_key_id=provider_details["accessKey"],
+                    aws_secret_access_key=provider_details["secretKey"],
+                    aws_session_token=provider_details.get("sessionToken"),
+                    region_name=provider_details["region"],
+                )
+                policies = iam_client.list_attached_user_policies(UserName=user_name)
+                policy_names = [
+                    policy["PolicyName"] for policy in policies["AttachedPolicies"]
+                ]
 
-            permission_reader = "ViewOnlyAccess" in policy_names
-            permission_cost = "AWSBillingReadOnlyAccess" in policy_names
+                permission_reader = "ViewOnlyAccess" in policy_names
+                permission_cost = "AWSBillingReadOnlyAccess" in policy_names
 
-            if permission_reader and permission_cost:
-                permission_valid = True
-                logs = "ViewOnlyAccess and AWSBillingReadOnlyAccess policies validated."
-            elif permission_reader:
-                logs = "ViewOnlyAccess policy validated, but AWSBillingReadOnlyAccess policy validation failed."
-            elif permission_cost:
-                logs = "AWSBillingReadOnlyAccess policy validated, but ViewOnlyAccess policy validation failed."
+                if permission_reader and permission_cost:
+                    permission_valid = True
+                    logs = "ViewOnlyAccess and AWSBillingReadOnlyAccess policies validated."
+                elif permission_reader:
+                    logs = "ViewOnlyAccess policy validated, but AWSBillingReadOnlyAccess policy validation failed."
+                elif permission_cost:
+                    logs = "AWSBillingReadOnlyAccess policy validated, but ViewOnlyAccess policy validation failed."
+                else:
+                    logs = "Both ViewOnlyAccess and AWSBillingReadOnlyAccess policy validations failed."
             else:
-                logs = "Both ViewOnlyAccess and AWSBillingReadOnlyAccess policy validations failed."
+                # Assumed roles/federated identities (e.g. GitHub OIDC) are validated by capabilities.
+                reader_error = ""
+                cost_error = ""
+
+                try:
+                    ec2_client = boto3.client(
+                        "ec2",
+                        aws_access_key_id=provider_details["accessKey"],
+                        aws_secret_access_key=provider_details["secretKey"],
+                        aws_session_token=provider_details.get("sessionToken"),
+                        region_name=provider_details["region"],
+                    )
+                    ec2_client.describe_regions()
+                    permission_reader = True
+                except Exception as e:
+                    reader_error = str(e)
+
+                try:
+                    ce_client = boto3.client(
+                        "ce",
+                        aws_access_key_id=provider_details["accessKey"],
+                        aws_secret_access_key=provider_details["secretKey"],
+                        aws_session_token=provider_details.get("sessionToken"),
+                        region_name="us-east-1",
+                    )
+                    today = datetime.now(timezone.utc).date()
+                    ce_client.get_cost_and_usage(
+                        TimePeriod={
+                            "Start": today.replace(day=1).isoformat(),
+                            "End": (today + timedelta(days=1)).isoformat(),
+                        },
+                        Granularity="MONTHLY",
+                        Metrics=["UnblendedCost"],
+                    )
+                    permission_cost = True
+                except Exception as e:
+                    cost_error = str(e)
+
+                if permission_reader and permission_cost:
+                    permission_valid = True
+                    logs = (
+                        "AWS role/federated capability checks validated "
+                        "(ec2:DescribeRegions and ce:GetCostAndUsage)."
+                    )
+                elif permission_reader:
+                    logs = "AWS capability checks: ec2:DescribeRegions validated, but ce:GetCostAndUsage failed."
+                    if cost_error:
+                        logs += f" Details: {cost_error}"
+                elif permission_cost:
+                    logs = "AWS capability checks: ce:GetCostAndUsage validated, but ec2:DescribeRegions failed."
+                    if reader_error:
+                        logs += f" Details: {reader_error}"
+                else:
+                    logs = "AWS capability checks failed for both ec2:DescribeRegions and ce:GetCostAndUsage."
+                    details = ", ".join(d for d in [reader_error, cost_error] if d)
+                    if details:
+                        logs += f" Details: {details}"
 
         except NoCredentialsError as e:
             logs = f"AWS credentials validation failed: {str(e)}"
