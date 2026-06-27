@@ -1,5 +1,4 @@
 # core/utils_report_pdf.py
-import os
 import math
 import logging
 from datetime import datetime
@@ -13,13 +12,10 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.colors import HexColor
 from reportlab.platypus import Paragraph, Image, Table, TableStyle
-from reportlab.graphics.shapes import Drawing, Polygon, Line, String
+from reportlab.graphics.shapes import Drawing, Polygon, Line, Circle, Wedge, String
 from reportlab.graphics.charts.legends import Legend
 from reportlab.graphics.charts.piecharts import Pie
 from reportlab.graphics.charts.barcharts import VerticalBarChart
-
-# Plotly
-import plotly.graph_objects as go
 
 from core.utils_report_common import (
     enrich_resource_inventory,
@@ -313,33 +309,105 @@ def draw_cost_chart(months: list[str], costs: list[float]) -> Drawing:
     return d
 
 
-def draw_exitscore_chart(
-    exit_score: int, output_path: str, width: int = 750, height: int = 500
-) -> str:
-    # Create the gauge chart
-    fig = go.Figure(
-        go.Indicator(
-            mode="gauge+number",
-            value=exit_score,
-            domain={"x": [0, 1], "y": [0, 1]},
-            gauge={
-                "axis": {"range": [0, 100], "tickwidth": 0.2, "tickcolor": "darkgray"},
-                "bar": {"color": "#f3f6f6", "thickness": 0.2},
-                "steps": [
-                    {"range": [0, 20], "color": "#ba1c1d"},
-                    {"range": [20, 40], "color": "#ff9533"},
-                    {"range": [40, 60], "color": "#f1ca00"},
-                    {"range": [60, 80], "color": "#76c31d"},
-                    {"range": [80, 100], "color": "#065f43"},
-                ],
-            },
+def draw_exitscore_pie_chart(
+    exit_score: int,
+    size: float = 7.5 * cm,
+    show_title: bool = False,
+    ring_bg_color: str = "#E9ECEF",
+    value_color: str = "#000000",
+) -> Drawing:
+    # Clamp value
+    val = max(0, min(100, int(exit_score)))
+
+    def score_to_grade(s: int) -> str:
+        if s > 83:
+            return "A"
+        if s > 67:
+            return "B"
+        if s > 50:
+            return "C"
+        if s > 33:
+            return "D"
+        if s > 17:
+            return "E"
+        return "F"
+
+    # Band palette (matches the 6-grade gauge segments)
+    bands = [
+        (0, 17, "#ba1c1d", "F"),
+        (17, 33, "#d44000", "E"),
+        (33, 50, "#ff9533", "D"),
+        (50, 67, "#f1ca00", "C"),
+        (67, 83, "#76c31d", "B"),
+        (83, 100, "#065f43", "A"),
+    ]
+
+    def band_color(score: int):
+        s = max(0, min(100, int(score)))
+        for a, b, hexcol, _ in bands:
+            if a <= s <= b:
+                return HexColor(hexcol)
+        return HexColor("#4a5568")
+
+    # Canvas: a touch taller when showing a title
+    d = Drawing(size, size + (20 if show_title else 0))
+    w, h = d.width, d.height
+    cx = w / 2.0
+    cy = (h / 2.0) - (8 if show_title else 0)
+
+    # Geometry
+    r_outer = min(w, h) * 0.40
+    r_inner = r_outer * 0.62
+
+    # Optional title
+    if show_title:
+        d.add(
+            String(
+                cx,
+                h - 8,
+                "Exit Score",
+                textAnchor="middle",
+                fontSize=10,
+                fillColor=colors.black,
+            )
+        )
+
+    # Background ring
+    d.add(Circle(cx, cy, r_outer, fillColor=HexColor(ring_bg_color), strokeColor=None))
+
+    # Progress arc (start at -90 deg to sweep from top clockwise)
+    if val > 0:
+        start_deg = -90.0
+        sweep_deg = 360.0 * (val / 100.0)
+        d.add(
+            Wedge(
+                cx,
+                cy,
+                r_outer,
+                start_deg,
+                start_deg + sweep_deg,
+                fillColor=band_color(val),
+                strokeColor=None,
+            )
+        )
+
+    # Punch the inner hole to make a donut
+    d.add(Circle(cx, cy, r_inner, fillColor=HexColor("#FFFFFF"), strokeColor=None))
+
+    # Grade label
+    d.add(
+        String(
+            cx,
+            cy - 7,
+            score_to_grade(val),
+            textAnchor="middle",
+            fontSize=22,
+            fontName="Helvetica-Bold",
+            fillColor=HexColor(value_color),
         )
     )
 
-    image_file = os.path.join(output_path, "exit_score_chart.png")
-    fig.write_image(image_file, width=width, height=height)
-
-    return image_file
+    return d
 
 
 def draw_vendor_lockin_radar_chart(

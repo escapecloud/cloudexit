@@ -220,25 +220,25 @@
                   class="d-flex align-items-center justify-content-between chart-card-head"
                 >
                   <div>
-                    <h3 class="m-0">Exit Readiness Score</h3>
+                    <h3 class="m-0">Scoring #1 - Exit Readiness</h3>
                   </div>
                   <div class="info-hint-box">
                     <i class="bi bi-info-circle"></i>
                     <div class="hint-hoverbox">
-                      <h5>Exit Score</h5>
+                      <h5>Exit Readiness Grade</h5>
                       <div class="hint-dt">
                         <p>
-                          This gauge chart represents the EscapeCloud Platform's
-                          exit score methodology, based on risk assessment
-                          results and the alternative technology landscape.
-                          <br /><br />It uses a benchmark developed by our
-                          experts to quantify the challenges and limitations of
-                          exiting the cloud:
-                          <br />- Complex (0 - 20)
-                          <br />- Challenging (20 - 40)
-                          <br />- Manageable (40 - 60)
-                          <br />- Smooth Transition (60 - 80)
-                          <br />- Seamless (80 - 100)
+                          This grade reflects how ready your environment is to
+                          exit the cloud. It's based on how dependent your setup
+                          is on provider-specific services and whether mature
+                          alternatives exist - the lower the dependency, the
+                          higher the grade.
+                          <br /><br />A - Seamless
+                          <br />B - Smooth Transition
+                          <br />C - Manageable
+                          <br />D - Challenging
+                          <br />E - Complex
+                          <br />F - Very Complex
                         </p>
                       </div>
                     </div>
@@ -274,7 +274,7 @@
                   class="d-flex align-items-center justify-content-between chart-card-head"
                 >
                   <div>
-                    <h3 class="m-0">Vendor Lock-In Score</h3>
+                    <h3 class="m-0">Scoring #2 - Vendor Lock-In Score</h3>
                   </div>
                   <div class="info-hintbx">
                     <i class="bi bi-info-circle"></i>
@@ -1130,24 +1130,40 @@
           ],
         };
 
+        const exitScoreValue = {{ exit_score | default(0) | round(0) }};
+        const exitScoreGrade =
+          exitScoreValue > 83
+            ? "A"
+            : exitScoreValue > 67
+              ? "B"
+              : exitScoreValue > 50
+                ? "C"
+                : exitScoreValue > 33
+                  ? "D"
+                  : exitScoreValue > 17
+                    ? "E"
+                    : "F";
+
         const gaugeSpec = {
           width: 300,
           height: 350,
           padding: { top: 0, bottom: 0, left: 0, right: 0 },
           type: "common",
+          tooltip: { visible: false },
           data: [
             {
               id: "pointer",
-              values: [{ type: "Score", value: {{ exit_score | default(0) | round(0) }} }],
+              values: [{ type: "Score", value: exitScoreValue }],
             },
             {
               id: "segment",
               values: [
-                { type: "Complex", value: 20 },
-                { type: "Challenging", value: 40 },
-                { type: "Manageable", value: 60 },
-                { type: "Smooth Transition", value: 80 },
-                { type: "Seamless", value: 100 },
+                { type: "F", value: 17 },
+                { type: "E", value: 33 },
+                { type: "D", value: 50 },
+                { type: "C", value: 67 },
+                { type: "B", value: 83 },
+                { type: "A", value: 100 },
               ],
             },
           ],
@@ -1169,10 +1185,11 @@
                   fill: {
                     type: "threshold",
                     field: "value",
-                    domain: [20, 40, 60, 80, 100],
+                    domain: [17, 33, 50, 67, 83, 100],
                     range: [
                       "#ba1c1d",
                       "#ba1c1d",
+                      "#d44000",
                       "#ff9533",
                       "#f1ca00",
                       "#76c31d",
@@ -1205,7 +1222,7 @@
                   fill: {
                     type: "threshold",
                     field: "value",
-                    domain: [20, 40, 60, 80, 100],
+                    domain: [17, 33, 50, 67, 83],
                     range: ["#012e53"],
                   },
                 },
@@ -1219,7 +1236,7 @@
                   fill: {
                     type: "threshold",
                     field: "value",
-                    domain: [20, 40, 60, 80, 100],
+                    domain: [17, 33, 50, 67, 83],
                     range: ["#012e53"],
                   },
                 },
@@ -1265,9 +1282,9 @@
               offsetY: "-10%",
               title: {
                 style: {
-                  text: "{{ exit_score | default(0) | round(0) }}",
-                  fontSize: 40,
-                  fontWeight: 500,
+                  text: exitScoreGrade,
+                  fontSize: 52,
+                  fontWeight: 600,
                   fontColor: "#012e53",
                 },
               },
@@ -1275,33 +1292,11 @@
                 {
                   style: {
                     dy: 10,
-                    text: "Exit Score",
+                    text: "Grade",
                     fontSize: 20,
                   },
                 },
               ],
-            },
-            {
-              visible: true,
-              offsetX: "-70%",
-              offsetY: "45%",
-              title: {
-                style: {
-                  text: "0",
-                  fontSize: 14,
-                },
-              },
-            },
-            {
-              visible: true,
-              offsetX: "70%",
-              offsetY: "45%",
-              title: {
-                style: {
-                  text: "100",
-                  fontSize: 14,
-                },
-              },
             },
           ],
         };

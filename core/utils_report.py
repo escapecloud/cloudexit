@@ -42,7 +42,7 @@ from core.utils_report_pdf import (
     draw_risk_chart,
     draw_cost_chart,
     draw_vendor_lockin_radar_chart,
-    draw_exitscore_chart,
+    draw_exitscore_pie_chart,
 )
 
 # Configure logger
@@ -472,36 +472,29 @@ def _build_scoring_section(scoring_data, report_path, styles, content_style):
     content = []
     content.append(Spacer(1, 12))
     content.append(Paragraph("EscapeCloud Scoring", styles["Heading1"]))
-    content.append(Paragraph("Scoring #1 - Exit Score", styles["Heading2"]))
+    content.append(Paragraph("Scoring #1 - Exit Readiness", styles["Heading2"]))
     content.append(
         Paragraph(
-            "The following gauge chart visualizes a combined score that reflects "
-            "both risk assessment results and the evaluation of alternative technologies:",
+            "The Exit Readiness Grade provides a consolidated indicator of how prepared "
+            "the assessed environment is for a potential cloud exit or migration scenario:",
             content_style,
         )
     )
     content.append(Spacer(1, 12))
 
     exit_score = scoring_data.get("exit_score", 0) if scoring_data else 0
-
-    chart_output_path = os.path.join(report_path, "assets/charts")
-    os.makedirs(chart_output_path, exist_ok=True)
-
-    exit_score_image_path = draw_exitscore_chart(
-        exit_score, chart_output_path, width=750, height=500
-    )
+    exit_score_chart = draw_exitscore_pie_chart(exit_score, size=5 * cm)
 
     exitscore_table_data = [
         ["", ""],
-        ["Complex (0 - 20)", ""],
-        ["Challenging (20 - 40)", ""],
-        ["Manageable (40 - 60)", ""],
-        ["Smooth Transition (60 - 80)", ""],
-        ["Seamless (80 - 100)", ""],
+        ["A - Seamless", ""],
+        ["B - Smooth Transition", ""],
+        ["C - Manageable", ""],
+        ["D - Challenging", ""],
+        ["E - Complex", ""],
+        ["F - Very Complex", ""],
     ]
-    exitscore_table_data[1][1] = Image(
-        exit_score_image_path, width=7.5 * cm, height=5 * cm
-    )
+    exitscore_table_data[1][1] = exit_score_chart
 
     exitscore_table = Table(exitscore_table_data, colWidths=[5 * cm, 10.5 * cm])
     exitscore_table_style = TableStyle(
@@ -512,10 +505,10 @@ def _build_scoring_section(scoring_data, report_path, styles, content_style):
             ("FONTNAME", (0, 0), (1, 0), "Helvetica-Bold"),
             ("ALIGN", (0, 0), (1, 0), "CENTER"),
             ("VALIGN", (0, 0), (1, 0), "MIDDLE"),
-            ("SPAN", (1, 1), (1, 5)),
+            ("SPAN", (1, 1), (1, 6)),
             ("GRID", (0, 0), (-1, -1), 1, colors.black),
-            ("ALIGN", (0, 1), (0, 5), "LEFT"),
-            ("VALIGN", (0, 1), (0, 5), "MIDDLE"),
+            ("ALIGN", (0, 1), (0, 6), "LEFT"),
+            ("VALIGN", (0, 1), (0, 6), "MIDDLE"),
             ("ALIGN", (1, 1), (1, 1), "CENTER"),
             ("VALIGN", (1, 1), (1, 1), "MIDDLE"),
         ]
