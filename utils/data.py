@@ -140,9 +140,10 @@ def initialize_dataset() -> None:
                 f"[INFO] Download successful. Extracting dataset from {latest_file}..."
             )
 
-            with gzip.open(local_compressed_path, "rb") as f_in, open(
-                local_db_path, "wb"
-            ) as f_out:
+            with (
+                gzip.open(local_compressed_path, "rb") as f_in,
+                open(local_db_path, "wb") as f_out,
+            ):
                 shutil.copyfileobj(f_in, f_out)
 
             print("[INFO] Dataset updated successfully.")
