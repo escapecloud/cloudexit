@@ -735,6 +735,17 @@ def run_assessment(config, provider_name, *, dry_run=False):
 
         # Output the report path after the separator
         console.print("-------------------------------------------")
+        console.print(
+            "Need to see how a regulatory-aligned report looks (DORA / FINMA / UK PRA evidence support)?"
+        )
+        console.print(
+            "We can generate one from your --dry-run output and share a sample with you -- or forward this to your risk or compliance team."
+        )
+        console.print(
+            "Point-in-time evidence only; not a compliance certification or a complete exit strategy."
+        )
+        console.print("Contact: request_report@escapecloud.io")
+        console.print("-------------------------------------------")
         console.print("Outputs:", style="bold")
         if payload_path:
             console.print(f"Payload: {payload_path}", style="cyan")
