@@ -21,6 +21,11 @@ from core.engine import (
     sync_assessment,
     generate_report,
 )
+from core.utils_egress import estimate_egress
+from core.utils_report_egress import (
+    generate_egress_html_report,
+    generate_egress_pdf_report,
+)
 from core.utils_sync import write_assessment_payload
 from utils.azure import (
     select_subscription,
@@ -253,7 +258,7 @@ def handle_aws(args):
             return
 
     # Run the AWS assessment pipeline
-    run_assessment(config, "aws", dry_run=args.dry_run)
+    run_assessment(config, "aws", dry_run=args.dry_run, egress=args.egress)
 
 
 def handle_azure(args):
@@ -489,10 +494,10 @@ def handle_azure(args):
 
     # Run the Azure assessment pipeline
     # logger.info("Starting Azure assessment pipeline.")
-    run_assessment(config, "azure", dry_run=args.dry_run)
+    run_assessment(config, "azure", dry_run=args.dry_run, egress=args.egress)
 
 
-def run_assessment(config, provider_name, *, dry_run=False):
+def run_assessment(config, provider_name, *, dry_run=False, egress=False):
     # Record the assessment start time to propagate across stages
     started_at = int(time.time())
 
@@ -733,6 +738,69 @@ def run_assessment(config, provider_name, *, dry_run=False):
             )
             sys.exit(codes.REPORT)
 
+        # Stage 7: Egress Estimation (opt-in via --egress).
+        # A failure here must not discard the completed assessment.
+        egress_failed = False
+        egress_json_path = None
+        egress_html_path = None
+        egress_pdf_path = None
+        if egress:
+            console.print("-------------------------------------------")
+            console.print("Stage #7 – Egress Estimation", style="bold")
+
+            with console.status("Estimating egress data...", spinner="dots"):
+                egress_result = estimate_egress(
+                    config["cloudServiceProvider"],
+                    config["providerDetails"],
+                    raw_data_path,
+                    name=name,
+                    exit_strategy=config["exitStrategy"],
+                    assessment_type=config["assessmentType"],
+                )
+
+            if egress_result["success"]:
+                print_step("Estimating egress data...", status="ok")
+                egress_json_path = egress_result.get("json_path")
+
+                with console.status("Generating egress report...", spinner="dots"):
+                    egress_report_result = generate_egress_html_report(
+                        report_path, egress_json_path
+                    )
+
+                if egress_report_result["success"]:
+                    print_step("Generating egress report...", status="ok")
+                    egress_html_path = egress_report_result.get("html_path")
+                else:
+                    print_step(
+                        "Generating egress report...",
+                        status="error",
+                        logs=egress_report_result["logs"],
+                    )
+                    egress_failed = True
+
+                with console.status("Generating egress PDF...", spinner="dots"):
+                    egress_pdf_result = generate_egress_pdf_report(
+                        report_path, egress_json_path, config["providerDetails"]
+                    )
+
+                if egress_pdf_result["success"]:
+                    print_step("Generating egress PDF...", status="ok")
+                    egress_pdf_path = egress_pdf_result.get("pdf_path")
+                else:
+                    print_step(
+                        "Generating egress PDF...",
+                        status="error",
+                        logs=egress_pdf_result["logs"],
+                    )
+                    egress_failed = True
+            else:
+                print_step(
+                    "Estimating egress data...",
+                    status="error",
+                    logs=egress_result["logs"],
+                )
+                egress_failed = True
+
         # Output the report path after the separator
         console.print("-------------------------------------------")
         console.print(
@@ -758,7 +826,14 @@ def run_assessment(config, provider_name, *, dry_run=False):
         json_report_path = report_status.get("reports", {}).get("JSON")
         if json_report_path:
             console.print(f"JSON Report: {json_report_path}", style="cyan")
+        if egress_html_path:
+            console.print(f"Egress Report: {egress_html_path}", style="cyan")
+        if egress_pdf_path:
+            console.print(f"Egress PDF: {egress_pdf_path}", style="cyan")
         console.print("-------------------------------------------")
+
+        if egress_failed:
+            sys.exit(codes.EGRESS)
 
     except Exception as e:
         console.print(f"[red]Unexpected error: {e}[/red]")
@@ -780,6 +855,8 @@ def parse_arguments():
             "  python3 main.py azure --name 'DMS System'  # Use a pre-defined assessment name\n"
             "  python3 main.py aws --config config.json --dry-run  # Local report + payload.json, no remote sync\n"
             "  python3 main.py azure --config config.json --dry-run\n"
+            "  python3 main.py aws --config config.json --egress    # Estimate egress data volume\n"
+            "  python3 main.py azure --config config.json --egress\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -815,6 +892,13 @@ def parse_arguments():
             "remote sync."
         ),
     )
+    aws_parser.add_argument(
+        "--egress",
+        action="store_true",
+        help=(
+            "Estimate how much data lives in the region and " "would need to move out."
+        ),
+    )
 
     # Subparser for Azure
     azure_parser = subparsers.add_parser("azure", help="Perform an Azure assessment.")
@@ -841,6 +925,14 @@ def parse_arguments():
         help=(
             "Run a local assessment and also write raw_data/payload.json without "
             "remote sync."
+        ),
+    )
+    azure_parser.add_argument(
+        "--egress",
+        action="store_true",
+        help=(
+            "Estimate how much data lives in the resource group and "
+            "would need to move out."
         ),
     )
 

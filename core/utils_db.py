@@ -19,6 +19,7 @@ ALLOWED_TABLES = {
     "alternativetechnology",
     "alternativetechnologyorganization",
     "risk",
+    "egresspricing",
 }
 
 
