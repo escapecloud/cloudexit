@@ -107,14 +107,19 @@ def transform_alt_tech_for_pdf(
     return alt_tech
 
 
-def draw_header_footer(report_path: str, canvas, doc) -> None:
+def draw_header_footer(
+    report_path: str,
+    canvas,
+    doc,
+    title: str = "EscapeCloud Community Edition - Report",
+) -> None:
     # Save the state of the canvas to not affect the drawing
     canvas.saveState()
     width, height = A4
 
     # Include the date in the format mm-dd-yyyy
     current_date = datetime.now().strftime("%m-%d-%Y")
-    left_text_content1 = "EscapeCloud Community Edition - Report"
+    left_text_content1 = title
     left_text_content2 = f"Date: {current_date}"
 
     # Define the header content with Paragraphs

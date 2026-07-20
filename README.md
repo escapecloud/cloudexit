@@ -105,6 +105,17 @@ See the [configuration reference](https://cloudexit.escapecloud.io/config/config
 
 Want to see how a regulatory-aligned report looks (DORA / FINMA / UK PRA)? Run with `--dry-run` and send the output `payload.json` to request_report@escapecloud.io — we'll generate a sample you can share with your risk or compliance team.
 
+## Data Landscape & Egress Estimation (alpha)
+
+Add `--egress` to any assessment to measure how much data lives in the assessed scope and estimate the one-time internet egress fee for moving it out — based on the provider's tiered list prices, with no additional permissions required.
+
+```bash
+python main.py azure --cli --egress
+python main.py aws --profile PROFILE --egress
+```
+
+See the [egress reference](https://cloudexit.escapecloud.io/egress/overview.html) for details.
+
 ## CI/CD
 
 cloudexit runs headlessly in CI pipelines via `--non-interactive` and environment variables. A ready-made GitHub Action is available:

@@ -369,7 +369,7 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
         ):
             main.handle_aws(_ni_aws_args(dry_run=True))
 
-        mock_run.assert_called_once_with(ANY, "aws", dry_run=True)
+        mock_run.assert_called_once_with(ANY, "aws", dry_run=True, egress=False)
 
 
 def _ni_aws_args(**kwargs):
@@ -380,6 +380,7 @@ def _ni_aws_args(**kwargs):
         name=None,
         non_interactive=True,
         dry_run=False,
+        egress=False,
     )
     defaults.update(kwargs)
     return Namespace(**defaults)
@@ -393,6 +394,7 @@ def _ni_azure_args(**kwargs):
         name=None,
         non_interactive=True,
         dry_run=False,
+        egress=False,
     )
     defaults.update(kwargs)
     return Namespace(**defaults)
@@ -554,6 +556,232 @@ class NonInteractiveAzureTests(unittest.TestCase):
             with self.assertRaises(SystemExit) as ctx:
                 main.handle_azure(_ni_azure_args())
         self.assertEqual(ctx.exception.code, codes.CONFIG)
+
+
+class EgressStageTests(unittest.TestCase):
+    _ESTIMATE_OK = {
+        "success": True,
+        "logs": "",
+        "json_path": "/tmp/report/raw/egress_estimate.json",
+    }
+    _REPORT_OK = {
+        "success": True,
+        "logs": "",
+        "html_path": "/tmp/report/egress.html",
+    }
+    _PDF_OK = {
+        "success": True,
+        "logs": "",
+        "pdf_path": "/tmp/report/egress.pdf",
+    }
+
+    @staticmethod
+    def _azure_config():
+        return {
+            "name": "Azure Egress Test",
+            "cloudServiceProvider": 1,
+            "exitStrategy": 1,
+            "assessmentType": 1,
+            "providerDetails": {
+                "credential": MagicMock(),
+                "tenantId": "tenant-id",
+                "subscriptionId": "sub-id",
+                "resourceGroupName": "my-rg",
+            },
+        }
+
+    def test_egress_module_not_invoked_without_flag(self):
+        patches = _base_patches()
+        for p in patches:
+            p.start()
+        mock_estimate = patch("main.estimate_egress").start()
+        mock_render = patch("main.generate_egress_html_report").start()
+        mock_pdf = patch("main.generate_egress_pdf_report").start()
+        try:
+            main.run_assessment(self._azure_config(), "azure")
+        finally:
+            patch.stopall()
+
+        mock_estimate.assert_not_called()
+        mock_render.assert_not_called()
+        mock_pdf.assert_not_called()
+
+    def test_egress_invoked_after_report_generation(self):
+        manager = MagicMock()
+        patches = _base_patches()
+        for p in patches:
+            p.start()
+        mock_report = patch(
+            "main.generate_report",
+            return_value={"success": True, "reports": {}},
+        ).start()
+        mock_estimate = patch(
+            "main.estimate_egress", return_value=self._ESTIMATE_OK
+        ).start()
+        mock_render = patch(
+            "main.generate_egress_html_report", return_value=self._REPORT_OK
+        ).start()
+        mock_pdf = patch(
+            "main.generate_egress_pdf_report", return_value=self._PDF_OK
+        ).start()
+        manager.attach_mock(mock_report, "generate_report")
+        manager.attach_mock(mock_estimate, "estimate_egress")
+        manager.attach_mock(mock_render, "generate_egress_html_report")
+        manager.attach_mock(mock_pdf, "generate_egress_pdf_report")
+        config = self._azure_config()
+        try:
+            main.run_assessment(config, "azure", egress=True)
+        finally:
+            patch.stopall()
+
+        mock_estimate.assert_called_once_with(
+            1,
+            config["providerDetails"],
+            "/tmp/report/raw",
+            name=config["name"],
+            exit_strategy=config["exitStrategy"],
+            assessment_type=config["assessmentType"],
+        )
+        mock_render.assert_called_once_with(
+            "/tmp/report", "/tmp/report/raw/egress_estimate.json"
+        )
+        mock_pdf.assert_called_once_with(
+            "/tmp/report",
+            "/tmp/report/raw/egress_estimate.json",
+            config["providerDetails"],
+        )
+        call_names = [name for name, _, _ in manager.mock_calls]
+        self.assertLess(
+            call_names.index("generate_report"), call_names.index("estimate_egress")
+        )
+        self.assertLess(
+            call_names.index("estimate_egress"),
+            call_names.index("generate_egress_html_report"),
+        )
+        self.assertLess(
+            call_names.index("generate_egress_html_report"),
+            call_names.index("generate_egress_pdf_report"),
+        )
+
+    def test_egress_failure_still_prints_outputs_and_exits_egress(self):
+        patches = _base_patches()
+        for p in patches:
+            p.start()
+        patch(
+            "main.estimate_egress",
+            return_value={"success": False, "logs": "metrics api error"},
+        ).start()
+        mock_render = patch("main.generate_egress_html_report").start()
+        mock_pdf = patch("main.generate_egress_pdf_report").start()
+        mock_print = patch("main.console.print").start()
+        try:
+            with self.assertRaises(SystemExit) as ctx:
+                main.run_assessment(self._azure_config(), "azure", egress=True)
+        finally:
+            patch.stopall()
+
+        self.assertEqual(ctx.exception.code, codes.EGRESS)
+        mock_render.assert_not_called()
+        mock_pdf.assert_not_called()
+        printed = [str(call) for call in mock_print.call_args_list]
+        self.assertTrue(any("Outputs:" in line for line in printed))
+
+    def test_egress_report_failure_still_prints_outputs_and_exits_egress(self):
+        patches = _base_patches()
+        for p in patches:
+            p.start()
+        patch("main.estimate_egress", return_value=self._ESTIMATE_OK).start()
+        patch(
+            "main.generate_egress_html_report",
+            return_value={"success": False, "logs": "template error"},
+        ).start()
+        patch("main.generate_egress_pdf_report", return_value=self._PDF_OK).start()
+        mock_print = patch("main.console.print").start()
+        try:
+            with self.assertRaises(SystemExit) as ctx:
+                main.run_assessment(self._azure_config(), "azure", egress=True)
+        finally:
+            patch.stopall()
+
+        self.assertEqual(ctx.exception.code, codes.EGRESS)
+        printed = [str(call) for call in mock_print.call_args_list]
+        self.assertTrue(any("Outputs:" in line for line in printed))
+        # The JSON path is internal input for the reports; it is never listed
+        # in Outputs. The failed HTML report is not listed, but the PDF ran
+        # independently and succeeded, so it is.
+        self.assertFalse(any("Egress Estimate:" in line for line in printed))
+        self.assertFalse(any("Egress Report:" in line for line in printed))
+        self.assertTrue(any("Egress PDF:" in line for line in printed))
+
+    def test_egress_pdf_failure_still_prints_outputs_and_exits_egress(self):
+        patches = _base_patches()
+        for p in patches:
+            p.start()
+        patch("main.estimate_egress", return_value=self._ESTIMATE_OK).start()
+        patch("main.generate_egress_html_report", return_value=self._REPORT_OK).start()
+        patch(
+            "main.generate_egress_pdf_report",
+            return_value={"success": False, "logs": "reportlab error"},
+        ).start()
+        mock_print = patch("main.console.print").start()
+        try:
+            with self.assertRaises(SystemExit) as ctx:
+                main.run_assessment(self._azure_config(), "azure", egress=True)
+        finally:
+            patch.stopall()
+
+        self.assertEqual(ctx.exception.code, codes.EGRESS)
+        printed = [str(call) for call in mock_print.call_args_list]
+        self.assertTrue(any("Outputs:" in line for line in printed))
+        self.assertTrue(any("Egress Report:" in line for line in printed))
+        self.assertFalse(any("Egress PDF:" in line for line in printed))
+
+    def test_egress_invoked_for_aws_with_provider_code(self):
+        patches = _base_patches()
+        for p in patches:
+            p.start()
+        mock_estimate = patch(
+            "main.estimate_egress", return_value=self._ESTIMATE_OK
+        ).start()
+        patch("main.generate_egress_html_report", return_value=self._REPORT_OK).start()
+        patch("main.generate_egress_pdf_report", return_value=self._PDF_OK).start()
+        config = VALID_CONFIG.copy()
+        try:
+            main.run_assessment(config, "aws", egress=True)
+        finally:
+            patch.stopall()
+
+        mock_estimate.assert_called_once_with(
+            2,
+            config["providerDetails"],
+            "/tmp/report/raw",
+            name=config["name"],
+            exit_strategy=config["exitStrategy"],
+            assessment_type=config["assessmentType"],
+        )
+
+    def test_handle_azure_passes_egress_flag(self):
+        mock_credential = MagicMock()
+        with (
+            patch.dict(os.environ, NonInteractiveAzureTests._BASE_ENV, clear=False),
+            patch("main.ClientSecretCredential", return_value=mock_credential),
+            patch("main.run_assessment") as mock_run,
+            patch("main.console.print"),
+        ):
+            main.handle_azure(_ni_azure_args(egress=True))
+
+        mock_run.assert_called_once_with(ANY, "azure", dry_run=False, egress=True)
+
+    def test_handle_aws_passes_egress_flag(self):
+        with (
+            patch.dict(os.environ, NonInteractiveAWSTests._BASE_ENV, clear=False),
+            patch("main.validate_region"),
+            patch("main.run_assessment") as mock_run,
+            patch("main.console.print"),
+        ):
+            main.handle_aws(_ni_aws_args(egress=True))
+
+        mock_run.assert_called_once_with(ANY, "aws", dry_run=False, egress=True)
 
 
 class ResolveModeEnvVarTests(unittest.TestCase):
