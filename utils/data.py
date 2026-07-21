@@ -1,5 +1,6 @@
 # utils/data.py
 import os
+import sys
 import gzip
 import shutil
 import hashlib
@@ -136,18 +137,30 @@ def initialize_dataset() -> None:
 
         # Download and extract dataset
         if download_file(latest_file_url, local_compressed_path):
-            print(
-                f"[INFO] Download successful. Extracting dataset from {latest_file}..."
-            )
+            downloaded_checksum = compute_file_hash(local_compressed_path)
+            if downloaded_checksum != remote_checksum:
+                print(
+                    f"[ERROR] Checksum mismatch for {latest_file}. "
+                    f"Expected {remote_checksum}, got {downloaded_checksum}. "
+                    "Discarding downloaded file."
+                )
+                os.remove(local_compressed_path)
+            else:
+                print(
+                    f"[INFO] Checksum verified. Extracting dataset from {latest_file}..."
+                )
 
-            with (
-                gzip.open(local_compressed_path, "rb") as f_in,
-                open(local_db_path, "wb") as f_out,
-            ):
-                shutil.copyfileobj(f_in, f_out)
+                with (
+                    gzip.open(local_compressed_path, "rb") as f_in,
+                    open(local_db_path, "wb") as f_out,
+                ):
+                    shutil.copyfileobj(f_in, f_out)
 
-            print("[INFO] Dataset updated successfully.")
+                print("[INFO] Dataset updated successfully.")
 
-    if not any(DATASET_FOLDER.iterdir()):
-        print("[ERROR] Dataset folder is empty! Cannot proceed without data.")
-        exit(1)
+    if not local_db_path.exists() or local_db_path.stat().st_size == 0:
+        print(
+            f"[ERROR] Dataset database {local_db_path} is missing or empty! "
+            "Cannot proceed without data."
+        )
+        sys.exit(1)
