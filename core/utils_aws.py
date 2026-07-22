@@ -38,7 +38,9 @@ def _retry_call(
         except botocore.exceptions.BotoCoreError:
             time.sleep(retry_delay * (2**attempt))
             continue
-    raise Exception(f"Failed to call {getattr(func, '__name__', repr(func))} after {max_retries} attempts")
+    raise Exception(
+        f"Failed to call {getattr(func, '__name__', repr(func))} after {max_retries} attempts"
+    )
 
 
 def aws_api_call_with_retry(
@@ -165,9 +167,7 @@ def build_aws_resource_inventory(
                     # logger.error(f"Operation {operation_name} does not exist for service {service_name}")
                     continue
 
-                resources = paginate_or_call(
-                    client, operation_name, result_key.strip()
-                )
+                resources = paginate_or_call(client, operation_name, result_key.strip())
 
                 # Aggregate the resources
                 for resource in resources:
