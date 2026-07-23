@@ -8,9 +8,10 @@ from unittest.mock import MagicMock, patch
 import botocore.exceptions
 
 from core.utils_aws import (
-    aws_api_call_with_retry,
     convert_datetime,
     get_missing_months_aws,
+    paginate,
+    paginate_or_call,
 )
 
 
@@ -81,116 +82,6 @@ class GetMissingMonthsAwsTests(unittest.TestCase):
 
         missing = get_missing_months_aws(set(), 6)
         self.assertEqual(len(missing), 6)
-
-
-class AwsApiCallWithRetryTests(unittest.TestCase):
-    def test_successful_call_returns_result(self):
-        mock_client = MagicMock()
-        mock_client.describe_instances.return_value = {"Reservations": []}
-
-        api_call = aws_api_call_with_retry(
-            mock_client, "describe_instances", {}, max_retries=3, retry_delay=0
-        )
-        result = api_call()
-
-        self.assertEqual(result, {"Reservations": []})
-        mock_client.describe_instances.assert_called_once()
-
-    def test_passes_parameters_to_function(self):
-        mock_client = MagicMock()
-        mock_client.list_buckets.return_value = {"Buckets": []}
-
-        params = {"MaxItems": 10}
-        api_call = aws_api_call_with_retry(
-            mock_client, "list_buckets", params, max_retries=1, retry_delay=0
-        )
-        api_call()
-
-        mock_client.list_buckets.assert_called_once_with(MaxItems=10)
-
-    def test_passes_kwargs_from_caller(self):
-        mock_client = MagicMock()
-        mock_client.describe_instances.return_value = {"Reservations": []}
-
-        api_call = aws_api_call_with_retry(
-            mock_client, "describe_instances", {}, max_retries=1, retry_delay=0
-        )
-        api_call(NextToken="abc123")
-
-        mock_client.describe_instances.assert_called_once_with(NextToken="abc123")
-
-    @patch("core.utils_aws.time.sleep")
-    def test_retries_on_throttling(self, mock_sleep):
-        mock_client = MagicMock()
-        throttle_error = botocore.exceptions.ClientError(
-            {"Error": {"Code": "Throttling", "Message": "Rate exceeded"}},
-            "DescribeInstances",
-        )
-        mock_client.describe_instances.side_effect = [
-            throttle_error,
-            {"Reservations": ["instance-1"]},
-        ]
-
-        api_call = aws_api_call_with_retry(
-            mock_client, "describe_instances", {}, max_retries=3, retry_delay=1
-        )
-        result = api_call()
-
-        self.assertEqual(result, {"Reservations": ["instance-1"]})
-        self.assertEqual(mock_client.describe_instances.call_count, 2)
-        mock_sleep.assert_called_once()
-
-    def test_raises_non_throttling_client_error_immediately(self):
-        mock_client = MagicMock()
-        access_denied = botocore.exceptions.ClientError(
-            {"Error": {"Code": "AccessDenied", "Message": "Not authorized"}},
-            "DescribeInstances",
-        )
-        mock_client.describe_instances.side_effect = access_denied
-
-        api_call = aws_api_call_with_retry(
-            mock_client, "describe_instances", {}, max_retries=3, retry_delay=0
-        )
-
-        with self.assertRaises(botocore.exceptions.ClientError):
-            api_call()
-
-        mock_client.describe_instances.assert_called_once()
-
-    @patch("core.utils_aws.time.sleep")
-    def test_raises_after_max_retries_exhausted(self, mock_sleep):
-        mock_client = MagicMock()
-        throttle_error = botocore.exceptions.ClientError(
-            {"Error": {"Code": "Throttling", "Message": "Rate exceeded"}},
-            "DescribeInstances",
-        )
-        mock_client.describe_instances.side_effect = throttle_error
-
-        api_call = aws_api_call_with_retry(
-            mock_client, "describe_instances", {}, max_retries=2, retry_delay=0
-        )
-
-        with self.assertRaises(Exception) as ctx:
-            api_call()
-
-        self.assertIn("Failed to call", str(ctx.exception))
-        self.assertEqual(mock_client.describe_instances.call_count, 2)
-
-    @patch("core.utils_aws.time.sleep")
-    def test_retries_on_botocore_error(self, mock_sleep):
-        mock_client = MagicMock()
-        mock_client.describe_instances.side_effect = [
-            botocore.exceptions.BotoCoreError(),
-            {"Reservations": []},
-        ]
-
-        api_call = aws_api_call_with_retry(
-            mock_client, "describe_instances", {}, max_retries=3, retry_delay=1
-        )
-        result = api_call()
-
-        self.assertEqual(result, {"Reservations": []})
-        self.assertEqual(mock_client.describe_instances.call_count, 2)
 
 
 class BuildAwsCostInventoryErrorTests(unittest.TestCase):
@@ -313,6 +204,82 @@ class BuildAwsResourceInventoryErrorTests(unittest.TestCase):
                 report_path,
                 raw_data_path,
             )
+
+
+class PaginateTests(unittest.TestCase):
+    def _fake_client(self, pages):
+        """Build a stub client whose paginator yields the given pages."""
+        paginator = MagicMock()
+        paginator.paginate.return_value = iter(pages)
+        client = MagicMock()
+        client.get_paginator.return_value = paginator
+        return client
+
+    def test_collects_items_across_pages(self):
+        client = self._fake_client(
+            [{"Items": [1, 2, 3]}, {"Items": [4, 5]}, {"Items": [6]}]
+        )
+        self.assertEqual(paginate(client, "any_op", "Items"), [1, 2, 3, 4, 5, 6])
+
+    def test_missing_result_key_treated_as_empty(self):
+        client = self._fake_client([{"Items": [1]}, {}])
+        self.assertEqual(paginate(client, "any_op", "Items"), [1])
+
+    def test_forwards_kwargs_to_paginator(self):
+        client = self._fake_client([{"Items": []}])
+        paginate(client, "any_op", "Items", MaxResults=50)
+        client.get_paginator.return_value.paginate.assert_called_once_with(
+            MaxResults=50
+        )
+
+    def test_throttling_mid_pagination_does_not_silently_truncate(self):
+        """Regression: retrying next() on a dead PageIterator generator
+        used to return a truncated prefix as if it were the full result.
+        With retries pushed down to the client (AWS_RETRY_CONFIG), the
+        paginator generator never sees the throttle and delivers every page.
+        Here we assert paginate() does not swallow a mid-iteration error."""
+
+        def flaky_pages():
+            yield {"Items": ["r1", "r2"]}
+            raise botocore.exceptions.ClientError(
+                {"Error": {"Code": "Throttling", "Message": "slow down"}},
+                "ListSomething",
+            )
+
+        paginator = MagicMock()
+        paginator.paginate.return_value = flaky_pages()
+        client = MagicMock()
+        client.get_paginator.return_value = paginator
+
+        with self.assertRaises(botocore.exceptions.ClientError):
+            paginate(client, "any_op", "Items")
+
+
+class PaginateOrCallTests(unittest.TestCase):
+    def test_uses_paginator_when_available(self):
+        paginator = MagicMock()
+        paginator.paginate.return_value = iter([{"Items": [1, 2]}, {"Items": [3]}])
+        client = MagicMock()
+        client.can_paginate.return_value = True
+        client.get_paginator.return_value = paginator
+
+        self.assertEqual(paginate_or_call(client, "list_things", "Items"), [1, 2, 3])
+        client.can_paginate.assert_called_once_with("list_things")
+
+    def test_falls_back_to_single_call_when_not_paginable(self):
+        client = MagicMock()
+        client.can_paginate.return_value = False
+        client.list_things.return_value = {"Items": ["a", "b"]}
+
+        self.assertEqual(paginate_or_call(client, "list_things", "Items"), ["a", "b"])
+        client.list_things.assert_called_once_with()
+
+    def test_non_dict_response_returns_empty_list(self):
+        client = MagicMock()
+        client.can_paginate.return_value = False
+        client.list_things.return_value = None
+
+        self.assertEqual(paginate_or_call(client, "list_things", "Items"), [])
 
 
 if __name__ == "__main__":

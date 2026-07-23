@@ -5,7 +5,7 @@ from typing import Any
 from datetime import datetime, timedelta, timezone
 from botocore.exceptions import BotoCoreError, ClientError
 
-from .utils_aws import paginate
+from .utils_aws import AWS_RETRY_CONFIG, paginate
 from .utils_egress import GIB, format_bytes, new_row
 
 logger = logging.getLogger("core.engine.egress.aws")
@@ -165,8 +165,10 @@ def _list_buckets_in_region(s3_client: Any, region: str) -> list[str]:
 def _collect_s3_buckets(
     session: Any, region: str, code: str, entry: dict[str, Any]
 ) -> list[dict[str, Any]]:
-    s3_client = session.client("s3", region_name=region)
-    cloudwatch = session.client("cloudwatch", region_name=region)
+    s3_client = session.client("s3", region_name=region, config=AWS_RETRY_CONFIG)
+    cloudwatch = session.client(
+        "cloudwatch", region_name=region, config=AWS_RETRY_CONFIG
+    )
 
     bucket_names = _list_buckets_in_region(s3_client, region)
 
@@ -245,7 +247,7 @@ def _collect_s3_buckets(
 def _collect_ebs_volumes(
     session: Any, region: str, code: str, entry: dict[str, Any]
 ) -> list[dict[str, Any]]:
-    ec2_client = session.client("ec2", region_name=region)
+    ec2_client = session.client("ec2", region_name=region, config=AWS_RETRY_CONFIG)
     rows = []
     for volume in paginate(ec2_client, "describe_volumes", "Volumes"):
         name = next(
@@ -266,7 +268,7 @@ def _collect_ebs_volumes(
 def _collect_ebs_snapshots(
     session: Any, region: str, code: str, entry: dict[str, Any]
 ) -> list[dict[str, Any]]:
-    ec2_client = session.client("ec2", region_name=region)
+    ec2_client = session.client("ec2", region_name=region, config=AWS_RETRY_CONFIG)
     rows = []
     for snapshot in paginate(
         ec2_client, "describe_snapshots", "Snapshots", OwnerIds=["self"]
@@ -292,8 +294,10 @@ def _collect_ebs_snapshots(
 def _collect_rds_instances(
     session: Any, region: str, code: str, entry: dict[str, Any]
 ) -> list[dict[str, Any]]:
-    rds_client = session.client("rds", region_name=region)
-    cloudwatch = session.client("cloudwatch", region_name=region)
+    rds_client = session.client("rds", region_name=region, config=AWS_RETRY_CONFIG)
+    cloudwatch = session.client(
+        "cloudwatch", region_name=region, config=AWS_RETRY_CONFIG
+    )
 
     rows = []
     specs = []
@@ -344,7 +348,9 @@ def _collect_rds_instances(
 def _collect_dynamodb_tables(
     session: Any, region: str, code: str, entry: dict[str, Any]
 ) -> list[dict[str, Any]]:
-    dynamodb_client = session.client("dynamodb", region_name=region)
+    dynamodb_client = session.client(
+        "dynamodb", region_name=region, config=AWS_RETRY_CONFIG
+    )
     rows = []
     for table_name in paginate(dynamodb_client, "list_tables", "TableNames"):
         try:
@@ -380,7 +386,9 @@ def _collect_dynamodb_tables(
 def _collect_backup_vaults(
     session: Any, region: str, code: str, entry: dict[str, Any]
 ) -> list[dict[str, Any]]:
-    backup_client = session.client("backup", region_name=region)
+    backup_client = session.client(
+        "backup", region_name=region, config=AWS_RETRY_CONFIG
+    )
     rows = []
     for vault in paginate(backup_client, "list_backup_vaults", "BackupVaultList"):
         vault_name = vault["BackupVaultName"]
