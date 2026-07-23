@@ -39,6 +39,7 @@ from utils.connection import resolve_mode
 from utils.data import initialize_dataset
 from utils.utils import (
     ascii_art,
+    build_config,
     create_directory,
     load_config,
     prompt_required_inputs,
@@ -67,15 +68,98 @@ logger.setLevel(logging.INFO)
 console = Console()
 
 
-def handle_aws(args):
-    config = {}
+class ConfigError(Exception):
+    pass
 
+
+def _aws_provider_from_profile(profile: str) -> dict:
+    if not is_aws_cli_installed():
+        console.print(
+            "[red]AWS CLI is not installed. Install it from https://aws.amazon.com/cli/[/red]"
+        )
+        raise ConfigError
+    if not is_aws_profile_valid(profile):
+        console.print(
+            f"[red]AWS profile '{profile}' is not configured. "
+            f"Use `aws configure --profile {profile}`.[/red]"
+        )
+        raise ConfigError
+    try:
+        session = boto3.Session(profile_name=profile)
+        credentials = session.get_credentials()
+        if credentials is None:
+            console.print(
+                f"[red]AWS profile '{profile}' has no valid credentials. "
+                f"Use `aws configure --profile {profile}`.[/red]"
+            )
+            raise ConfigError
+        region = session.region_name or "us-east-1"
+    except (NoCredentialsError, ProfileNotFound) as e:
+        console.print(
+            f"[red]AWS profile error: {str(e)}. Use `aws configure` to set up a profile.[/red]"
+        )
+        raise ConfigError
+
+    provider_details = {
+        "accessKey": credentials.access_key,
+        "secretKey": credentials.secret_key,
+        "region": region,
+    }
+    if getattr(credentials, "token", None):
+        provider_details["sessionToken"] = credentials.token
+    return provider_details
+
+
+def _aws_provider_from_env() -> dict:
+    access_key = require_env("AWS_ACCESS_KEY_ID", "AWS access key")
+    secret_key = require_env("AWS_SECRET_ACCESS_KEY", "AWS secret key")
+    region = require_env("AWS_DEFAULT_REGION", "AWS region")
+    session_token = os.environ.get("AWS_SESSION_TOKEN", "").strip()
+    try:
+        validate_region(region)
+    except ValueError as e:
+        console.print(f"[red]AWS_DEFAULT_REGION: {e}[/red]")
+        raise ConfigError
+
+    provider_details = {
+        "accessKey": access_key,
+        "secretKey": secret_key,
+        "region": region,
+    }
+    if session_token:
+        provider_details["sessionToken"] = session_token
+    return provider_details
+
+
+def _aws_provider_from_prompt() -> dict:
+    try:
+        access_key = input("Enter AWS Access Key: ").strip()
+        secret_key = input("Enter AWS Secret Key: ").strip()
+
+        # Validate AWS region input
+        while True:
+            region = input("Enter AWS region: ").strip()
+            try:
+                validate_region(region)
+                break
+            except ValueError as e:
+                console.print(f"[red]{e} Please enter a valid AWS region.[/red]")
+    except Exception as e:
+        console.print(f"[red]Error during manual AWS configuration: {e}[/red]")
+        raise ConfigError
+
+    return {
+        "accessKey": access_key,
+        "secretKey": secret_key,
+        "region": region,
+    }
+
+
+def handle_aws(args):
     cloud_provider = 2
 
     if args.config:
-        # logger.info(f"AWS --config argument detected with path: {args.config}")
         config = load_config(args.config)
-
         if not config:
             console.print("[red]Invalid or missing AWS configuration file.[/red]")
             return
@@ -83,193 +167,201 @@ def handle_aws(args):
         # Handle name field logic (priority: --name > config name > fallback)
         if args.name:
             config["name"] = args.name.strip()
-
         if "name" not in config or not config["name"].strip():
             config["name"] = (
                 f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}"
             )
 
-    elif args.non_interactive:
+        run_assessment(config, "aws", dry_run=args.dry_run, egress=args.egress)
+        return
+
+    if args.non_interactive:
         exit_strategy = require_env_int(
             "ESC_EXIT_STRATEGY", "exit strategy (1 or 3)", {1, 3}
         )
         assessment_type = require_env_int(
             "ESC_ASSESSMENT_TYPE", "assessment type (1 or 2)", {1, 2}
         )
-
-        if args.profile:
-            if not is_aws_cli_installed():
-                console.print(
-                    "[red]AWS CLI is not installed. Install it from https://aws.amazon.com/cli/[/red]"
-                )
-                sys.exit(codes.CONFIG)
-            if not is_aws_profile_valid(args.profile):
-                console.print(
-                    f"[red]AWS profile '{args.profile}' is not configured. "
-                    f"Use `aws configure --profile {args.profile}`.[/red]"
-                )
-                sys.exit(codes.CONFIG)
-            try:
-                session = boto3.Session(profile_name=args.profile)
-                credentials = session.get_credentials()
-                if credentials is None:
-                    console.print(
-                        f"[red]AWS profile '{args.profile}' has no valid credentials.[/red]"
-                    )
-                    sys.exit(codes.CONFIG)
-                region = session.region_name or "us-east-1"
-            except (NoCredentialsError, ProfileNotFound) as e:
-                console.print(f"[red]AWS profile error: {str(e)}.[/red]")
-                sys.exit(codes.CONFIG)
-            provider_details = {
-                "accessKey": credentials.access_key,
-                "secretKey": credentials.secret_key,
-                "region": region,
-            }
-            if getattr(credentials, "token", None):
-                provider_details["sessionToken"] = credentials.token
-            config = {
-                "name": (
-                    args.name.strip()
-                    if args.name
-                    else f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                ),
-                "cloudServiceProvider": cloud_provider,
-                "exitStrategy": exit_strategy,
-                "assessmentType": assessment_type,
-                "providerDetails": provider_details,
-            }
-        else:
-            access_key = require_env("AWS_ACCESS_KEY_ID", "AWS access key")
-            secret_key = require_env("AWS_SECRET_ACCESS_KEY", "AWS secret key")
-            region = require_env("AWS_DEFAULT_REGION", "AWS region")
-            session_token = os.environ.get("AWS_SESSION_TOKEN", "").strip()
-            try:
-                validate_region(region)
-            except ValueError as e:
-                console.print(f"[red]AWS_DEFAULT_REGION: {e}[/red]")
-                sys.exit(codes.CONFIG)
-            provider_details = {
-                "accessKey": access_key,
-                "secretKey": secret_key,
-                "region": region,
-            }
-            if session_token:
-                provider_details["sessionToken"] = session_token
-            config = {
-                "name": (
-                    args.name.strip()
-                    if args.name
-                    else f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                ),
-                "cloudServiceProvider": cloud_provider,
-                "exitStrategy": exit_strategy,
-                "assessmentType": assessment_type,
-                "providerDetails": provider_details,
-            }
-
-    elif args.profile:
-        # Check if aws cli available
-        if not is_aws_cli_installed():
-            # logger.error("AWS CLI is not installed.")
-            console.print(
-                "[red]AWS CLI is not installed. Install it from https://aws.amazon.com/cli/[/red]"
-            )
-            return
-        # Check if aws cli profile is valid
-        if not is_aws_profile_valid(args.profile):
-            # logger.error(f"AWS profile '{args.profile}' is not configured.")
-            console.print(
-                f"[red]AWS profile '{args.profile}' is not configured. Use `aws configure --profile {args.profile}`.[/red]"
-            )
-            return
-
-        # logger.info(f"AWS --profile argument detected with profile: {args.profile}")
         try:
-            session = boto3.Session(profile_name=args.profile)
-            credentials = session.get_credentials()
-            if credentials is None:
-                # logger.error(f"AWS profile '{args.profile}' has no valid credentials.")
-                console.print(
-                    f"[red]AWS profile '{args.profile}' has no valid credentials. Use `aws configure --profile {args.profile}`.[/red]"
-                )
-                return
-            region = session.region_name or "us-east-1"
-            # logger.info(f"Using AWS profile '{args.profile}' with region '{region}'.")
-
-            exit_strategy, assessment_type = prompt_required_inputs()
-            provider_details = {
-                "accessKey": credentials.access_key,
-                "secretKey": credentials.secret_key,
-                "region": region,
-            }
-            if getattr(credentials, "token", None):
-                provider_details["sessionToken"] = credentials.token
-            config = {
-                "name": (
-                    args.name.strip()
-                    if args.name
-                    else f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                ),
-                "cloudServiceProvider": cloud_provider,
-                "exitStrategy": exit_strategy,
-                "assessmentType": assessment_type,
-                "providerDetails": provider_details,
-            }
-        except (NoCredentialsError, ProfileNotFound) as e:
-            # logger.error(f"AWS profile error: {e}", exc_info=True)
-            console.print(
-                f"[red]AWS profile error: {str(e)}. Use `aws configure` to set up a profile.[/red]"
-            )
+            if args.profile:
+                provider_details = _aws_provider_from_profile(args.profile)
+            else:
+                provider_details = _aws_provider_from_env()
+        except ConfigError:
+            sys.exit(codes.CONFIG)
+    elif args.profile:
+        try:
+            provider_details = _aws_provider_from_profile(args.profile)
+        except ConfigError:
             return
+        exit_strategy, assessment_type = prompt_required_inputs()
     else:
         exit_strategy, assessment_type = prompt_required_inputs()
-        # Prompt for manual input
         try:
-            access_key = input("Enter AWS Access Key: ").strip()
-            secret_key = input("Enter AWS Secret Key: ").strip()
-
-            # Validate AWS region input
-            while True:
-                region = input("Enter AWS region: ").strip()
-                try:
-                    validate_region(region)
-                    break
-                except ValueError as e:
-                    console.print(f"[red]{e} Please enter a valid AWS region.[/red]")
-
-            config = {
-                "name": (
-                    args.name.strip()
-                    if args.name
-                    else f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                ),
-                "cloudServiceProvider": cloud_provider,
-                "exitStrategy": exit_strategy,
-                "assessmentType": assessment_type,
-                "providerDetails": {
-                    "accessKey": access_key,
-                    "secretKey": secret_key,
-                    "region": region,
-                },
-            }
-        except Exception as e:
-            console.print(f"[red]Error during manual AWS configuration: {e}[/red]")
+            provider_details = _aws_provider_from_prompt()
+        except ConfigError:
             return
 
-    # Run the AWS assessment pipeline
+    config = build_config(
+        cloud_provider, exit_strategy, assessment_type, provider_details, args
+    )
     run_assessment(config, "aws", dry_run=args.dry_run, egress=args.egress)
 
 
-def handle_azure(args):
-    config = {}
+def _azure_cli_credential() -> DefaultAzureCredential:
+    if not is_azure_cli_installed():
+        console.print(
+            "[red]Azure CLI is not installed. Install it from https://aka.ms/install-azure-cli.[/red]"
+        )
+        raise ConfigError
+    if not is_azure_cli_logged_in():
+        console.print(
+            "[red]You are not logged in to Azure CLI. Please run 'az login' and try again.[/red]"
+        )
+        raise ConfigError
+    if is_azure_cli_token_expired():
+        console.print("[red]Your Azure CLI token has expired. Please run:[/red]")
+        console.print(
+            "[bold cyan]az login --scope https://management.azure.com/.default[/bold cyan]"
+        )
+        raise ConfigError
+    return DefaultAzureCredential()
 
+
+def _azure_provider_noninteractive(args) -> dict:
+    subscription_id = require_env("ESC_SUBSCRIPTION_ID", "Azure subscription ID")
+    resource_group = require_env("ESC_RESOURCE_GROUP", "Azure resource group")
+    tenant_id = require_env("AZURE_TENANT_ID", "Azure tenant ID")
+    client_id = os.environ.get("AZURE_CLIENT_ID", "").strip()
+    client_secret = os.environ.get("AZURE_CLIENT_SECRET", "").strip()
+
+    if args.cli:
+        credential = _azure_cli_credential()
+    else:
+        if client_secret:
+            if not client_id:
+                console.print(
+                    "[red]--non-interactive with AZURE_CLIENT_SECRET also requires AZURE_CLIENT_ID.[/red]"
+                )
+                raise ConfigError
+            credential = ClientSecretCredential(
+                tenant_id=tenant_id,
+                client_id=client_id,
+                client_secret=client_secret,
+            )
+        else:
+            if not client_id:
+                console.print(
+                    "[red]--non-interactive Azure OIDC requires AZURE_CLIENT_ID when AZURE_CLIENT_SECRET is not set.[/red]"
+                )
+                raise ConfigError
+            credential = DefaultAzureCredential()
+
+    provider_details = {
+        "credential": credential,
+        "tenantId": tenant_id,
+        "subscriptionId": subscription_id,
+        "resourceGroupName": resource_group,
+    }
+    if client_id:
+        provider_details["clientId"] = client_id
+    if not args.cli and client_secret:
+        provider_details["clientSecret"] = client_secret
+    return provider_details
+
+
+def _azure_provider_from_cli() -> dict:
+    credential = _azure_cli_credential()
+    try:
+        tenant_id = input("Enter Azure Tenant ID: ").strip()
+        subscription_client = SubscriptionClient(credential)
+        subscriptions = list(subscription_client.subscriptions.list())
+        if not subscriptions:
+            logger.error("No subscriptions found for the provided Azure credentials.")
+            console.print(
+                "[red]No subscriptions found for the provided credentials.[/red]"
+            )
+            raise ConfigError
+
+        selected_subscription = select_subscription(subscriptions)
+        subscription_id = selected_subscription.subscription_id
+
+        resource_client = ResourceManagementClient(credential, subscription_id)
+        resource_groups = list(resource_client.resource_groups.list())
+        if not resource_groups:
+            logger.error("No resource groups found in the selected subscription.")
+            console.print(
+                "[red]No resource groups found in the selected subscription.[/red]"
+            )
+            raise ConfigError
+
+        resource_group_name = select_resource_group(resource_groups)
+    except ConfigError:
+        raise
+    except Exception as e:
+        logger.error(f"Error during Azure CLI processing: {e}", exc_info=True)
+        console.print(f"[red]An error occurred: {e}[/red]")
+        raise ConfigError
+
+    return {
+        "credential": credential,
+        "tenantId": tenant_id,
+        "subscriptionId": subscription_id,
+        "resourceGroupName": resource_group_name,
+    }
+
+
+def _azure_provider_from_prompt() -> dict:
+    tenant_id = input("Enter Azure Tenant ID: ").strip()
+    client_id = input("Enter Service Principal / Client ID: ").strip()
+    client_secret = input("Enter Client Secret: ").strip()
+
+    try:
+        credential = ClientSecretCredential(
+            tenant_id=tenant_id, client_id=client_id, client_secret=client_secret
+        )
+        subscription_client = SubscriptionClient(credential)
+
+        subscriptions = list(subscription_client.subscriptions.list())
+        if not subscriptions:
+            console.print(
+                "[red]No subscriptions found. Please check your credentials.[/red]"
+            )
+            raise ConfigError
+
+        selected_subscription = select_subscription(subscriptions)
+        subscription_id = selected_subscription.subscription_id
+
+        resource_client = ResourceManagementClient(credential, subscription_id)
+        resource_groups = list(resource_client.resource_groups.list())
+        if not resource_groups:
+            console.print(
+                "[red]No resource groups found in the selected subscription.[/red]"
+            )
+            raise ConfigError
+
+        resource_group_name = select_resource_group(resource_groups)
+    except ConfigError:
+        raise
+    except Exception as e:
+        logger.error(f"Error during manual Azure configuration: {e}", exc_info=True)
+        console.print(f"[red]An error occurred: {e}[/red]")
+        raise ConfigError
+
+    return {
+        "tenantId": tenant_id,
+        "clientId": client_id,
+        "clientSecret": client_secret,
+        "subscriptionId": subscription_id,
+        "resourceGroupName": resource_group_name,
+    }
+
+
+def handle_azure(args):
     cloud_provider = 1
 
     if args.config:
-        # logger.info(f"Azure --config argument detected with path: {args.config}")
         config = load_config(args.config)
-
         if not config:
             console.print("[red]Invalid or missing Azure configuration file.[/red]")
             return
@@ -277,223 +369,41 @@ def handle_azure(args):
         # Handle name field logic (priority: --name > config name > fallback)
         if args.name:
             config["name"] = args.name.strip()
-
         if "name" not in config or not config["name"].strip():
             config["name"] = (
                 f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}"
             )
 
-    elif args.non_interactive:
+        run_assessment(config, "azure", dry_run=args.dry_run, egress=args.egress)
+        return
+
+    if args.non_interactive:
         exit_strategy = require_env_int(
             "ESC_EXIT_STRATEGY", "exit strategy (1 or 3)", {1, 3}
         )
         assessment_type = require_env_int(
             "ESC_ASSESSMENT_TYPE", "assessment type (1 or 2)", {1, 2}
         )
-        subscription_id = require_env("ESC_SUBSCRIPTION_ID", "Azure subscription ID")
-        resource_group = require_env("ESC_RESOURCE_GROUP", "Azure resource group")
-        tenant_id = require_env("AZURE_TENANT_ID", "Azure tenant ID")
-        client_id = os.environ.get("AZURE_CLIENT_ID", "").strip()
-        client_secret = os.environ.get("AZURE_CLIENT_SECRET", "").strip()
-
-        if args.cli:
-            if not is_azure_cli_installed():
-                console.print(
-                    "[red]Azure CLI is not installed. Install it from https://aka.ms/install-azure-cli.[/red]"
-                )
-                sys.exit(codes.CONFIG)
-            if not is_azure_cli_logged_in():
-                console.print(
-                    "[red]You are not logged in to Azure CLI. Please run 'az login' and try again.[/red]"
-                )
-                sys.exit(codes.CONFIG)
-            if is_azure_cli_token_expired():
-                console.print(
-                    "[red]Your Azure CLI token has expired. Please run:[/red]"
-                )
-                console.print(
-                    "[bold cyan]az login --scope https://management.azure.com/.default[/bold cyan]"
-                )
-                sys.exit(codes.CONFIG)
-            credential = DefaultAzureCredential()
-        else:
-            if client_secret:
-                if not client_id:
-                    console.print(
-                        "[red]--non-interactive with AZURE_CLIENT_SECRET also requires AZURE_CLIENT_ID.[/red]"
-                    )
-                    sys.exit(codes.CONFIG)
-                credential = ClientSecretCredential(
-                    tenant_id=tenant_id,
-                    client_id=client_id,
-                    client_secret=client_secret,
-                )
-            else:
-                if not client_id:
-                    console.print(
-                        "[red]--non-interactive Azure OIDC requires AZURE_CLIENT_ID when AZURE_CLIENT_SECRET is not set.[/red]"
-                    )
-                    sys.exit(codes.CONFIG)
-                credential = DefaultAzureCredential()
-
-        provider_details = {
-            "credential": credential,
-            "tenantId": tenant_id,
-            "subscriptionId": subscription_id,
-            "resourceGroupName": resource_group,
-        }
-        if client_id:
-            provider_details["clientId"] = client_id
-        if not args.cli and client_secret:
-            provider_details["clientSecret"] = client_secret
-
-        config = {
-            "name": (
-                args.name.strip()
-                if args.name
-                else f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            ),
-            "cloudServiceProvider": cloud_provider,
-            "exitStrategy": exit_strategy,
-            "assessmentType": assessment_type,
-            "providerDetails": provider_details,
-        }
-
-    elif args.cli:
-        # logger.info("Azure --cli argument detected. Using Azure CLI credentials.")
-        # Check if az cli available
-        if not is_azure_cli_installed():
-            # logger.error("Azure CLI is not installed.")
-            console.print(
-                "[red]Azure CLI is not installed. Install it from https://aka.ms/install-azure-cli.[/red]"
-            )
-            return
-
-        # Check if the user is logged in to Azure CLI
-        if not is_azure_cli_logged_in():
-            # logger.error("User is not logged in to Azure CLI")
-            console.print(
-                "[red]You are not logged in to Azure CLI. Please run 'az login' and try again.[/red]"
-            )
-            return
-
-        # Check if the cli token is expired
-        if is_azure_cli_token_expired():
-            # logger.error("Azure CLI token is expired.")
-            console.print("[red]Your Azure CLI token has expired. Please run:[/red]")
-            console.print(
-                "[bold cyan]az login --scope https://management.azure.com/.default[/bold cyan]"
-            )
-            return
-
         try:
-            credential = DefaultAzureCredential()
-            tenant_id = input("Enter Azure Tenant ID: ").strip()
-            subscription_client = SubscriptionClient(credential)
-            subscriptions = list(subscription_client.subscriptions.list())
-            if not subscriptions:
-                logger.error(
-                    "No subscriptions found for the provided Azure credentials."
-                )
-                console.print(
-                    "[red]No subscriptions found for the provided credentials.[/red]"
-                )
-                return
-
-            selected_subscription = select_subscription(subscriptions)
-            subscription_id = selected_subscription.subscription_id
-
-            resource_client = ResourceManagementClient(credential, subscription_id)
-            resource_groups = list(resource_client.resource_groups.list())
-            if not resource_groups:
-                logger.error("No resource groups found in the selected subscription.")
-                console.print(
-                    "[red]No resource groups found in the selected subscription.[/red]"
-                )
-                return
-
-            resource_group_name = select_resource_group(resource_groups)
-            exit_strategy, assessment_type = prompt_required_inputs()
-            config = {
-                "name": (
-                    args.name.strip()
-                    if args.name
-                    else f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                ),
-                "cloudServiceProvider": cloud_provider,
-                "exitStrategy": exit_strategy,
-                "assessmentType": assessment_type,
-                "providerDetails": {
-                    "credential": credential,
-                    "tenantId": tenant_id,
-                    "subscriptionId": subscription_id,
-                    "resourceGroupName": resource_group_name,
-                },
-            }
-        except Exception as e:
-            logger.error(f"Error during Azure CLI processing: {e}", exc_info=True)
-            console.print(f"[red]An error occurred: {e}[/red]")
+            provider_details = _azure_provider_noninteractive(args)
+        except ConfigError:
+            sys.exit(codes.CONFIG)
+    elif args.cli:
+        try:
+            provider_details = _azure_provider_from_cli()
+        except ConfigError:
+            return
+        exit_strategy, assessment_type = prompt_required_inputs()
     else:
         exit_strategy, assessment_type = prompt_required_inputs()
-
-        tenant_id = input("Enter Azure Tenant ID: ").strip()
-        client_id = input("Enter Service Principal / Client ID: ").strip()
-        client_secret = input("Enter Client Secret: ").strip()
-
         try:
-            # Authenticate using the provided credentials
-            credential = ClientSecretCredential(
-                tenant_id=tenant_id, client_id=client_id, client_secret=client_secret
-            )
-            subscription_client = SubscriptionClient(credential)
-
-            # Fetch and prompt the user to select a subscription
-            subscriptions = list(subscription_client.subscriptions.list())
-            if not subscriptions:
-                console.print(
-                    "[red]No subscriptions found. Please check your credentials.[/red]"
-                )
-                return
-
-            selected_subscription = select_subscription(subscriptions)
-            subscription_id = selected_subscription.subscription_id
-
-            # Fetch and prompt the user to select a resource group
-            resource_client = ResourceManagementClient(credential, subscription_id)
-            resource_groups = list(resource_client.resource_groups.list())
-            if not resource_groups:
-                console.print(
-                    "[red]No resource groups found in the selected subscription.[/red]"
-                )
-                return
-
-            resource_group_name = select_resource_group(resource_groups)
-
-            # Build the configuration
-            config = {
-                "name": (
-                    args.name.strip()
-                    if args.name
-                    else f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                ),
-                "cloudServiceProvider": cloud_provider,
-                "exitStrategy": exit_strategy,
-                "assessmentType": assessment_type,
-                "providerDetails": {
-                    "tenantId": tenant_id,
-                    "clientId": client_id,
-                    "clientSecret": client_secret,
-                    "subscriptionId": subscription_id,
-                    "resourceGroupName": resource_group_name,
-                },
-            }
-        except Exception as e:
-            logger.error(f"Error during manual Azure configuration: {e}", exc_info=True)
-            console.print(f"[red]An error occurred: {e}[/red]")
+            provider_details = _azure_provider_from_prompt()
+        except ConfigError:
             return
 
-    # Run the Azure assessment pipeline
-    # logger.info("Starting Azure assessment pipeline.")
+    config = build_config(
+        cloud_provider, exit_strategy, assessment_type, provider_details, args
+    )
     run_assessment(config, "azure", dry_run=args.dry_run, egress=args.egress)
 
 

@@ -28,6 +28,28 @@ def load_config(file_path: str) -> dict[str, Any] | None:
         return None
 
 
+def resolve_name(args) -> str:
+    if getattr(args, "name", None) and args.name.strip():
+        return args.name.strip()
+    return f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+
+def build_config(
+    cloud_provider: int,
+    exit_strategy: int,
+    assessment_type: int,
+    provider_details: dict,
+    args,
+) -> dict:
+    return {
+        "name": resolve_name(args),
+        "cloudServiceProvider": cloud_provider,
+        "exitStrategy": exit_strategy,
+        "assessmentType": assessment_type,
+        "providerDetails": provider_details,
+    }
+
+
 def prompt_required_inputs() -> tuple[int, int]:
     while True:
         try:
