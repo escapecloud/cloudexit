@@ -18,6 +18,31 @@ from .utils_db import connect, load_data
 logger = logging.getLogger("core.engine.aws")
 
 
+def _retry_call(
+    func: Callable[..., Any],
+    max_retries: int,
+    retry_delay: int,
+    *args: Any,
+    **kwargs: Any,
+) -> Any:
+    for attempt in range(max_retries):
+        try:
+            return func(*args, **kwargs)
+        except botocore.exceptions.ClientError as error:
+            error_code = error.response["Error"]["Code"]
+            if error_code in ["Throttling", "RequestLimitExceeded"]:
+                time.sleep(retry_delay * (2**attempt))
+                continue
+            else:
+                raise
+        except botocore.exceptions.BotoCoreError:
+            time.sleep(retry_delay * (2**attempt))
+            continue
+    raise Exception(
+        f"Failed to call {getattr(func, '__name__', repr(func))} after {max_retries} attempts"
+    )
+
+
 def aws_api_call_with_retry(
     client: Any,
     function_name: str,
@@ -25,29 +50,56 @@ def aws_api_call_with_retry(
     max_retries: int,
     retry_delay: int,
 ) -> Callable[..., Any]:
-    def api_call(*args, **kwargs):
-        for attempt in range(max_retries):
-            try:
-                function_to_call = getattr(client, function_name)
-                if parameters:
-                    return function_to_call(**parameters, **kwargs)
-                else:
-                    return function_to_call(**kwargs)
-            except botocore.exceptions.ClientError as error:
-                error_code = error.response["Error"]["Code"]
-                # logger.warning(f"ClientError: {error_code}. Attempt {attempt + 1} of {max_retries}. Retrying in {retry_delay} seconds.")
-                if error_code in ["Throttling", "RequestLimitExceeded"]:
-                    time.sleep(retry_delay * (2**attempt))
-                    continue
-                else:
-                    raise
-            except botocore.exceptions.BotoCoreError:
-                # logger.warning(f"BotoCoreError. Attempt {attempt + 1} of {max_retries}. Retrying in {retry_delay} seconds.")
-                time.sleep(retry_delay * (2**attempt))
-                continue
-        raise Exception(f"Failed to call {function_name} after {max_retries} attempts")
+    function_to_call = getattr(client, function_name)
 
-    return api_call  # Return the callable function
+    def api_call(*args, **kwargs):
+        merged = {**parameters, **kwargs} if parameters else kwargs
+        return _retry_call(function_to_call, max_retries, retry_delay, **merged)
+
+    return api_call
+
+
+def paginate(
+    client: Any,
+    operation_name: str,
+    result_key: str,
+    max_retries: int = 3,
+    retry_delay: int = 2,
+    **kwargs: Any,
+) -> list:
+    """Iterate all pages of a boto3 operation, retrying throttled page fetches."""
+    paginator = client.get_paginator(operation_name)
+    page_iter = iter(paginator.paginate(**kwargs))
+    items: list = []
+    while True:
+        try:
+            page = _retry_call(next, max_retries, retry_delay, page_iter)
+        except StopIteration:
+            break
+        items.extend(page.get(result_key, []))
+    return items
+
+
+def paginate_or_call(
+    client: Any,
+    operation_name: str,
+    result_key: str,
+    max_retries: int = 3,
+    retry_delay: int = 2,
+    **kwargs: Any,
+) -> list:
+    """paginate() when boto3 supports it for this operation, else a single call."""
+    if client.can_paginate(operation_name):
+        return paginate(
+            client, operation_name, result_key, max_retries, retry_delay, **kwargs
+        )
+    api_call = aws_api_call_with_retry(
+        client, operation_name, kwargs, max_retries, retry_delay
+    )
+    response = api_call()
+    if not isinstance(response, dict):
+        return []
+    return response.get(result_key, [])
 
 
 def convert_datetime(obj: Any) -> Any:
@@ -115,24 +167,7 @@ def build_aws_resource_inventory(
                     # logger.error(f"Operation {operation_name} does not exist for service {service_name}")
                     continue
 
-                # Make the API call
-                api_call = aws_api_call_with_retry(
-                    client, operation_name, {}, max_retries=3, retry_delay=2
-                )
-                response = api_call()
-
-                if isinstance(response, dict):
-                    response.pop("ResponseMetadata", None)
-                    resources = response.get(result_key.strip(), [])
-                    # Handle paginated results
-                    while "NextToken" in response:
-                        next_token = response["NextToken"]
-                        response = api_call(NextToken=next_token)
-                        response.pop("ResponseMetadata", None)
-                        resources.extend(response.get(result_key.strip(), []))
-                else:
-                    # logger.warning(f"No valid response found for {service_name} operation {operation_name}. Skipping.")
-                    continue
+                resources = paginate_or_call(client, operation_name, result_key.strip())
 
                 # Aggregate the resources
                 for resource in resources:

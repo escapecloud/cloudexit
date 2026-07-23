@@ -5,6 +5,7 @@ from typing import Any
 from datetime import datetime, timedelta, timezone
 from botocore.exceptions import BotoCoreError, ClientError
 
+from .utils_aws import paginate
 from .utils_egress import GIB, format_bytes, new_row
 
 logger = logging.getLogger("core.engine.egress.aws")
@@ -128,14 +129,6 @@ def fetch_latest_metric_values(
         return None
 
 
-def _paginate(client: Any, operation_name: str, result_key: str, **kwargs) -> list:
-    items = []
-    paginator = client.get_paginator(operation_name)
-    for page in paginator.paginate(**kwargs):
-        items.extend(page.get(result_key, []))
-    return items
-
-
 def _bucket_region(s3_client: Any, bucket_name: str) -> str:
     location = s3_client.get_bucket_location(Bucket=bucket_name).get(
         "LocationConstraint"
@@ -254,7 +247,7 @@ def _collect_ebs_volumes(
 ) -> list[dict[str, Any]]:
     ec2_client = session.client("ec2", region_name=region)
     rows = []
-    for volume in _paginate(ec2_client, "describe_volumes", "Volumes"):
+    for volume in paginate(ec2_client, "describe_volumes", "Volumes"):
         name = next(
             (tag["Value"] for tag in volume.get("Tags", []) if tag["Key"] == "Name"),
             volume["VolumeId"],
@@ -275,7 +268,7 @@ def _collect_ebs_snapshots(
 ) -> list[dict[str, Any]]:
     ec2_client = session.client("ec2", region_name=region)
     rows = []
-    for snapshot in _paginate(
+    for snapshot in paginate(
         ec2_client, "describe_snapshots", "Snapshots", OwnerIds=["self"]
     ):
         row = new_row(
@@ -306,7 +299,7 @@ def _collect_rds_instances(
     specs = []
     spec_rows: dict[str, tuple[dict[str, Any], int]] = {}
     for index, instance in enumerate(
-        _paginate(rds_client, "describe_db_instances", "DBInstances")
+        paginate(rds_client, "describe_db_instances", "DBInstances")
     ):
         identifier = instance["DBInstanceIdentifier"]
         row = new_row(
@@ -353,7 +346,7 @@ def _collect_dynamodb_tables(
 ) -> list[dict[str, Any]]:
     dynamodb_client = session.client("dynamodb", region_name=region)
     rows = []
-    for table_name in _paginate(dynamodb_client, "list_tables", "TableNames"):
+    for table_name in paginate(dynamodb_client, "list_tables", "TableNames"):
         try:
             table = dynamodb_client.describe_table(TableName=table_name).get(
                 "Table", {}
@@ -389,7 +382,7 @@ def _collect_backup_vaults(
 ) -> list[dict[str, Any]]:
     backup_client = session.client("backup", region_name=region)
     rows = []
-    for vault in _paginate(backup_client, "list_backup_vaults", "BackupVaultList"):
+    for vault in paginate(backup_client, "list_backup_vaults", "BackupVaultList"):
         vault_name = vault["BackupVaultName"]
         row = new_row(
             vault.get("BackupVaultArn", vault_name),
