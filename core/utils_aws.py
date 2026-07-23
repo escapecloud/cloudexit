@@ -1,81 +1,30 @@
 # core/utils_aws.py
 import boto3
-import botocore
 import json
 import os
-import time
 import logging
 import sqlite3
-from collections.abc import Callable
 from typing import Any
 from datetime import date, datetime, timezone
 from collections import defaultdict
 from dateutil.relativedelta import relativedelta
-from botocore.exceptions import NoCredentialsError, ClientError
+from botocore.config import Config
 
 from .utils_db import connect, load_data
 
 logger = logging.getLogger("core.engine.aws")
 
-
-def _retry_call(
-    func: Callable[..., Any],
-    max_retries: int,
-    retry_delay: int,
-    *args: Any,
-    **kwargs: Any,
-) -> Any:
-    for attempt in range(max_retries):
-        try:
-            return func(*args, **kwargs)
-        except botocore.exceptions.ClientError as error:
-            error_code = error.response["Error"]["Code"]
-            if error_code in ["Throttling", "RequestLimitExceeded"]:
-                time.sleep(retry_delay * (2**attempt))
-                continue
-            else:
-                raise
-        except botocore.exceptions.BotoCoreError:
-            time.sleep(retry_delay * (2**attempt))
-            continue
-    raise Exception(
-        f"Failed to call {getattr(func, '__name__', repr(func))} after {max_retries} attempts"
-    )
-
-
-def aws_api_call_with_retry(
-    client: Any,
-    function_name: str,
-    parameters: dict[str, Any],
-    max_retries: int,
-    retry_delay: int,
-) -> Callable[..., Any]:
-    function_to_call = getattr(client, function_name)
-
-    def api_call(*args, **kwargs):
-        merged = {**parameters, **kwargs} if parameters else kwargs
-        return _retry_call(function_to_call, max_retries, retry_delay, **merged)
-
-    return api_call
+AWS_RETRY_CONFIG = Config(retries={"mode": "adaptive", "max_attempts": 8})
 
 
 def paginate(
     client: Any,
     operation_name: str,
     result_key: str,
-    max_retries: int = 3,
-    retry_delay: int = 2,
     **kwargs: Any,
 ) -> list:
-    """Iterate all pages of a boto3 operation, retrying throttled page fetches."""
-    paginator = client.get_paginator(operation_name)
-    page_iter = iter(paginator.paginate(**kwargs))
     items: list = []
-    while True:
-        try:
-            page = _retry_call(next, max_retries, retry_delay, page_iter)
-        except StopIteration:
-            break
+    for page in client.get_paginator(operation_name).paginate(**kwargs):
         items.extend(page.get(result_key, []))
     return items
 
@@ -84,19 +33,12 @@ def paginate_or_call(
     client: Any,
     operation_name: str,
     result_key: str,
-    max_retries: int = 3,
-    retry_delay: int = 2,
     **kwargs: Any,
 ) -> list:
     """paginate() when boto3 supports it for this operation, else a single call."""
     if client.can_paginate(operation_name):
-        return paginate(
-            client, operation_name, result_key, max_retries, retry_delay, **kwargs
-        )
-    api_call = aws_api_call_with_retry(
-        client, operation_name, kwargs, max_retries, retry_delay
-    )
-    response = api_call()
+        return paginate(client, operation_name, result_key, **kwargs)
+    response = getattr(client, operation_name)(**kwargs)
     if not isinstance(response, dict):
         return []
     return response.get(result_key, [])
@@ -162,7 +104,9 @@ def build_aws_resource_inventory(
             # logger.info(f"Processing service {service_name} with operation {operation_name}")
 
             try:
-                client = session.client(service_name, region_name=region)
+                client = session.client(
+                    service_name, region_name=region, config=AWS_RETRY_CONFIG
+                )
                 if not hasattr(client, operation_name):
                     # logger.error(f"Operation {operation_name} does not exist for service {service_name}")
                     continue
@@ -182,7 +126,7 @@ def build_aws_resource_inventory(
                     }
                 )
 
-            except (NoCredentialsError, ClientError, Exception):
+            except Exception:
                 # logger.error(f"Error while processing {service_name}", exc_info=True)
                 continue
 
@@ -264,7 +208,9 @@ def build_aws_cost_inventory(
             aws_session_token=provider_details.get("sessionToken"),
             region_name=provider_details["region"],
         )
-        cost_explorer = session.client("ce", region_name="us-east-1")
+        cost_explorer = session.client(
+            "ce", region_name="us-east-1", config=AWS_RETRY_CONFIG
+        )
 
         db_path = os.path.join(report_path, "data", "assessment.db")
 
