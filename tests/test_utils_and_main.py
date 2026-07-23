@@ -58,7 +58,6 @@ class LoadConfigTests(unittest.TestCase):
 
 
 def _base_patches():
-    """Patches that prevent real cloud/filesystem calls for all stage tests."""
     return [
         patch("main.console.print"),
         patch("main.print_step"),
@@ -93,7 +92,6 @@ def _base_patches():
 
 class RunAssessmentExitCodeTests(unittest.TestCase):
     def _run_with_patches(self, overrides: dict):
-        """Apply base patches, override specific ones, and run the assessment."""
         patches = _base_patches()
         for p in patches:
             p.start()
@@ -373,7 +371,6 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
 
 
 def _ni_aws_args(**kwargs):
-    """Build a Namespace that looks like 'aws --non-interactive' with optional overrides."""
     defaults = dict(
         config=None,
         profile=None,
@@ -387,7 +384,6 @@ def _ni_aws_args(**kwargs):
 
 
 def _ni_azure_args(**kwargs):
-    """Build a Namespace that looks like 'azure --non-interactive' with optional overrides."""
     defaults = dict(
         config=None,
         cli=False,
@@ -523,7 +519,7 @@ class NonInteractiveAzureTests(unittest.TestCase):
         self.assertEqual(config_arg["providerDetails"]["clientId"], "client-id-456")
         self.assertNotIn("clientSecret", config_arg["providerDetails"])
 
-    def test_missing_client_id_for_oidc_exits_config(self):
+    def test_missing_client_id_for_oidc_raises_config_error(self):
         env = {
             k: v
             for k, v in self._BASE_ENV.items()
@@ -533,9 +529,8 @@ class NonInteractiveAzureTests(unittest.TestCase):
             patch.dict(os.environ, env, clear=False),
             patch("main.console.print"),
         ):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(main.ConfigError):
                 main.handle_azure(_ni_azure_args())
-        self.assertEqual(ctx.exception.code, codes.CONFIG)
 
     def test_missing_subscription_id_exits_config(self):
         env = {k: v for k, v in self._BASE_ENV.items() if k != "ESC_SUBSCRIPTION_ID"}
@@ -782,6 +777,44 @@ class EgressStageTests(unittest.TestCase):
             main.handle_aws(_ni_aws_args(egress=True))
 
         mock_run.assert_called_once_with(ANY, "aws", dry_run=False, egress=True)
+
+
+class MainExitCodeTests(unittest.TestCase):
+    def test_config_error_from_handler_exits_config(self):
+        with (
+            patch("main.initialize_dataset"),
+            patch("main.console.print"),
+            patch(
+                "main.parse_arguments",
+                return_value=Namespace(cloud_provider="aws"),
+            ),
+            patch("main.handle_aws", side_effect=main.ConfigError),
+        ):
+            with self.assertRaises(SystemExit) as ctx:
+                main.main()
+        self.assertEqual(ctx.exception.code, codes.CONFIG)
+
+    def test_bad_config_file_exits_config_end_to_end(self):
+        args = Namespace(
+            cloud_provider="aws",
+            config="/nonexistent/aws.json",
+            profile=None,
+            name=None,
+            non_interactive=False,
+            dry_run=False,
+            egress=False,
+        )
+        with (
+            patch("main.initialize_dataset"),
+            patch("main.console.print"),
+            patch("main.parse_arguments", return_value=args),
+            patch("main.load_config", return_value=None),
+            patch("main.run_assessment") as mock_run,
+        ):
+            with self.assertRaises(SystemExit) as ctx:
+                main.main()
+        self.assertEqual(ctx.exception.code, codes.CONFIG)
+        mock_run.assert_not_called()
 
 
 class ResolveModeEnvVarTests(unittest.TestCase):

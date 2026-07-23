@@ -162,7 +162,7 @@ def handle_aws(args):
         config = load_config(args.config)
         if not config:
             console.print("[red]Invalid or missing AWS configuration file.[/red]")
-            return
+            raise ConfigError
 
         # Handle name field logic (priority: --name > config name > fallback)
         if args.name:
@@ -182,25 +182,16 @@ def handle_aws(args):
         assessment_type = require_env_int(
             "ESC_ASSESSMENT_TYPE", "assessment type (1 or 2)", {1, 2}
         )
-        try:
-            if args.profile:
-                provider_details = _aws_provider_from_profile(args.profile)
-            else:
-                provider_details = _aws_provider_from_env()
-        except ConfigError:
-            sys.exit(codes.CONFIG)
-    elif args.profile:
-        try:
+        if args.profile:
             provider_details = _aws_provider_from_profile(args.profile)
-        except ConfigError:
-            return
+        else:
+            provider_details = _aws_provider_from_env()
+    elif args.profile:
+        provider_details = _aws_provider_from_profile(args.profile)
         exit_strategy, assessment_type = prompt_required_inputs()
     else:
         exit_strategy, assessment_type = prompt_required_inputs()
-        try:
-            provider_details = _aws_provider_from_prompt()
-        except ConfigError:
-            return
+        provider_details = _aws_provider_from_prompt()
 
     config = build_config(
         cloud_provider, exit_strategy, assessment_type, provider_details, args
@@ -364,7 +355,7 @@ def handle_azure(args):
         config = load_config(args.config)
         if not config:
             console.print("[red]Invalid or missing Azure configuration file.[/red]")
-            return
+            raise ConfigError
 
         # Handle name field logic (priority: --name > config name > fallback)
         if args.name:
@@ -384,22 +375,13 @@ def handle_azure(args):
         assessment_type = require_env_int(
             "ESC_ASSESSMENT_TYPE", "assessment type (1 or 2)", {1, 2}
         )
-        try:
-            provider_details = _azure_provider_noninteractive(args)
-        except ConfigError:
-            sys.exit(codes.CONFIG)
+        provider_details = _azure_provider_noninteractive(args)
     elif args.cli:
-        try:
-            provider_details = _azure_provider_from_cli()
-        except ConfigError:
-            return
+        provider_details = _azure_provider_from_cli()
         exit_strategy, assessment_type = prompt_required_inputs()
     else:
         exit_strategy, assessment_type = prompt_required_inputs()
-        try:
-            provider_details = _azure_provider_from_prompt()
-        except ConfigError:
-            return
+        provider_details = _azure_provider_from_prompt()
 
     config = build_config(
         cloud_provider, exit_strategy, assessment_type, provider_details, args
@@ -864,17 +846,20 @@ def main():
         return
 
     # Dispatch based on provided arguments
-    if args.cloud_provider == "aws":
-        handle_aws(args)
-    elif args.cloud_provider == "azure":
-        handle_azure(args)
-    else:
-        console.print(
-            "[red]Invalid command. Use 'aws' or 'azure' as the first argument.[/red]"
-        )
-        console.print(
-            "[green]Run 'python3 main.py --help' for usage instructions.[/green]"
-        )
+    try:
+        if args.cloud_provider == "aws":
+            handle_aws(args)
+        elif args.cloud_provider == "azure":
+            handle_azure(args)
+        else:
+            console.print(
+                "[red]Invalid command. Use 'aws' or 'azure' as the first argument.[/red]"
+            )
+            console.print(
+                "[green]Run 'python3 main.py --help' for usage instructions.[/green]"
+            )
+    except ConfigError:
+        sys.exit(codes.CONFIG)
 
 
 if __name__ == "__main__":
