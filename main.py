@@ -50,6 +50,7 @@ from utils.utils import (
 )
 from utils.validate import validate_region, validate_config
 from utils import codes
+from utils.version import __version__
 
 # Configure the root logger to ensure logs propagate from all modules
 logging.basicConfig(
@@ -780,6 +781,13 @@ def parse_arguments():
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"cloudexit v{__version__}",
+        help="Show the CLI version and exit.",
+    )
+
     subparsers = parser.add_subparsers(
         dest="cloud_provider", help="Specify the cloud provider (aws or azure)."
     )
@@ -859,18 +867,20 @@ def parse_arguments():
 
 
 def main():
+    # Parse arguments first so --version/--help exit before any side effects
+    # (ASCII art, dataset download).
+    args = parse_arguments()
+
     # Print ASCII art
     console.print(ascii_art, style="bold cyan")
 
-    # Ensure latest dataset is available before proceeding
-    initialize_dataset()
-
-    args = parse_arguments()
-
-    # Check if the cloud provider is specified
+    # Nothing to do without a subcommand — show help before any dataset download.
     if not args.cloud_provider:
         print_help_message()
         return
+
+    # Ensure latest dataset is available before proceeding
+    initialize_dataset()
 
     # Dispatch based on provided arguments
     try:

@@ -19,7 +19,7 @@ class PostAssessmentHostResolutionTests(unittest.TestCase):
             patch.dict(os.environ, {"HOST": "env.exitcloud.io"}, clear=False),
             patch(
                 "core.utils_sync.config",
-                types.SimpleNamespace(HOST="", CLI_VERSION="v1"),
+                types.SimpleNamespace(HOST=""),
             ),
             patch("core.utils_sync._build_payload", return_value={"sample": "payload"}),
             patch(
@@ -47,7 +47,7 @@ class PostAssessmentHostResolutionTests(unittest.TestCase):
             patch.dict(os.environ, {}, clear=True),
             patch(
                 "core.utils_sync.config",
-                types.SimpleNamespace(HOST="", CLI_VERSION="v1"),
+                types.SimpleNamespace(HOST=""),
             ),
         ):
             result = post_assessment(

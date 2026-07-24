@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version, no leading v (e.g. 1.1.5)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Guard against non-main dispatch
+        run: |
+          if [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            echo "Release must be dispatched from main, got ${{ github.ref }}"; exit 1
+          fi
+
+      - name: Validate version and guard against existing tag
+        run: |
+          v="${{ inputs.version }}"
+          echo "$v" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "Bad version format: $v"; exit 1; }
+          if git ls-remote --exit-code --tags origin "refs/tags/v$v" >/dev/null 2>&1; then
+            echo "Tag v$v already exists on origin"; exit 1
+          fi
+
+      - name: Bump utils/version.py
+        run: |
+          v="${{ inputs.version }}"
+          sed -i "s/^__version__ = .*/__version__ = \"$v\"/" utils/version.py
+          grep -q "^__version__ = \"$v\"$" utils/version.py || { echo "sed did not update version"; exit 1; }
+
+      - name: Commit, tag, and push to main
+        run: |
+          v="${{ inputs.version }}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -am "Release v$v"
+          git tag "v$v"
+          git push origin HEAD --follow-tags
