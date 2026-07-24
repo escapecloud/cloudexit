@@ -367,7 +367,9 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
         ):
             main.handle_aws(_ni_aws_args(dry_run=True))
 
-        mock_run.assert_called_once_with(ANY, "aws", dry_run=True, egress=False)
+        mock_run.assert_called_once_with(
+            ANY, "aws", dry_run=True, non_interactive=True, egress=False
+        )
 
 
 def _ni_aws_args(**kwargs):
@@ -765,7 +767,9 @@ class EgressStageTests(unittest.TestCase):
         ):
             main.handle_azure(_ni_azure_args(egress=True))
 
-        mock_run.assert_called_once_with(ANY, "azure", dry_run=False, egress=True)
+        mock_run.assert_called_once_with(
+            ANY, "azure", dry_run=False, non_interactive=True, egress=True
+        )
 
     def test_handle_aws_passes_egress_flag(self):
         with (
@@ -776,7 +780,9 @@ class EgressStageTests(unittest.TestCase):
         ):
             main.handle_aws(_ni_aws_args(egress=True))
 
-        mock_run.assert_called_once_with(ANY, "aws", dry_run=False, egress=True)
+        mock_run.assert_called_once_with(
+            ANY, "aws", dry_run=False, non_interactive=True, egress=True
+        )
 
 
 class MainExitCodeTests(unittest.TestCase):
