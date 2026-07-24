@@ -10,6 +10,7 @@ import requests
 from typing import Any
 
 from core.utils_db import load_data
+from utils.version import __version__
 
 # Configure logger
 logger = logging.getLogger("core.engine.sync")
@@ -60,7 +61,7 @@ def _build_payload(
         for c in cost_rows
     ]
 
-    engine_version = getattr(config, "CLI_VERSION", "v1.0.0").strip()
+    engine_version = f"v{__version__}"
     now = int(time.time())
 
     payload: dict[str, Any] = {
