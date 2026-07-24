@@ -874,13 +874,13 @@ def main():
     # Print ASCII art
     console.print(ascii_art, style="bold cyan")
 
-    # Ensure latest dataset is available before proceeding
-    initialize_dataset()
-
-    # Check if the cloud provider is specified
+    # Nothing to do without a subcommand — show help before any dataset download.
     if not args.cloud_provider:
         print_help_message()
         return
+
+    # Ensure latest dataset is available before proceeding
+    initialize_dataset()
 
     # Dispatch based on provided arguments
     try:
