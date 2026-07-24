@@ -172,7 +172,13 @@ def handle_aws(args):
                 f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}"
             )
 
-        run_assessment(config, "aws", dry_run=args.dry_run, egress=args.egress)
+        run_assessment(
+            config,
+            "aws",
+            dry_run=args.dry_run,
+            non_interactive=args.non_interactive,
+            egress=args.egress,
+        )
         return
 
     if args.non_interactive:
@@ -196,7 +202,13 @@ def handle_aws(args):
     config = build_config(
         cloud_provider, exit_strategy, assessment_type, provider_details, args
     )
-    run_assessment(config, "aws", dry_run=args.dry_run, egress=args.egress)
+    run_assessment(
+        config,
+        "aws",
+        dry_run=args.dry_run,
+        non_interactive=args.non_interactive,
+        egress=args.egress,
+    )
 
 
 def _azure_cli_credential() -> DefaultAzureCredential:
@@ -365,7 +377,13 @@ def handle_azure(args):
                 f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}"
             )
 
-        run_assessment(config, "azure", dry_run=args.dry_run, egress=args.egress)
+        run_assessment(
+            config,
+            "azure",
+            dry_run=args.dry_run,
+            non_interactive=args.non_interactive,
+            egress=args.egress,
+        )
         return
 
     if args.non_interactive:
@@ -386,10 +404,18 @@ def handle_azure(args):
     config = build_config(
         cloud_provider, exit_strategy, assessment_type, provider_details, args
     )
-    run_assessment(config, "azure", dry_run=args.dry_run, egress=args.egress)
+    run_assessment(
+        config,
+        "azure",
+        dry_run=args.dry_run,
+        non_interactive=args.non_interactive,
+        egress=args.egress,
+    )
 
 
-def run_assessment(config, provider_name, *, dry_run=False, egress=False):
+def run_assessment(
+    config, provider_name, *, dry_run=False, non_interactive=False, egress=False
+):
     # Record the assessment start time to propagate across stages
     started_at = int(time.time())
 
@@ -694,17 +720,18 @@ def run_assessment(config, provider_name, *, dry_run=False, egress=False):
                 egress_failed = True
 
         # Output the report path after the separator
-        console.print("-------------------------------------------")
-        console.print(
-            "Need to see how a regulatory-aligned report looks (DORA / FINMA / UK PRA evidence support)?"
-        )
-        console.print(
-            "We can generate one from your --dry-run output and share a sample with you -- or forward this to your risk or compliance team."
-        )
-        console.print(
-            "Point-in-time evidence only; not a compliance certification or a complete exit strategy."
-        )
-        console.print("Contact: request_report@escapecloud.io")
+        if not (dry_run or non_interactive):
+            console.print("-------------------------------------------")
+            console.print(
+                "Need to see how a regulatory-aligned report looks (DORA / FINMA / UK PRA evidence support)?"
+            )
+            console.print(
+                "We can generate one from your --dry-run output and share a sample with you -- or forward this to your risk or compliance team."
+            )
+            console.print(
+                "Point-in-time evidence only; not a compliance certification or a complete exit strategy."
+            )
+            console.print("Contact: request_report@escapecloud.io")
         console.print("-------------------------------------------")
         console.print("Outputs:", style="bold")
         if payload_path:
