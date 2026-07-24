@@ -16,11 +16,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Guard against non-main dispatch
+        run: |
+          if [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            echo "Release must be dispatched from main, got ${{ github.ref }}"; exit 1
+          fi
+
       - name: Validate version and guard against existing tag
         run: |
           v="${{ inputs.version }}"
           echo "$v" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "Bad version format: $v"; exit 1; }
-          if git rev-parse "v$v" >/dev/null 2>&1; then echo "Tag v$v already exists"; exit 1; fi
+          if git ls-remote --exit-code --tags origin "refs/tags/v$v" >/dev/null 2>&1; then
+            echo "Tag v$v already exists on origin"; exit 1
+          fi
 
       - name: Bump utils/version.py
         run: |
