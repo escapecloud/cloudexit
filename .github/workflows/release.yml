@@ -44,5 +44,5 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git commit -am "Release v$v"
-          git tag "v$v"
-          git push origin HEAD --follow-tags
+          git tag -a "v$v" -m "Release v$v"
+          git push origin HEAD "refs/tags/v$v"
