@@ -5,6 +5,7 @@ import boto3
 import time
 import sys
 import os
+import getpass
 from rich.console import Console
 from datetime import datetime
 from botocore.exceptions import NoCredentialsError, ProfileNotFound
@@ -135,7 +136,7 @@ def _aws_provider_from_env() -> dict:
 def _aws_provider_from_prompt() -> dict:
     try:
         access_key = input("Enter AWS Access Key: ").strip()
-        secret_key = input("Enter AWS Secret Key: ").strip()
+        secret_key = getpass.getpass("Enter AWS Secret Key (input hidden): ").strip()
 
         # Validate AWS region input
         while True:
@@ -318,7 +319,7 @@ def _azure_provider_from_cli() -> dict:
 def _azure_provider_from_prompt() -> dict:
     tenant_id = input("Enter Azure Tenant ID: ").strip()
     client_id = input("Enter Service Principal / Client ID: ").strip()
-    client_secret = input("Enter Client Secret: ").strip()
+    client_secret = getpass.getpass("Enter Client Secret (input hidden): ").strip()
 
     try:
         credential = ClientSecretCredential(
