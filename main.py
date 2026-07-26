@@ -59,8 +59,6 @@ logging.basicConfig(
 )
 logging.getLogger("botocore").setLevel(logging.WARNING)
 logging.getLogger("boto3").setLevel(logging.WARNING)
-logging.getLogger("kaleido").setLevel(logging.WARNING)
-logging.getLogger("choreographer").setLevel(logging.WARNING)
 
 # Configure the logger
 logger = logging.getLogger(__name__)
