@@ -54,7 +54,7 @@ def select_subscription(subscriptions: list[Any]) -> Any:
             # logger.info(f"Subscription selected: {selected_subscription.display_name} ({selected_subscription.subscription_id})")
             return selected_subscription
         except ValueError as e:
-            logger.warning(f"Invalid subscription selection: {e}")
+            logger.debug(f"Invalid subscription selection: {e}")
             console.print(f"[red]{e} Please select a valid number.[/red]")
 
 
@@ -72,5 +72,5 @@ def select_resource_group(resource_groups: list[Any]) -> str:
             # logger.info(f"Resource Group selected: {selected_resource_group}")
             return selected_resource_group
         except ValueError as e:
-            logger.warning(f"Invalid resource group selection: {e}")
+            logger.debug(f"Invalid resource group selection: {e}")
             console.print(f"[red]{e} Please select a valid number.[/red]")

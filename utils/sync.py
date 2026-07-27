@@ -30,12 +30,12 @@ def submit_assessment(
 ) -> requests.Response | None:
     host = host or getattr(config, "HOST", "") if config else ""
     if not host:
-        logger.warning("HOST not configured – skipping assessment sync.")
+        logger.debug("HOST not configured – skipping assessment sync.")
         return None
 
     token = get_jwt_token(host=host, key=key) if key else get_jwt_token(host=host)
     if not token:
-        logger.warning("Could not obtain JWT – skipping assessment sync.")
+        logger.debug("Could not obtain JWT – skipping assessment sync.")
         return None
 
     url = _build_url(host)
@@ -49,5 +49,5 @@ def submit_assessment(
         logger.info("POST %s – status %s", url, resp.status_code)
         return resp
     except requests.RequestException as exc:
-        logger.error("Assessment POST failed: %s", exc)
+        logger.error("Assessment POST failed: %s", exc, exc_info=True)
         return None

@@ -14,7 +14,6 @@ from utils.version import __version__
 
 # Configure logger
 logger = logging.getLogger("core.engine.sync")
-logger.setLevel(logging.INFO)
 
 _ASSESS_PATH = "/api/v1/assessments/"
 

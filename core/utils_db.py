@@ -2,9 +2,8 @@
 import sqlite3
 import logging
 
-# Configure logger for database operations
+# Configure logger for database operations (level left to the root handlers)
 logger = logging.getLogger("core.engine.db")
-logger.setLevel(logging.INFO)
 
 # Default master database
 MASTER_DATABASE = "datasets/data.db"
@@ -28,7 +27,7 @@ def connect(db_path=MASTER_DATABASE):
         conn = sqlite3.connect(db_path)
         return conn
     except sqlite3.Error as e:
-        logger.error(f"Error connecting to database: {e}")
+        logger.debug(f"Error connecting to database: {e}")
         raise
 
 
@@ -44,7 +43,7 @@ def load_data(table_name, db_path=MASTER_DATABASE):
         conn.close()
         return [dict(zip(columns, row)) for row in rows]
     except sqlite3.Error as e:
-        logger.error(f"Error loading data from table '{table_name}': {e}")
+        logger.debug(f"Error loading data from table '{table_name}': {e}")
         raise
 
 
@@ -58,7 +57,7 @@ def execute_query(query, params=None, db_path=MASTER_DATABASE):
         conn.close()
         return rowcount
     except sqlite3.Error as e:
-        logger.error(f"Error executing query: {e}")
+        logger.debug(f"Error executing query: {e}")
         raise
 
 
@@ -72,7 +71,7 @@ def fetch_one(query, params=None, db_path=MASTER_DATABASE):
         conn.close()
         return dict(zip(columns, row)) if row else None
     except sqlite3.Error as e:
-        logger.error(f"Error fetching data: {e}")
+        logger.debug(f"Error fetching data: {e}")
         raise
 
 
@@ -86,5 +85,5 @@ def fetch_all(query, params=None, db_path=MASTER_DATABASE):
         conn.close()
         return [dict(zip(columns, row)) for row in rows]
     except sqlite3.Error as e:
-        logger.error(f"Error fetching data: {e}")
+        logger.debug(f"Error fetching data: {e}")
         raise

@@ -26,7 +26,6 @@ from core.utils_report_common import (
 
 # Configure logger
 logger = logging.getLogger("core.engine.report_pdf")
-logger.setLevel(logging.INFO)
 
 
 def transform_resource_inventory_for_pdf(

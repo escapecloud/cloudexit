@@ -126,8 +126,9 @@ def test_permissions(
                 logs = "Both Reader and Cost Management Reader roles validation failed."
 
         except ClientAuthenticationError as e:
+            # Expected outcome of a permission test; surfaced to the user via `logs`.
             logs = f"Azure credentials validation failed: {str(e)}"
-            logger.error(logs)
+            logger.warning(logs)
         except Exception as e:
             logs = f"Azure permission test failed: {str(e)}"
             logger.error(logs)
@@ -231,8 +232,9 @@ def test_permissions(
                         logs += f" Details: {details}"
 
         except NoCredentialsError as e:
+            # Expected outcome of a permission test; surfaced to the user via `logs`.
             logs = f"AWS credentials validation failed: {str(e)}"
-            logger.error(logs)
+            logger.warning(logs)
         except Exception as e:
             logs = f"AWS permission test failed: {str(e)}"
             logger.error(logs)
