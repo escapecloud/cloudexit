@@ -297,7 +297,7 @@ class PaginateTests(unittest.TestCase):
         )
 
     def test_throttling_mid_pagination_does_not_silently_truncate(self):
-        
+
         def flaky_pages():
             yield {"Items": ["r1", "r2"]}
             raise botocore.exceptions.ClientError(
