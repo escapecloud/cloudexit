@@ -67,6 +67,7 @@ _THIRD_PARTY_NOISY = ("botocore", "boto3", "azure")
 #  so they never flood the -vv console or run.log.
 _ALWAYS_QUIET = ("PIL",)
 
+
 def configure_logging(verbose: int = 0) -> None:
     """
     verbose == 0 -> WARNING (default; the Rich step UI is the primary output)
@@ -99,12 +100,17 @@ def configure_logging(verbose: int = 0) -> None:
 
 
 def add_run_log_handler(report_path: str) -> None:
-    file_handler = logging.FileHandler(os.path.join(report_path, "run.log"))
-    file_handler.setLevel(logging.DEBUG)
-    file_handler.setFormatter(
-        logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    )
-    logging.getLogger().addHandler(file_handler)
+    # A logging-setup failure must never abort the assessment, so degrade
+    # gracefully if run.log cannot be created (e.g. dir missing or read-only).
+    try:
+        file_handler = logging.FileHandler(os.path.join(report_path, "run.log"))
+        file_handler.setLevel(logging.DEBUG)
+        file_handler.setFormatter(
+            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        )
+        logging.getLogger().addHandler(file_handler)
+    except OSError as exc:
+        logger.warning("Could not create run.log in %s: %s", report_path, exc)
 
 
 class ConfigError(Exception):

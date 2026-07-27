@@ -66,7 +66,9 @@ def get_jwt_token(
             "Authentication succeeded but token field missing in response: %s", data
         )
     except requests.RequestException as exc:
-        logger.error("EscapeCloud authentication request failed: %s", exc, exc_info=True)
+        logger.error(
+            "EscapeCloud authentication request failed: %s", exc, exc_info=True
+        )
     except ValueError:
         logger.error(
             "EscapeCloud authentication response was not valid JSON.", exc_info=True
