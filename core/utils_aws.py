@@ -127,7 +127,15 @@ def build_aws_resource_inventory(
                 )
 
             except Exception:
-                # logger.error(f"Error while processing {service_name}", exc_info=True)
+                # Log and skip: one throttled/failing service must not abort the
+                # whole inventory, but it must not look identical to an empty one.
+                logger.error(
+                    "Error processing %s.%s in %s",
+                    service_name,
+                    operation_name,
+                    region,
+                    exc_info=True,
+                )
                 continue
 
         # Save raw data to a JSON file

@@ -323,7 +323,12 @@ def sync_assessment(
     )
 
     if not result.get("success"):
-        raise RuntimeError(f"Assessment sync failed: {result.get('logs')}")
+        return {
+            "success": False,
+            "online": True,
+            "payload": None,
+            "logs": f"Assessment sync failed: {result.get('logs')}",
+        }
 
     logger.debug(result)
 
@@ -355,7 +360,12 @@ def sync_assessment(
 
     except Exception as e:
         logger.error("Error saving server risks to local DB: %s", str(e), exc_info=True)
-        raise RuntimeError(f"Failed to store server risks: {str(e)}")
+        return {
+            "success": False,
+            "online": True,
+            "payload": None,
+            "logs": f"Failed to store server risks: {str(e)}",
+        }
 
     try:
         scoring = payload.get("scoring_data")
@@ -380,7 +390,12 @@ def sync_assessment(
 
     except Exception as e:
         logger.error("Error saving scoring data to local DB: %s", str(e), exc_info=True)
-        raise RuntimeError(f"Failed to store scoring data: {str(e)}")
+        return {
+            "success": False,
+            "online": True,
+            "payload": None,
+            "logs": f"Failed to store scoring data: {str(e)}",
+        }
 
     return result
 

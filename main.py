@@ -6,6 +6,7 @@ import time
 import sys
 import os
 import getpass
+import traceback
 from rich.console import Console
 from rich.logging import RichHandler
 from datetime import datetime
@@ -464,6 +465,10 @@ def run_assessment(
     # Record the assessment start time to propagate across stages
     started_at = int(time.time())
 
+    # Bound up front so the error handler can reference it even if the crash
+    # happens before the report directory is created.
+    report_path = None
+
     try:
         # Preliminary Stage: Validate configuration & create directory
         console.print("-------------------------------------------")
@@ -802,6 +807,20 @@ def run_assessment(
 
     except Exception as e:
         console.print(f"[red]Unexpected error: {e}[/red]")
+        # Persist the full traceback so a one-line error is actionable. Falls
+        # back to the cwd when the crash happened before the report dir existed.
+        target_dir = report_path or os.getcwd()
+        try:
+            log_file = os.path.join(target_dir, f"error-{int(time.time())}.log")
+            with open(log_file, "w", encoding="utf-8") as fh:
+                fh.write(traceback.format_exc())
+            console.print(f"[yellow]Full traceback written to: {log_file}[/yellow]")
+        except OSError:
+            console.print(
+                "[yellow]Could not write a traceback file; see run.log.[/yellow]"
+            )
+        # Also funnel to run.log at DEBUG (kept off the default console).
+        logger.debug("Unexpected error", exc_info=True)
         sys.exit(codes.UNEXPECTED)
 
 
