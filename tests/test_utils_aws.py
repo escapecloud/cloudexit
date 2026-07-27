@@ -1,4 +1,5 @@
 # tests/test_utils_aws.py
+import logging
 import os
 import tempfile
 import unittest
@@ -206,6 +207,69 @@ class BuildAwsResourceInventoryErrorTests(unittest.TestCase):
             )
 
 
+class BuildAwsResourceInventoryPerServiceTests(unittest.TestCase):
+    @patch("core.utils_aws.connect")
+    @patch("core.utils_aws.paginate_or_call")
+    @patch("core.utils_aws.boto3.Session")
+    @patch("core.utils_aws.load_data")
+    def test_failed_service_is_skipped_and_logged_at_debug(
+        self, mock_load_data, mock_session_cls, mock_poc, mock_connect
+    ):
+        mock_load_data.return_value = [
+            {
+                "code": "AWS.ec2.describe_instances.Reservations",
+                "id": 1,
+                "name": "EC2",
+                "csp": 2,
+                "status": "t",
+            },
+            {
+                "code": "AWS.s3.list_buckets.Buckets",
+                "id": 2,
+                "name": "S3",
+                "csp": 2,
+                "status": "t",
+            },
+        ]
+        # First service raises (e.g. AccessDenied); second returns resources.
+        mock_poc.side_effect = [
+            botocore.exceptions.ClientError(
+                {"Error": {"Code": "AccessDenied", "Message": "no"}},
+                "DescribeInstances",
+            ),
+            [{"InstanceId": "i-1"}],
+        ]
+        mock_connect.return_value.__enter__.return_value = MagicMock()
+
+        from core.utils_aws import build_aws_resource_inventory
+
+        with tempfile.TemporaryDirectory() as tmp:
+            report_path = os.path.join(tmp, "report")
+            raw_data_path = os.path.join(tmp, "raw")
+            os.makedirs(os.path.join(report_path, "data"), exist_ok=True)
+            os.makedirs(raw_data_path, exist_ok=True)
+
+            with self.assertLogs("core.engine.aws", level="DEBUG") as cm:
+                build_aws_resource_inventory(
+                    2,
+                    {"accessKey": "AK", "secretKey": "SK", "region": "us-east-1"},
+                    report_path,
+                    raw_data_path,
+                )
+
+        # Loop continued past the failing service to the next one.
+        self.assertEqual(mock_poc.call_count, 2)
+        # The failure was recorded at DEBUG, naming the failed service...
+        self.assertTrue(
+            any(
+                r.levelno == logging.DEBUG and "ec2" in r.getMessage()
+                for r in cm.records
+            )
+        )
+        # ...and never escalated to WARNING/ERROR (stays off the console).
+        self.assertFalse(any(r.levelno >= logging.WARNING for r in cm.records))
+
+
 class PaginateTests(unittest.TestCase):
     def _fake_client(self, pages):
         """Build a stub client whose paginator yields the given pages."""
@@ -233,12 +297,7 @@ class PaginateTests(unittest.TestCase):
         )
 
     def test_throttling_mid_pagination_does_not_silently_truncate(self):
-        """Regression: retrying next() on a dead PageIterator generator
-        used to return a truncated prefix as if it were the full result.
-        With retries pushed down to the client (AWS_RETRY_CONFIG), the
-        paginator generator never sees the throttle and delivers every page.
-        Here we assert paginate() does not swallow a mid-iteration error."""
-
+        
         def flaky_pages():
             yield {"Items": ["r1", "r2"]}
             raise botocore.exceptions.ClientError(

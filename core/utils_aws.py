@@ -126,15 +126,18 @@ def build_aws_resource_inventory(
                     }
                 )
 
-            except Exception:
-                # Log and skip: one throttled/failing service must not abort the
-                # whole inventory, but it must not look identical to an empty one.
-                logger.error(
-                    "Error processing %s.%s in %s",
+            except Exception as exc:
+                # Expected for services the caller can't access or that aren't
+                # available in a region. Keep at DEBUG (run.log only) so it never
+                # floods the console, while still distinguishing a failed service
+                # from an empty one. The message alone is the useful signal; the
+                # botocore stack is noise, so no exc_info here.
+                logger.debug(
+                    "Error processing %s.%s in %s: %s",
                     service_name,
                     operation_name,
                     region,
-                    exc_info=True,
+                    exc,
                 )
                 continue
 

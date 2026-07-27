@@ -264,6 +264,60 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
                 main.run_assessment(VALID_CONFIG.copy(), "aws")
         self.assertEqual(ctx.exception.code, codes.UNEXPECTED)
 
+    def test_unexpected_error_writes_traceback_file(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            raw_data_path = os.path.join(tmp_dir, "raw")
+            os.makedirs(raw_data_path, exist_ok=True)
+            with self.assertRaises(SystemExit) as ctx:
+                with (
+                    patch("main.validate_config"),
+                    patch("main.resolve_mode", return_value=("offline", None)),
+                    patch(
+                        "main.create_directory",
+                        return_value=(tmp_dir, raw_data_path),
+                    ),
+                    patch(
+                        "main.verify_credentials",
+                        side_effect=RuntimeError("boom-unexpected"),
+                    ),
+                    patch("main.print_step"),
+                    patch("main.console.print"),
+                ):
+                    main.run_assessment(VALID_CONFIG.copy(), "aws")
+
+            self.assertEqual(ctx.exception.code, codes.UNEXPECTED)
+            logs = [f for f in os.listdir(tmp_dir) if f.startswith("error-")]
+            self.assertEqual(len(logs), 1)
+            body = Path(tmp_dir, logs[0]).read_text(encoding="utf-8")
+            self.assertIn("Traceback", body)
+            self.assertIn("boom-unexpected", body)
+
+    def test_online_sync_failure_exits_risk_assessment(self):
+        with self.assertRaises(SystemExit) as ctx:
+            with (
+                patch("main.validate_config"),
+                patch("main.resolve_mode", return_value=("online", "jwt-token")),
+                patch("main.create_directory", return_value=("/tmp/r", "/tmp/r/raw")),
+                patch("main.verify_credentials", return_value=(True, "ok")),
+                patch("main.test_permissions", return_value=(True, True, True, "ok")),
+                patch(
+                    "main.create_resource_inventory",
+                    return_value={"success": True, "logs": ""},
+                ),
+                patch(
+                    "main.create_cost_inventory",
+                    return_value={"success": True, "logs": ""},
+                ),
+                patch(
+                    "main.sync_assessment",
+                    return_value={"success": False, "logs": "server responded 401"},
+                ),
+                patch("main.print_step"),
+                patch("main.console.print"),
+            ):
+                main.run_assessment(VALID_CONFIG.copy(), "aws")
+        self.assertEqual(ctx.exception.code, codes.RISK_ASSESSMENT)
+
     def test_full_success_exits_0(self):
         with (
             patch("main.validate_config"),
