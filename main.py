@@ -7,6 +7,7 @@ import sys
 import os
 import getpass
 from rich.console import Console
+from rich.logging import RichHandler
 from datetime import datetime
 from botocore.exceptions import NoCredentialsError, ProfileNotFound
 from azure.identity import DefaultAzureCredential, ClientSecretCredential
@@ -53,19 +54,57 @@ from utils.validate import validate_region, validate_config
 from utils import codes
 from utils.version import __version__
 
-# Configure the root logger to ensure logs propagate from all modules
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logging.getLogger("botocore").setLevel(logging.WARNING)
-logging.getLogger("boto3").setLevel(logging.WARNING)
-
-# Configure the logger
+# Configure the logger (level is left to the handlers, see configure_logging)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 # Initialize the console object
 console = Console()
+
+# Third-party loggers kept quiet unless the user opts into deep verbosity (-vv)
+_THIRD_PARTY_NOISY = ("botocore", "boto3", "azure")
+
+# Loggers with no diagnostic value ever — pinned to WARNING regardless of verbosity,
+#  so they never flood the -vv console or run.log.
+_ALWAYS_QUIET = ("PIL",)
+
+def configure_logging(verbose: int = 0) -> None:
+    """
+    verbose == 0 -> WARNING (default; the Rich step UI is the primary output)
+    verbose == 1 -> INFO    (--verbose: show our interaction narrative)
+    verbose >= 2 -> DEBUG   (-vv: also un-mute third-party libraries)
+    """
+    root = logging.getLogger()
+    root.setLevel(logging.DEBUG)
+    root.handlers.clear()
+
+    if verbose == 0:
+        console_level = logging.WARNING
+    elif verbose == 1:
+        console_level = logging.INFO
+    else:
+        console_level = logging.DEBUG
+
+    console_handler = RichHandler(
+        console=console, show_path=False, rich_tracebacks=True
+    )
+    console_handler.setLevel(console_level)
+    root.addHandler(console_handler)
+
+    third_party_level = logging.DEBUG if verbose >= 2 else logging.WARNING
+    for name in _THIRD_PARTY_NOISY:
+        logging.getLogger(name).setLevel(third_party_level)
+
+    for name in _ALWAYS_QUIET:
+        logging.getLogger(name).setLevel(logging.WARNING)
+
+
+def add_run_log_handler(report_path: str) -> None:
+    file_handler = logging.FileHandler(os.path.join(report_path, "run.log"))
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(
+        logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    )
+    logging.getLogger().addHandler(file_handler)
 
 
 class ConfigError(Exception):
@@ -448,6 +487,7 @@ def run_assessment(
         # Create directories
         try:
             report_path, raw_data_path = create_directory()
+            add_run_log_handler(report_path)
             print_step("Directory successfully created.", status="ok")
         except RuntimeError as e:
             print_step("Directory creation failed.", status="error", logs=str(e))
@@ -791,8 +831,20 @@ def parse_arguments():
         dest="cloud_provider", help="Specify the cloud provider (aws or azure)."
     )
 
+    # Shared options available on every subcommand (e.g. `aws --verbose`)
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument(
+        "-v",
+        "--verbose",
+        action="count",
+        default=0,
+        help="Increase log verbosity (-v for INFO, -vv for DEBUG + third-party).",
+    )
+
     # Subparser for AWS
-    aws_parser = subparsers.add_parser("aws", help="Perform an AWS assessment.")
+    aws_parser = subparsers.add_parser(
+        "aws", parents=[common], help="Perform an AWS assessment."
+    )
     aws_group = aws_parser.add_mutually_exclusive_group(required=False)
     aws_group.add_argument(
         "--config", type=str, help="Path to the configuration file (JSON format)."
@@ -827,7 +879,9 @@ def parse_arguments():
     )
 
     # Subparser for Azure
-    azure_parser = subparsers.add_parser("azure", help="Perform an Azure assessment.")
+    azure_parser = subparsers.add_parser(
+        "azure", parents=[common], help="Perform an Azure assessment."
+    )
     azure_group = azure_parser.add_mutually_exclusive_group(required=False)
     azure_group.add_argument(
         "--config", type=str, help="Path to the configuration file (JSON format)."
@@ -869,6 +923,9 @@ def main():
     # Parse arguments first so --version/--help exit before any side effects
     # (ASCII art, dataset download).
     args = parse_arguments()
+
+    # Configure logging before any side effects so verbosity applies everywhere.
+    configure_logging(getattr(args, "verbose", 0))
 
     # Print ASCII art
     console.print(ascii_art, style="bold cyan")
