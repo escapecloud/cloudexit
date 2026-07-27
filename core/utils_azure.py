@@ -35,7 +35,9 @@ def is_resource_inventory_empty(
             # logger.info("Resources found in the resource group.")
             return False
     except AzureError as e:
-        logger.error(
+        # Re-raised to build_azure_resource_inventory, which logs at ERROR with
+        # the traceback; keep this at DEBUG to avoid double-logging.
+        logger.debug(
             f"Error checking Azure resource inventory: {str(e)}", exc_info=True
         )
         raise

@@ -126,8 +126,9 @@ def test_permissions(
                 logs = "Both Reader and Cost Management Reader roles validation failed."
 
         except ClientAuthenticationError as e:
+            # Expected outcome of a permission test; surfaced to the user via `logs`.
             logs = f"Azure credentials validation failed: {str(e)}"
-            logger.error(logs)
+            logger.warning(logs)
         except Exception as e:
             logs = f"Azure permission test failed: {str(e)}"
             logger.error(logs)
@@ -231,8 +232,9 @@ def test_permissions(
                         logs += f" Details: {details}"
 
         except NoCredentialsError as e:
+            # Expected outcome of a permission test; surfaced to the user via `logs`.
             logs = f"AWS credentials validation failed: {str(e)}"
-            logger.error(logs)
+            logger.warning(logs)
         except Exception as e:
             logs = f"AWS permission test failed: {str(e)}"
             logger.error(logs)
@@ -321,7 +323,12 @@ def sync_assessment(
     )
 
     if not result.get("success"):
-        raise RuntimeError(f"Assessment sync failed: {result.get('logs')}")
+        return {
+            "success": False,
+            "online": True,
+            "payload": None,
+            "logs": f"Assessment sync failed: {result.get('logs')}",
+        }
 
     logger.debug(result)
 
@@ -353,7 +360,12 @@ def sync_assessment(
 
     except Exception as e:
         logger.error("Error saving server risks to local DB: %s", str(e), exc_info=True)
-        raise RuntimeError(f"Failed to store server risks: {str(e)}")
+        return {
+            "success": False,
+            "online": True,
+            "payload": None,
+            "logs": f"Failed to store server risks: {str(e)}",
+        }
 
     try:
         scoring = payload.get("scoring_data")
@@ -378,7 +390,12 @@ def sync_assessment(
 
     except Exception as e:
         logger.error("Error saving scoring data to local DB: %s", str(e), exc_info=True)
-        raise RuntimeError(f"Failed to store scoring data: {str(e)}")
+        return {
+            "success": False,
+            "online": True,
+            "payload": None,
+            "logs": f"Failed to store scoring data: {str(e)}",
+        }
 
     return result
 

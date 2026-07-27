@@ -63,7 +63,7 @@ def prompt_required_inputs() -> tuple[int, int]:
             # logger.info(f"Exit Strategy selected: {exit_strategy}")
             break
         except ValueError as e:
-            logger.warning(f"Invalid exit strategy input: {e}")
+            logger.debug(f"Invalid exit strategy input: {e}")
             console.print(f"[red]{e} Please enter 1 or 3.[/red]")
 
     while True:
@@ -78,7 +78,7 @@ def prompt_required_inputs() -> tuple[int, int]:
             # logger.info(f"Assessment Type selected: {assessment_type}")
             break
         except ValueError as e:
-            logger.warning(f"Invalid assessment type input: {e}")
+            logger.debug(f"Invalid assessment type input: {e}")
             console.print(f"[red]{e} Please enter 1 or 2.[/red]")
 
     return exit_strategy, assessment_type

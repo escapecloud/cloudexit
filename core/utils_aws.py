@@ -126,8 +126,19 @@ def build_aws_resource_inventory(
                     }
                 )
 
-            except Exception:
-                # logger.error(f"Error while processing {service_name}", exc_info=True)
+            except Exception as exc:
+                # Expected for services the caller can't access or that aren't
+                # available in a region. Keep at DEBUG (run.log only) so it never
+                # floods the console, while still distinguishing a failed service
+                # from an empty one. The message alone is the useful signal; the
+                # botocore stack is noise, so no exc_info here.
+                logger.debug(
+                    "Error processing %s.%s in %s: %s",
+                    service_name,
+                    operation_name,
+                    region,
+                    exc,
+                )
                 continue
 
         # Save raw data to a JSON file

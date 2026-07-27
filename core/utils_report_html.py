@@ -10,7 +10,6 @@ from core.utils_report_common import (
 
 # Configure logger
 logger = logging.getLogger("core.engine.report_html")
-logger.setLevel(logging.INFO)
 
 
 def transform_cost_inventory_for_html(

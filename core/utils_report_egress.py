@@ -36,7 +36,6 @@ from core.utils_report_pdf import draw_header_footer
 PDF_HEADER_TITLE = "EscapeCloud Community Edition - Data & Egress"
 
 logger = logging.getLogger("core.engine.report_egress")
-logger.setLevel(logging.INFO)
 
 DEFAULT_PRICING_ZONE = "zone1"
 UNIT_DIVISORS = {"GB": 10**9, "GiB": 2**30}

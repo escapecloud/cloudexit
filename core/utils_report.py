@@ -47,7 +47,6 @@ from core.utils_report_pdf import (
 
 # Configure logger
 logger = logging.getLogger("core.engine.report")
-logger.setLevel(logging.INFO)
 
 
 def anonymize_string(s: str, num_visible: int = 4) -> str:
