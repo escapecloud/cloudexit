@@ -145,6 +145,120 @@ class BuildScopeSectionTests(unittest.TestCase):
         self.assertEqual(len(tables), 1)
 
 
+class BuildTfstateScopeSectionTests(unittest.TestCase):
+    _SHA = "a3f1" + "b" * 56 + "9c2e"
+    _LINEAGE = "121f3456-7d0f-a7be-ceb0-c91d44c6a689"
+
+    def setUp(self):
+        self.styles, self.content_style = _make_styles()
+        self.fixture = build_report_fixture()
+
+    def _rows(self, metadata, provider_details, tfstate_scope=None):
+        content = _build_scope_section(
+            metadata,
+            provider_details,
+            self.styles,
+            self.content_style,
+            tfstate_scope,
+        )
+        tables = [item for item in content if isinstance(item, Table)]
+        self.assertEqual(len(tables), 1)
+        return {row[0]: row[1] for row in tables[0]._cellvalues[1:]}
+
+    def _aws_scope(self, **overrides):
+        scope = {
+            "file": "infra.tfstate",
+            "sha256": self._SHA,
+            "lineage": self._LINEAGE,
+            "serial": 7,
+            "locations": ["eu-central-1"],
+            "subscriptions": [],
+            "resource_groups": [],
+        }
+        scope.update(overrides)
+        return scope
+
+    def test_aws_renders_file_state_and_regions(self):
+        rows = self._rows(
+            self.fixture["metadata"],
+            {"tfstatePath": "/tmp/infra.tfstate"},
+            self._aws_scope(),
+        )
+
+        self.assertEqual(list(rows), ["File", "State", "Region(s)"])
+        self.assertEqual(rows["File"], "infra.tfstate (SHA-256 a3f1…9c2e)")
+        self.assertEqual(rows["State"], f"{self._LINEAGE} (Serial: 7)")
+        self.assertEqual(rows["Region(s)"], "eu-central-1")
+
+    def test_azure_renders_subscription_and_resource_groups(self):
+        metadata = {**self.fixture["metadata"], "cloud_service_provider": 1}
+        scope = self._aws_scope(
+            subscriptions=["0299bf7a-8ca8-479b-8659-c62e62cd7bae"],
+            resource_groups=["escape-test-rg-1", "escape-test-rg-2"],
+        )
+
+        rows = self._rows(metadata, {"tfstatePath": "/tmp/infra.tfstate"}, scope)
+
+        self.assertEqual(
+            list(rows), ["File", "State", "Subscription", "Resource Group(s)"]
+        )
+        self.assertEqual(rows["Subscription"], "0299bf7a-8ca8-479b-8659-c62e62cd7bae")
+        self.assertEqual(
+            rows["Resource Group(s)"], "escape-test-rg-1, escape-test-rg-2"
+        )
+        # Azure deliberately mirrors the live table, which shows no location.
+        self.assertNotIn("Location(s)", rows)
+        self.assertNotIn("Region(s)", rows)
+
+    def test_many_values_are_capped_with_a_remainder(self):
+        metadata = {**self.fixture["metadata"], "cloud_service_provider": 1}
+        scope = self._aws_scope(
+            subscriptions=["sub-1"],
+            resource_groups=[f"rg-{i}" for i in range(6)],
+        )
+
+        rows = self._rows(metadata, {"tfstatePath": "/tmp/infra.tfstate"}, scope)
+
+        self.assertEqual(rows["Resource Group(s)"], "rg-0, rg-1, rg-2, +3 more")
+
+    def test_missing_values_report_not_determinable(self):
+        rows = self._rows(
+            self.fixture["metadata"],
+            {"tfstatePath": "/tmp/infra.tfstate"},
+            self._aws_scope(locations=[]),
+        )
+
+        self.assertEqual(rows["Region(s)"], "Not determinable from state")
+
+    def test_state_row_omitted_when_lineage_and_serial_absent(self):
+        rows = self._rows(
+            self.fixture["metadata"],
+            {"tfstatePath": "/tmp/infra.tfstate"},
+            self._aws_scope(lineage=None, serial=None),
+        )
+
+        self.assertEqual(list(rows), ["File", "Region(s)"])
+        self.assertEqual(rows["File"], "infra.tfstate (SHA-256 a3f1…9c2e)")
+
+    def test_missing_manifest_falls_back_to_file_name_only(self):
+        rows = self._rows(
+            self.fixture["metadata"], {"tfstatePath": "/tmp/infra.tfstate"}, None
+        )
+
+        self.assertEqual(rows["File"], "infra.tfstate")
+        self.assertEqual(rows["Region(s)"], "Not determinable from state")
+        # Never the credential rows, which would all be N/A here.
+        self.assertNotIn("Access Key", rows)
+
+    def test_live_mode_table_is_unchanged(self):
+        rows = self._rows(
+            self.fixture["metadata"], self.fixture["provider_details"], None
+        )
+
+        self.assertEqual(list(rows), ["Access Key", "Secret Key", "Region"])
+        self.assertEqual(rows["Region"], "eu-central-1")
+
+
 class BuildCostSectionTests(unittest.TestCase):
     def setUp(self):
         self.styles, self.content_style = _make_styles()

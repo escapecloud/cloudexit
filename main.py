@@ -118,6 +118,16 @@ class ConfigError(Exception):
     pass
 
 
+def _reject_egress_with_tfstate(args) -> None:
+    # --egress needs live API access, so it cannot run against a state file.
+    if getattr(args, "tfstate", None) and getattr(args, "egress", False):
+        console.print(
+            "[red]--egress cannot be combined with --tfstate. Egress estimation "
+            "requires live cloud API access.[/red]"
+        )
+        sys.exit(codes.CONFIG)
+
+
 def _aws_provider_from_profile(profile: str) -> dict:
     if not is_aws_cli_installed():
         console.print(
@@ -204,6 +214,9 @@ def _aws_provider_from_prompt() -> dict:
 def handle_aws(args):
     cloud_provider = 2
 
+    _reject_egress_with_tfstate(args)
+    tfstate_path = getattr(args, "tfstate", None)
+
     if args.config:
         config = load_config(args.config)
         if not config:
@@ -234,10 +247,15 @@ def handle_aws(args):
         assessment_type = require_env_int(
             "ESC_ASSESSMENT_TYPE", "assessment type (1 or 2)", {1, 2}
         )
-        if args.profile:
+        if tfstate_path:
+            provider_details = {"tfstatePath": tfstate_path}
+        elif args.profile:
             provider_details = _aws_provider_from_profile(args.profile)
         else:
             provider_details = _aws_provider_from_env()
+    elif tfstate_path:
+        exit_strategy, assessment_type = prompt_required_inputs()
+        provider_details = {"tfstatePath": tfstate_path}
     elif args.profile:
         provider_details = _aws_provider_from_profile(args.profile)
         exit_strategy, assessment_type = prompt_required_inputs()
@@ -409,6 +427,9 @@ def _azure_provider_from_prompt() -> dict:
 def handle_azure(args):
     cloud_provider = 1
 
+    _reject_egress_with_tfstate(args)
+    tfstate_path = getattr(args, "tfstate", None)
+
     if args.config:
         config = load_config(args.config)
         if not config:
@@ -439,7 +460,13 @@ def handle_azure(args):
         assessment_type = require_env_int(
             "ESC_ASSESSMENT_TYPE", "assessment type (1 or 2)", {1, 2}
         )
-        provider_details = _azure_provider_noninteractive(args)
+        if tfstate_path:
+            provider_details = {"tfstatePath": tfstate_path}
+        else:
+            provider_details = _azure_provider_noninteractive(args)
+    elif tfstate_path:
+        exit_strategy, assessment_type = prompt_required_inputs()
+        provider_details = {"tfstatePath": tfstate_path}
     elif args.cli:
         provider_details = _azure_provider_from_cli()
         exit_strategy, assessment_type = prompt_required_inputs()
@@ -480,6 +507,17 @@ def run_assessment(
             print_step("Configuration validation failed.", status="error", logs=str(e))
             sys.exit(codes.CONFIG)
 
+        # tfstate mode reads a local state file: no credentials, no permission
+        # check, no cost data — and no egress estimation, which needs live APIs.
+        is_tfstate = bool(config["providerDetails"].get("tfstatePath"))
+        if is_tfstate and egress:
+            print_step(
+                "Configuration validation failed.",
+                status="error",
+                logs="--egress requires live cloud API access and cannot be used with a Terraform state file.",
+            )
+            sys.exit(codes.CONFIG)
+
         # Detect ExitCloud Integration
         mode, jwt = resolve_mode()
         if dry_run:
@@ -514,59 +552,70 @@ def run_assessment(
         # Stage 1: Verify Credentials
         console.print("-------------------------------------------")
         console.print("Stage #1 - Validate Credentials", style="bold")
-        # Test Connection
-        connection_success, logs = verify_credentials(
-            config["cloudServiceProvider"], config["providerDetails"]
-        )
-        if connection_success:
-            print_step(f"Connecting to {provider_name}...", status="ok")
+        if is_tfstate:
+            print_step(
+                "Skipped - tfstate mode (no cloud credentials used).", status="warning"
+            )
         else:
-            print_step(f"Connecting to {provider_name}...", status="error")
-            console.print(f"   ↳ {logs}", style="dim")
-            logger.error(f"Credential verification failed: {logs}")
-            sys.exit(codes.CREDENTIALS)
+            # Test Connection
+            connection_success, logs = verify_credentials(
+                config["cloudServiceProvider"], config["providerDetails"]
+            )
+            if connection_success:
+                print_step(f"Connecting to {provider_name}...", status="ok")
+            else:
+                print_step(f"Connecting to {provider_name}...", status="error")
+                console.print(f"   ↳ {logs}", style="dim")
+                logger.error(f"Credential verification failed: {logs}")
+                sys.exit(codes.CREDENTIALS)
         console.print("-------------------------------------------")
 
         # Stage 2: Test Permissions
         console.print("Stage #2 - Validate Permissions", style="bold")
 
-        # Labels for permission types
-        permission_reader_label = (
-            "Reader" if config["cloudServiceProvider"] == 1 else "ViewOnlyAccess"
-        )
-        permission_cost_label = (
-            "Cost Management Reader"
-            if config["cloudServiceProvider"] == 1
-            else "AWSBillingReadOnlyAccess"
-        )
+        if is_tfstate:
+            print_step(
+                "Skipped - tfstate mode (no cloud permissions needed).",
+                status="warning",
+            )
+        else:
+            # Labels for permission types
+            permission_reader_label = (
+                "Reader" if config["cloudServiceProvider"] == 1 else "ViewOnlyAccess"
+            )
+            permission_cost_label = (
+                "Cost Management Reader"
+                if config["cloudServiceProvider"] == 1
+                else "AWSBillingReadOnlyAccess"
+            )
 
-        # Test permissions with spinners
-        with console.status("Validating permissions...", spinner="dots"):
-            permission_valid, permission_reader, permission_cost, logs = (
-                test_permissions(
-                    config["cloudServiceProvider"], config["providerDetails"]
+            # Test permissions with spinners
+            with console.status("Validating permissions...", spinner="dots"):
+                permission_valid, permission_reader, permission_cost, logs = (
+                    test_permissions(
+                        config["cloudServiceProvider"], config["providerDetails"]
+                    )
                 )
-            )
 
-        # Output results for permission checks
-        if permission_reader:
-            print_step(f"Checking {permission_reader_label}...", status="ok")
-        else:
-            print_step(
-                f"Checking {permission_reader_label}...", status="error", logs=logs
-            )
+            # Output results for permission checks
+            if permission_reader:
+                print_step(f"Checking {permission_reader_label}...", status="ok")
+            else:
+                print_step(
+                    f"Checking {permission_reader_label}...", status="error", logs=logs
+                )
 
-        if permission_cost:
-            print_step(f"Checking {permission_cost_label}...", status="ok")
-        else:
-            print_step(
-                f"Checking {permission_cost_label}...", status="error", logs=logs
-            )
+            if permission_cost:
+                print_step(f"Checking {permission_cost_label}...", status="ok")
+            else:
+                print_step(
+                    f"Checking {permission_cost_label}...", status="error", logs=logs
+                )
 
-        # Exit if permissions are invalid
-        if not permission_valid:
-            logger.error(f"Permission validation failed: {logs}")
-            sys.exit(codes.PERMISSIONS)
+            # Exit if permissions are invalid
+            if not permission_valid:
+                logger.error(f"Permission validation failed: {logs}")
+                sys.exit(codes.PERMISSIONS)
 
         console.print("-------------------------------------------")
 
@@ -585,9 +634,25 @@ def run_assessment(
             )
 
         if result["success"]:
-            print_step(
-                f"Building resource inventory for {provider_name}...", status="ok"
-            )
+            # In tfstate mode, resources belonging to another cloud provider are
+            # dropped silently by design. Report the exclusion at step level so a
+            # partially-assessed state cannot pass for a complete one.
+            coverage = result.get("coverage") or {}
+            excluded = coverage.get("instances_excluded_other_provider", 0)
+            if excluded:
+                print_step(
+                    f"Building resource inventory for {provider_name}...",
+                    status="warning",
+                    logs=(
+                        f"Assessed {coverage['instances_counted']} of "
+                        f"{coverage['instances_total']} resources; {excluded} excluded "
+                        f"(other cloud provider). See raw_data/tfstate_manifest.json."
+                    ),
+                )
+            else:
+                print_step(
+                    f"Building resource inventory for {provider_name}...", status="ok"
+                )
         else:
             print_step(
                 f"Building resource inventory for {provider_name}...",
@@ -601,27 +666,34 @@ def run_assessment(
         # Stage 4: Build Cost Inventory
         console.print("Stage #4 - Build Cost Inventory", style="bold")
 
-        # Use a spinner to indicate progress
-        with console.status(
-            f"Building cost inventory for {provider_name}...", spinner="dots"
-        ):
-            cost_result = create_cost_inventory(
-                config["cloudServiceProvider"],
-                config["providerDetails"],
-                report_path,
-                raw_data_path,
-            )
-
-        # Handle the result
-        if cost_result["success"]:
-            print_step(f"Building cost inventory for {provider_name}...", status="ok")
-        else:
+        if is_tfstate:
             print_step(
-                f"Building cost inventory for {provider_name}...",
-                status="error",
-                logs=cost_result["logs"],
+                "Skipped - tfstate mode (no billing data available).", status="warning"
             )
-            sys.exit(codes.COST_INVENTORY)
+        else:
+            # Use a spinner to indicate progress
+            with console.status(
+                f"Building cost inventory for {provider_name}...", spinner="dots"
+            ):
+                cost_result = create_cost_inventory(
+                    config["cloudServiceProvider"],
+                    config["providerDetails"],
+                    report_path,
+                    raw_data_path,
+                )
+
+            # Handle the result
+            if cost_result["success"]:
+                print_step(
+                    f"Building cost inventory for {provider_name}...", status="ok"
+                )
+            else:
+                print_step(
+                    f"Building cost inventory for {provider_name}...",
+                    status="error",
+                    logs=cost_result["logs"],
+                )
+                sys.exit(codes.COST_INVENTORY)
 
         console.print("-------------------------------------------")
 
@@ -841,6 +913,8 @@ def parse_arguments():
             "  python3 main.py azure --config config.json --dry-run\n"
             "  python3 main.py aws --config config.json --egress    # Estimate egress data volume\n"
             "  python3 main.py azure --config config.json --egress\n"
+            "  python3 main.py aws --tfstate infra.tfstate          # Assess a Terraform/OpenTofu state file\n"
+            "  python3 main.py azure --tfstate infra.tfstate --dry-run\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -879,6 +953,14 @@ def parse_arguments():
         type=str,
         help="AWS profile name to use credentials from ~/.aws/credentials.",
     )
+    aws_group.add_argument(
+        "--tfstate",
+        type=str,
+        help=(
+            "Path to a Terraform/OpenTofu state file. Builds the inventory from "
+            "the state instead of the AWS APIs; no credentials are used."
+        ),
+    )
     aws_parser.add_argument(
         "--name", type=str, help="Assessment Name (Optional / Max. 50 characters)."
     )
@@ -915,6 +997,14 @@ def parse_arguments():
         "--cli",
         action="store_true",
         help="Use Azure CLI credentials for authentication.",
+    )
+    azure_group.add_argument(
+        "--tfstate",
+        type=str,
+        help=(
+            "Path to a Terraform/OpenTofu state file. Builds the inventory from "
+            "the state instead of the Azure APIs; no credentials are used."
+        ),
     )
     azure_parser.add_argument(
         "--name", type=str, help="Assessment Name (Optional / Max. 50 characters)."
