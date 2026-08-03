@@ -279,15 +279,84 @@ def _build_summary_section(metadata, styles, content_style):
     return content
 
 
-def _build_scope_section(metadata, provider_details, styles, content_style):
+# Cap on how many subscriptions / resource groups / regions a scope row lists
+# before it summarises the remainder. The full list stays in the manifest.
+MAX_SCOPE_VALUES = 3
+
+
+def _shorten(value: str, head: int = 4, tail: int = 4) -> str:
+    if not isinstance(value, str):
+        return "N/A"
+    if len(value) <= head + tail + 1:
+        return value
+    return f"{value[:head]}…{value[-tail:]}"
+
+
+def _join_scope_values(values) -> str:
+    if not values:
+        return "Not determinable from state"
+    shown = list(values)[:MAX_SCOPE_VALUES]
+    remaining = len(values) - len(shown)
+    text = ", ".join(shown)
+    return f"{text}, +{remaining} more" if remaining > 0 else text
+
+
+def _build_tfstate_scope_rows(metadata, scope):
+    rows = []
+
+    file_name = scope.get("file") or "N/A"
+    sha256 = scope.get("sha256")
+    if sha256:
+        file_name = f"{file_name} (SHA-256 {_shorten(sha256)})"
+    rows.append(["File", file_name])
+
+    lineage = scope.get("lineage")
+    serial = scope.get("serial")
+    if lineage and serial is not None:
+        rows.append(["State", f"{lineage} (Serial: {serial})"])
+    elif lineage:
+        rows.append(["State", lineage])
+    elif serial is not None:
+        rows.append(["State", f"Serial: {serial}"])
+
+    if metadata["cloud_service_provider"] == 1:  # Azure
+        rows.append(["Subscription", _join_scope_values(scope.get("subscriptions"))])
+        rows.append(
+            ["Resource Group(s)", _join_scope_values(scope.get("resource_groups"))]
+        )
+    else:  # AWS
+        rows.append(["Region(s)", _join_scope_values(scope.get("locations"))])
+
+    return rows
+
+
+def _build_scope_section(
+    metadata, provider_details, styles, content_style, tfstate_scope=None
+):
     """Page 1: Scope of Assessment table."""
     content = []
     content.append(Paragraph("Scope of Assessment", styles["Heading2"]))
-    content.append(Paragraph("Defined scope of assessment:", content_style))
+
+    tfstate_path = provider_details.get("tfstatePath")
+    if tfstate_path:
+        content.append(
+            Paragraph(
+                "Assessed from Terraform state. Resources not managed by "
+                "Terraform are not included.",
+                content_style,
+            )
+        )
+    else:
+        content.append(Paragraph("Defined scope of assessment:", content_style))
 
     scope_data = [["Name", "Value"]]
 
-    if metadata["cloud_service_provider"] == 1:  # Azure
+    if tfstate_path:
+        # Fall back to the little we know from the config when the manifest is
+        # unavailable, rather than rendering credential rows that are all N/A.
+        scope = tfstate_scope or {"file": os.path.basename(tfstate_path)}
+        scope_data.extend(_build_tfstate_scope_rows(metadata, scope))
+    elif metadata["cloud_service_provider"] == 1:  # Azure
         scope_data.extend(
             [
                 ["Tenant ID", provider_details.get("tenantId", "N/A")],
@@ -708,6 +777,7 @@ def generate_pdf_report(
     alternatives: list[dict[str, Any]],
     alternative_technologies: list[dict[str, Any]],
     exit_strategy: int,
+    tfstate_scope: dict[str, Any] | None = None,
 ) -> str:
     pdf_path = os.path.join(report_path, "report.pdf")
 
@@ -728,7 +798,9 @@ def generate_pdf_report(
 
     content = []
     content += _build_summary_section(metadata, styles, content_style)
-    content += _build_scope_section(metadata, provider_details, styles, content_style)
+    content += _build_scope_section(
+        metadata, provider_details, styles, content_style, tfstate_scope
+    )
     content += _build_cost_section(cost_data, styles, content_style)
     content += _build_risk_section(
         risk_data,

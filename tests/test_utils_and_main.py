@@ -905,5 +905,249 @@ class ResolveModeEnvVarTests(unittest.TestCase):
         self.assertIsNone(token)
 
 
+TFSTATE_CONFIG = {
+    "name": "Tfstate Assessment",
+    "cloudServiceProvider": 2,
+    "exitStrategy": 1,
+    "assessmentType": 1,
+    "providerDetails": {"tfstatePath": "config/aws-01.tfstate"},
+}
+
+
+class TfstateCliTests(unittest.TestCase):
+    _ENV = {"ESC_EXIT_STRATEGY": "3", "ESC_ASSESSMENT_TYPE": "1"}
+
+    def test_egress_with_tfstate_exits_config_for_aws(self):
+        with patch("main.console.print"):
+            with self.assertRaises(SystemExit) as ctx:
+                main.handle_aws(_ni_aws_args(tfstate="infra.tfstate", egress=True))
+        self.assertEqual(ctx.exception.code, codes.CONFIG)
+
+    def test_egress_with_tfstate_exits_config_for_azure(self):
+        with patch("main.console.print"):
+            with self.assertRaises(SystemExit) as ctx:
+                main.handle_azure(_ni_azure_args(tfstate="infra.tfstate", egress=True))
+        self.assertEqual(ctx.exception.code, codes.CONFIG)
+
+    def test_aws_non_interactive_needs_no_aws_env_vars(self):
+        env = {
+            k: v
+            for k, v in os.environ.items()
+            if not k.startswith("AWS_") and not k.startswith("ESC_")
+        }
+        env.update(self._ENV)
+        with (
+            patch.dict(os.environ, env, clear=True),
+            patch("main.run_assessment") as mock_run,
+            patch("main.console.print"),
+        ):
+            main.handle_aws(_ni_aws_args(tfstate="infra.tfstate"))
+
+        mock_run.assert_called_once()
+        config_arg = mock_run.call_args[0][0]
+        self.assertEqual(config_arg["exitStrategy"], 3)
+        self.assertEqual(config_arg["assessmentType"], 1)
+        self.assertEqual(
+            config_arg["providerDetails"], {"tfstatePath": "infra.tfstate"}
+        )
+
+    def test_azure_non_interactive_needs_no_azure_env_vars(self):
+        env = {
+            k: v
+            for k, v in os.environ.items()
+            if not k.startswith("AZURE_") and not k.startswith("ESC_")
+        }
+        env.update(self._ENV)
+        with (
+            patch.dict(os.environ, env, clear=True),
+            patch("main.run_assessment") as mock_run,
+            patch("main.console.print"),
+        ):
+            main.handle_azure(_ni_azure_args(tfstate="infra.tfstate"))
+
+        mock_run.assert_called_once()
+        config_arg = mock_run.call_args[0][0]
+        self.assertEqual(config_arg["cloudServiceProvider"], 1)
+        self.assertEqual(config_arg["exitStrategy"], 3)
+        self.assertEqual(
+            config_arg["providerDetails"], {"tfstatePath": "infra.tfstate"}
+        )
+
+    def test_config_file_carries_tfstate_path_through_handle_aws(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            state_path = Path(tmp_dir) / "infra.tfstate"
+            state_path.write_text(
+                json.dumps({"version": 4, "resources": []}), encoding="utf-8"
+            )
+            config_path = Path(tmp_dir) / "config.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "cloudServiceProvider": 2,
+                        "exitStrategy": 1,
+                        "assessmentType": 1,
+                        "providerDetails": {"tfstatePath": str(state_path)},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with (
+                patch("main.run_assessment") as mock_run,
+                patch("main.console.print"),
+            ):
+                main.handle_aws(_ni_aws_args(config=str(config_path)))
+
+            config_arg = mock_run.call_args[0][0]
+            self.assertEqual(
+                config_arg["providerDetails"], {"tfstatePath": str(state_path)}
+            )
+            # The same config must survive validation without credential fields.
+            self.assertTrue(main.validate_config(config_arg))
+
+    def test_tfstate_parses_from_both_subcommands(self):
+        with patch("sys.argv", ["main.py", "aws", "--tfstate", "infra.tfstate"]):
+            args = main.parse_arguments()
+        self.assertEqual(args.tfstate, "infra.tfstate")
+
+        with patch(
+            "sys.argv", ["main.py", "azure", "--tfstate", "infra.tfstate", "--dry-run"]
+        ):
+            args = main.parse_arguments()
+        self.assertEqual(args.tfstate, "infra.tfstate")
+        self.assertTrue(args.dry_run)
+
+    def test_tfstate_is_mutually_exclusive_with_config(self):
+        with patch(
+            "sys.argv", ["main.py", "aws", "--config", "c.json", "--tfstate", "s"]
+        ):
+            with self.assertRaises(SystemExit):
+                main.parse_arguments()
+
+    def test_run_assessment_skips_credential_permission_and_cost_stages(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            raw_data_path = os.path.join(tmp_dir, "raw_data")
+            os.makedirs(raw_data_path, exist_ok=True)
+
+            with (
+                patch("main.validate_config"),
+                patch("main.resolve_mode", return_value=("offline", None)),
+                patch("main.create_directory", return_value=(tmp_dir, raw_data_path)),
+                patch("main.verify_credentials") as mock_creds,
+                patch("main.test_permissions") as mock_perms,
+                patch("main.create_cost_inventory") as mock_cost,
+                patch(
+                    "main.create_resource_inventory",
+                    return_value={"success": True, "logs": ""},
+                ) as mock_inventory,
+                patch(
+                    "main.perform_risk_assessment",
+                    return_value={"success": True, "logs": ""},
+                ) as mock_risk,
+                patch(
+                    "main.generate_report",
+                    return_value={"success": True, "reports": {}},
+                ) as mock_report,
+                patch("main.print_step"),
+                patch("main.console.print"),
+            ):
+                main.run_assessment(TFSTATE_CONFIG.copy(), "aws")
+
+        mock_creds.assert_not_called()
+        mock_perms.assert_not_called()
+        mock_cost.assert_not_called()
+        mock_inventory.assert_called_once_with(
+            2, {"tfstatePath": "config/aws-01.tfstate"}, tmp_dir, raw_data_path
+        )
+        mock_risk.assert_called_once()
+        mock_report.assert_called_once()
+
+    def _run_tfstate_stage3(self, inventory_result):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            raw_data_path = os.path.join(tmp_dir, "raw_data")
+            os.makedirs(raw_data_path, exist_ok=True)
+
+            with (
+                patch("main.validate_config"),
+                patch("main.resolve_mode", return_value=("offline", None)),
+                patch("main.create_directory", return_value=(tmp_dir, raw_data_path)),
+                patch("main.create_resource_inventory", return_value=inventory_result),
+                patch(
+                    "main.perform_risk_assessment",
+                    return_value={"success": True, "logs": ""},
+                ),
+                patch(
+                    "main.generate_report",
+                    return_value={"success": True, "reports": {}},
+                ),
+                patch("main.print_step") as mock_step,
+                patch("main.console.print"),
+            ):
+                main.run_assessment(TFSTATE_CONFIG.copy(), "aws")
+
+        return [
+            call
+            for call in mock_step.call_args_list
+            if "resource inventory" in call.args[0]
+        ]
+
+    def test_excluded_foreign_resources_downgrade_stage3_to_warning(self):
+        calls = self._run_tfstate_stage3(
+            {
+                "success": True,
+                "logs": "",
+                "coverage": {
+                    "instances_total": 31,
+                    "instances_counted": 3,
+                    "instances_excluded_other_provider": 27,
+                    "instances_excluded_unmapped": 1,
+                },
+            }
+        )
+
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0].kwargs["status"], "warning")
+        logs = calls[0].kwargs["logs"]
+        self.assertIn("Assessed 3 of 31 resources", logs)
+        self.assertIn("27 excluded", logs)
+
+    def test_clean_tfstate_run_keeps_stage3_ok(self):
+        calls = self._run_tfstate_stage3(
+            {
+                "success": True,
+                "logs": "",
+                "coverage": {
+                    "instances_total": 8,
+                    "instances_counted": 5,
+                    "instances_excluded_other_provider": 0,
+                    "instances_excluded_unmapped": 3,
+                },
+            }
+        )
+
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0].kwargs["status"], "ok")
+
+    def test_live_mode_result_without_coverage_keeps_stage3_ok(self):
+        calls = self._run_tfstate_stage3({"success": True, "logs": ""})
+
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0].kwargs["status"], "ok")
+
+    def test_run_assessment_rejects_egress_from_tfstate_config_file(self):
+        with (
+            patch("main.validate_config"),
+            patch("main.resolve_mode", return_value=("offline", None)),
+            patch("main.create_directory") as mock_dir,
+            patch("main.print_step"),
+            patch("main.console.print"),
+        ):
+            with self.assertRaises(SystemExit) as ctx:
+                main.run_assessment(TFSTATE_CONFIG.copy(), "aws", egress=True)
+
+        self.assertEqual(ctx.exception.code, codes.CONFIG)
+        mock_dir.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()

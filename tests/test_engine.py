@@ -1,7 +1,10 @@
+import json
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from core.engine import sync_assessment, test_permissions
+from core.engine import _load_tfstate_scope, sync_assessment, test_permissions
 
 
 class TestPermissionsAwsHybridMode(unittest.TestCase):
@@ -157,6 +160,36 @@ class SyncAssessmentContractTests(unittest.TestCase):
             )
         self.assertFalse(result["success"])
         self.assertIn("store server risks", result["logs"])
+
+
+class LoadTfstateScopeTests(unittest.TestCase):
+    def _write_manifest(self, directory, payload):
+        path = Path(directory) / "tfstate_manifest.json"
+        path.write_text(json.dumps(payload), encoding="utf-8")
+
+    def test_returns_scope_block_from_manifest(self):
+        scope = {"file": "infra.tfstate", "serial": 7, "locations": ["eu-central-1"]}
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            self._write_manifest(tmp_dir, {"scope": scope, "counted": []})
+
+            self.assertEqual(_load_tfstate_scope(tmp_dir), scope)
+
+    def test_missing_manifest_returns_none_without_raising(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            self.assertIsNone(_load_tfstate_scope(tmp_dir))
+
+    def test_corrupt_manifest_returns_none_without_raising(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = Path(tmp_dir) / "tfstate_manifest.json"
+            path.write_text("{not json", encoding="utf-8")
+
+            self.assertIsNone(_load_tfstate_scope(tmp_dir))
+
+    def test_manifest_without_scope_returns_none(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            self._write_manifest(tmp_dir, {"counted": []})
+
+            self.assertIsNone(_load_tfstate_scope(tmp_dir))
 
 
 if __name__ == "__main__":

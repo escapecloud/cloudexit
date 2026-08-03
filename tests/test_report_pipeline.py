@@ -141,6 +141,90 @@ class ReportPipelineSmokeTests(unittest.TestCase):
             self.assertGreater(pdf_file.stat().st_size, 0)
 
 
+class EmptyCostInventoryReportTests(unittest.TestCase):
+    """tfstate mode skips Stage 4, so reports must render with resources but no costs."""
+
+    def test_html_report_renders_resources_without_cost_data(self):
+        fixture = build_report_fixture()
+
+        with tempfile.TemporaryDirectory() as report_dir:
+            html_path = generate_html_report(
+                report_dir,
+                fixture["metadata"],
+                fixture["resource_type_mapping"],
+                fixture["resource_inventory"],
+                [],
+                None,
+                fixture["risk_data"],
+                fixture["risk_definitions"],
+                fixture["alternatives"],
+                fixture["alternative_technologies"],
+                fixture["exit_strategy"],
+                fixture["alternative_technology_organizations"],
+            )
+
+            self.assertTrue(Path(html_path).exists())
+            html = Path(html_path).read_text(encoding="utf-8")
+
+        self.assertIn("EC2 Instance", html)
+        self.assertIn("No cost data available.", html)
+        self.assertNotIn('id="costsChart"', html)
+
+    def test_json_report_has_empty_cost_inventory(self):
+        fixture = build_report_fixture()
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            raw_data_path = Path(tmp_dir) / "raw_data"
+            raw_data_path.mkdir()
+
+            json_path = generate_json_report(
+                str(raw_data_path),
+                fixture["metadata"],
+                fixture["resource_type_mapping"],
+                fixture["resource_inventory"],
+                [],
+                None,
+                fixture["risk_data"],
+                fixture["risk_definitions"],
+                fixture["alternatives"],
+                fixture["alternative_technologies"],
+                fixture["exit_strategy"],
+            )
+
+            payload = json.loads(Path(json_path).read_text(encoding="utf-8"))
+
+        self.assertEqual(payload["data"]["cost_inventory"], [])
+        self.assertEqual(
+            payload["data"]["resource_inventory"][0]["resource_name"], "EC2 Instance"
+        )
+
+    def test_pdf_report_generates_without_cost_data(self):
+        fixture = build_report_fixture()
+
+        with tempfile.TemporaryDirectory() as report_dir:
+            stage_report_assets(report_dir)
+
+            pdf_path = generate_pdf_report(
+                fixture["provider_details"],
+                report_dir,
+                fixture["metadata"],
+                fixture["resource_type_mapping"],
+                fixture["resource_inventory"],
+                [],
+                None,
+                fixture["risk_data"],
+                fixture["risk_definitions"],
+                fixture["alternatives"],
+                fixture["alternative_technologies"],
+                fixture["exit_strategy"],
+            )
+
+            pdf_file = Path(pdf_path)
+
+            self.assertTrue(pdf_file.exists())
+            self.assertGreater(pdf_file.stat().st_size, 0)
+
+
 class ReportTransformTests(unittest.TestCase):
     def test_transform_cost_inventory_for_json_sorts_months(self):
         unsorted_costs = [

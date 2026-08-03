@@ -1,6 +1,25 @@
 # utils/validate.py
+import os
 from typing import Any
 from .constants import REGION_CHOICES, REQUIRED_FIELDS_AZURE, REQUIRED_FIELDS_AWS
+
+# Fields that only mean something when connecting to a live account. tfstate
+# mode derives all of them from the state file, so accepting them alongside
+# tfstatePath would silently ignore whatever the user supplied. The CLI already
+# rejects --profile/--cli/--config next to --tfstate; this is the same rule for
+# configuration files.
+LIVE_ONLY_FIELDS = (
+    "accessKey",
+    "secretKey",
+    "sessionToken",
+    "region",
+    "credential",
+    "tenantId",
+    "clientId",
+    "clientSecret",
+    "subscriptionId",
+    "resourceGroupName",
+)
 
 
 def validate_region(region: str) -> None:
@@ -45,6 +64,29 @@ def validate_config(config: dict[str, Any]) -> bool:
 
     # Validate providerDetails based on cloudServiceProvider
     provider_details = config.get("providerDetails", {})
+
+    # tfstate mode reads a local state file instead of the provider APIs, so no
+    # credentials (and no region) are involved.
+    if "tfstatePath" in provider_details:
+        tfstate_path = provider_details.get("tfstatePath")
+        if not isinstance(tfstate_path, str) or not tfstate_path.strip():
+            raise ValueError(
+                "Invalid tfstatePath in providerDetails. Must be a non-empty path "
+                "to a Terraform/OpenTofu state file."
+            )
+        if not os.path.isfile(tfstate_path):
+            raise ValueError(f"Terraform state file not found: {tfstate_path}")
+
+        conflicting = [f for f in LIVE_ONLY_FIELDS if f in provider_details]
+        if conflicting:
+            raise ValueError(
+                "providerDetails cannot combine tfstatePath with live connection "
+                f"fields: {', '.join(conflicting)}. Remove them to scan the state "
+                "file, or remove tfstatePath to run a live assessment."
+            )
+
+        return True
+
     if cloud_service_provider == 1:  # Azure
         # Skip validation of clientId and clientSecret if using CLI credentials
         if provider_details.get("credential") is not None:

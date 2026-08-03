@@ -1,4 +1,5 @@
 # core/engine.py
+import json
 import logging
 import os
 import boto3
@@ -14,6 +15,7 @@ from .utils import copy_assets
 from .utils_aws import build_aws_resource_inventory, build_aws_cost_inventory
 from .utils_azure import build_azure_resource_inventory, build_azure_cost_inventory
 from .utils_db import connect, load_data
+from .utils_tfstate import build_tfstate_resource_inventory
 from .utils_report import (
     generate_html_report,
     generate_pdf_report,
@@ -256,7 +258,16 @@ def create_resource_inventory(
 
     try:
 
-        if cloud_service_provider == 1:  # Azure
+        if provider_details.get("tfstatePath"):  # Terraform / OpenTofu state file
+            coverage = build_tfstate_resource_inventory(
+                cloud_service_provider, provider_details, report_path, raw_data_path
+            )
+            return {
+                "success": True,
+                "logs": "Resource inventory created successfully.",
+                "coverage": coverage,
+            }
+        elif cloud_service_provider == 1:  # Azure
             build_azure_resource_inventory(
                 cloud_service_provider, provider_details, report_path, raw_data_path
             )
@@ -497,6 +508,17 @@ def perform_risk_assessment(
         return {"success": False, "logs": str(e)}
 
 
+def _load_tfstate_scope(raw_data_path: str) -> dict[str, Any] | None:
+    # A missing or unreadable manifest must not fail report generation.
+    manifest_path = os.path.join(raw_data_path, "tfstate_manifest.json")
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as manifest_file:
+            return json.load(manifest_file).get("scope")
+    except (OSError, json.JSONDecodeError) as e:
+        logger.warning("Could not read the tfstate manifest for report scope: %s", e)
+        return None
+
+
 # Stage 6
 def generate_report(
     cloud_service_provider: int,
@@ -568,6 +590,11 @@ def generate_report(
         )
 
         # Generate PDF report
+        tfstate_scope = (
+            _load_tfstate_scope(raw_data_path)
+            if provider_details.get("tfstatePath")
+            else None
+        )
         reports["PDF"] = generate_pdf_report(
             provider_details,
             report_path,
@@ -581,6 +608,7 @@ def generate_report(
             alternatives,
             alternative_technologies,
             exit_strategy,
+            tfstate_scope=tfstate_scope,
         )
 
         # Generate JSON report

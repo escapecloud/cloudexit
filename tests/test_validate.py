@@ -1,4 +1,7 @@
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
 from utils.validate import validate_config, validate_region
 
@@ -105,6 +108,100 @@ class ValidateConfigTests(unittest.TestCase):
         config["providerDetails"]["region"] = "invalid-region"
 
         with self.assertRaisesRegex(ValueError, "Invalid AWS region"):
+            validate_config(config)
+
+
+class ValidateTfstateConfigTests(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.state_path = Path(self._tmp.name) / "infra.tfstate"
+        self.state_path.write_text(
+            json.dumps({"version": 4, "resources": []}), encoding="utf-8"
+        )
+
+    def _config(self, cloud_service_provider, **provider_details):
+        return {
+            "name": "Tfstate Assessment",
+            "assessmentType": 1,
+            "cloudServiceProvider": cloud_service_provider,
+            "exitStrategy": 1,
+            "providerDetails": provider_details,
+        }
+
+    def test_accepts_aws_tfstate_config_without_credentials(self):
+        config = self._config(2, tfstatePath=str(self.state_path))
+
+        self.assertTrue(validate_config(config))
+
+    def test_accepts_azure_tfstate_config_without_credentials(self):
+        config = self._config(1, tfstatePath=str(self.state_path))
+
+        self.assertTrue(validate_config(config))
+
+    def test_rejects_missing_tfstate_file(self):
+        config = self._config(2, tfstatePath=str(self.state_path) + ".missing")
+
+        with self.assertRaisesRegex(ValueError, "Terraform state file not found"):
+            validate_config(config)
+
+    def test_rejects_empty_tfstate_path(self):
+        config = self._config(2, tfstatePath="   ")
+
+        with self.assertRaisesRegex(ValueError, "Invalid tfstatePath"):
+            validate_config(config)
+
+    def test_rejects_non_string_tfstate_path(self):
+        config = self._config(2, tfstatePath=42)
+
+        with self.assertRaisesRegex(ValueError, "Invalid tfstatePath"):
+            validate_config(config)
+
+    def test_generic_checks_still_apply_in_tfstate_mode(self):
+        config = self._config(2, tfstatePath=str(self.state_path))
+        config["exitStrategy"] = 9
+
+        with self.assertRaisesRegex(ValueError, "Invalid exitStrategy"):
+            validate_config(config)
+
+    def test_rejects_tfstate_combined_with_aws_credentials(self):
+        config = self._config(
+            2,
+            tfstatePath=str(self.state_path),
+            accessKey="AKIA_TEST",
+            secretKey="SECRET_TEST",
+        )
+
+        with self.assertRaisesRegex(ValueError, "cannot combine tfstatePath") as ctx:
+            validate_config(config)
+
+        self.assertIn("accessKey", str(ctx.exception))
+        self.assertIn("secretKey", str(ctx.exception))
+
+    def test_rejects_tfstate_combined_with_azure_credentials(self):
+        config = self._config(
+            1,
+            tfstatePath=str(self.state_path),
+            tenantId="tenant-id",
+            clientSecret="client-secret",
+            subscriptionId="sub-id",
+        )
+
+        with self.assertRaisesRegex(ValueError, "cannot combine tfstatePath"):
+            validate_config(config)
+
+    def test_rejects_tfstate_combined_with_region(self):
+        config = self._config(
+            2, tfstatePath=str(self.state_path), region="eu-central-1"
+        )
+
+        with self.assertRaisesRegex(ValueError, "cannot combine tfstatePath"):
+            validate_config(config)
+
+    def test_rejects_tfstate_combined_with_cli_credential_object(self):
+        config = self._config(1, tfstatePath=str(self.state_path), credential=object())
+
+        with self.assertRaisesRegex(ValueError, "cannot combine tfstatePath"):
             validate_config(config)
 
 

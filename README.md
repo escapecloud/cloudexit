@@ -90,6 +90,7 @@ The CLI supports multiple input modes for both AWS and Azure.
 | Interactive (manual credentials) | `python main.py aws` |
 | AWS CLI profile | `python main.py aws --profile PROFILE` |
 | JSON config file | `python main.py aws --config config.json` |
+| Terraform/OpenTofu state file | `python main.py aws --tfstate infra.tfstate` |
 | Non-interactive (env vars, CI) | `python main.py aws --non-interactive` |
 
 **Azure**
@@ -99,6 +100,7 @@ The CLI supports multiple input modes for both AWS and Azure.
 | Interactive (service principal) | `python main.py azure` |
 | Azure CLI session | `python main.py azure --cli` |
 | JSON config file | `python main.py azure --config config.json` |
+| Terraform/OpenTofu state file | `python main.py azure --tfstate infra.tfstate` |
 | Non-interactive (env vars, CI) | `python main.py azure --non-interactive` |
 
 See the [configuration reference](https://cloudexit.escapecloud.io/config/config-schema.html) for required permissions and config file format.
@@ -115,6 +117,23 @@ python main.py aws --profile PROFILE --egress
 ```
 
 See the [egress reference](https://cloudexit.escapecloud.io/egress/overview.html) for details.
+
+## Infrastructure-as-Code State Scan (alpha)
+
+Instead of connecting to a cloud account, cloudexit can build the assessment from a local **Terraform / OpenTofu state file** — no credentials, no API calls, nothing leaves your machine.
+
+```bash
+python main.py aws --tfstate infra.tfstate
+python main.py azure --tfstate infra.tfstate
+```
+
+If your state lives in a remote backend (S3, Azure Storage, Terraform Cloud, …), export it first:
+
+```bash
+terraform state pull > infra.tfstate
+```
+
+See the [infrastructure-as-code reference](https://cloudexit.escapecloud.io/tfstate/overview.html) for details.
 
 ## CI/CD
 
