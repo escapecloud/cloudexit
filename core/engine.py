@@ -254,7 +254,7 @@ def create_resource_inventory(
     raw_data_path: str,
 ) -> dict[str, Any]:
     # Copy assets and datasets folders data
-    copy_assets(report_path)
+    copy_assets(report_path, cloud_service_provider)
 
     try:
 
