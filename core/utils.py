@@ -57,9 +57,7 @@ def copy_assets(report_path: str, cloud_service_provider: int) -> None:
 
         # Only copy if the destination doesn't already exist
         if not os.path.exists(dest_path):
-            shutil.copytree(
-                src_path, dest_path, ignore=_png_only, dirs_exist_ok=True
-            )
+            shutil.copytree(src_path, dest_path, ignore=_png_only, dirs_exist_ok=True)
 
     # Copy datasets/data.db to data/assessment.db
     db_src_path = "datasets/data.db"

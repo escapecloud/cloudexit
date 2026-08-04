@@ -35,9 +35,7 @@ class CopyAssetsProviderScopeTests(unittest.TestCase):
     def test_unknown_provider_falls_back_to_every_icon_set(self):
         report_path = staged(99)
 
-        self.assertEqual(
-            icon_dirs(report_path), {"azure", "aws", "severity", "misc"}
-        )
+        self.assertEqual(icon_dirs(report_path), {"azure", "aws", "severity", "misc"})
 
     def test_provider_icon_set_is_copied_in_full(self):
         # The filter must drop non-PNG files only, never an icon.
