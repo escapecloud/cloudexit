@@ -794,6 +794,7 @@ def run_assessment(
                     config["cloudServiceProvider"],
                     config["providerDetails"],
                     raw_data_path,
+                    report_path=report_path,
                     name=name,
                     exit_strategy=config["exitStrategy"],
                     assessment_type=config["assessmentType"],

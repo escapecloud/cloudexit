@@ -12,6 +12,74 @@ from core.utils_egress_azure import (
     filter_data_bearing_resources,
 )
 
+# Stands in for what load_egress_registry() builds out of resourcetype_data,
+# so these tests exercise the engine rather than the shipped master data.
+TEST_REGISTRY = {
+    "microsoft.storage/storageaccounts": {
+        "category": "object",
+        "label": "Storage Account",
+        "strategy": "storage_account_metrics",
+    },
+    "microsoft.compute/disks": {
+        "category": "block",
+        "label": "Managed Disks",
+        "strategy": "allocated_size_property",
+        "api_version": "2024-03-02",
+        "size_property": "diskSizeGB",
+    },
+    "microsoft.compute/snapshots": {
+        "category": "block",
+        "label": "Managed Disk Snapshots",
+        "strategy": "allocated_size_property",
+        "api_version": "2024-03-02",
+        "size_property": "diskSizeGB",
+    },
+    "microsoft.sql/servers/databases": {
+        "category": "database",
+        "label": "Azure SQL Database",
+        "strategy": "monitor_metric",
+        "metrics": ["storage"],
+    },
+    "microsoft.documentdb/databaseaccounts": {
+        "category": "database",
+        "label": "Azure Cosmos DB",
+        "strategy": "monitor_metric",
+        "metrics": ["DataUsage", "IndexUsage"],
+    },
+    "microsoft.dbforpostgresql/flexibleservers": {
+        "category": "database",
+        "label": "Azure Database for PostgreSQL",
+        "strategy": "monitor_metric",
+        "metrics": ["storage_used"],
+    },
+    "microsoft.dbformysql/flexibleservers": {
+        "category": "database",
+        "label": "Azure Database for MySQL",
+        "strategy": "monitor_metric",
+        "metrics": ["storage_used"],
+    },
+    "microsoft.recoveryservices/vaults": {
+        "category": "backup",
+        "label": "Azure Site Recovery",
+        "strategy": "vault_warning",
+    },
+}
+
+_REGISTRY_PATCHER = None
+
+
+def setUpModule():
+    global _REGISTRY_PATCHER
+    _REGISTRY_PATCHER = patch(
+        "core.utils_egress_azure.load_egress_registry",
+        return_value=TEST_REGISTRY,
+    )
+    _REGISTRY_PATCHER.start()
+
+
+def tearDownModule():
+    _REGISTRY_PATCHER.stop()
+
 
 def _mock_resource(resource_type, name, resource_id, sku_name=None):
     resource = MagicMock()
@@ -42,7 +110,7 @@ class RegistryFilteringTests(unittest.TestCase):
             _mock_resource("Microsoft.RecoveryServices/vaults", "vault1", "/vault1"),
         ]
 
-        matched = filter_data_bearing_resources(resources)
+        matched = filter_data_bearing_resources(resources, TEST_REGISTRY)
         matched_names = [resource.name for resource, _ in matched]
 
         self.assertEqual(matched_names, ["sa1", "disk1", "vault1"])
@@ -52,7 +120,7 @@ class RegistryFilteringTests(unittest.TestCase):
             _mock_resource("MICROSOFT.STORAGE/StorageAccounts", "sa1", "/sa1"),
         ]
 
-        matched = filter_data_bearing_resources(resources)
+        matched = filter_data_bearing_resources(resources, TEST_REGISTRY)
 
         self.assertEqual(len(matched), 1)
         self.assertEqual(matched[0][1]["strategy"], "storage_account_metrics")
@@ -62,7 +130,7 @@ class RegistryFilteringTests(unittest.TestCase):
             _mock_resource("Microsoft.Network/networkInterfaces", "nic1", "/nic1"),
         ]
 
-        self.assertEqual(filter_data_bearing_resources(resources), [])
+        self.assertEqual(filter_data_bearing_resources(resources, TEST_REGISTRY), [])
 
 
 class FetchMonitorMetricsTests(unittest.TestCase):
@@ -323,6 +391,44 @@ class CollectAzureEgressTests(unittest.TestCase):
         self.assertEqual(rows[0]["size_bytes"], 10 * GIB)
         self.assertNotIn("findings", rows[0])
         self.assertEqual(archive_tiers, {"Archive"})
+
+
+class UnknownStrategyTests(unittest.TestCase):
+    @patch("core.utils_egress_azure.fetch_monitor_metrics")
+    def test_unknown_strategy_warns_and_skips_without_raising(self, mock_fetch):
+        mock_fetch.side_effect = [
+            {"UsedCapacity": [{"dimension": None, "value": float(GIB)}]},
+            {"BlobCapacity": []},
+        ]
+        registry = {
+            "microsoft.future/widgets": {
+                "category": "object",
+                "label": "Something New",
+                "strategy": "not_implemented_yet",
+            },
+            "microsoft.storage/storageaccounts": TEST_REGISTRY[
+                "microsoft.storage/storageaccounts"
+            ],
+        }
+        resources = [
+            _mock_resource("Microsoft.Future/widgets", "widget1", "/w1"),
+            _mock_resource("Microsoft.Storage/storageAccounts", "sa1", "/sa1"),
+        ]
+
+        with patch(
+            "core.utils_egress_azure.load_egress_registry", return_value=registry
+        ):
+            with self.assertLogs(
+                "core.engine.egress.azure", level="WARNING"
+            ) as captured:
+                rows, findings = build_egress_inventory(
+                    MagicMock(), MagicMock(), resources
+                )
+
+        # The known strategy still runs; only the unknown one is skipped.
+        self.assertEqual([row["name"] for row in rows], ["sa1"])
+        self.assertEqual(rows[0]["size_bytes"], GIB)
+        self.assertIn("not_implemented_yet", captured.output[0])
 
 
 if __name__ == "__main__":
