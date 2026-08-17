@@ -16,32 +16,86 @@ logger = logging.getLogger("core.engine.aws")
 
 AWS_RETRY_CONFIG = Config(retries={"mode": "adaptive", "max_attempts": 8})
 
+# Upper bound on the items collected for a single resource type. Some list
+# operations (e.g. describe_images, describe_snapshots) return every publicly
+# shared resource in the region when called without an owner filter, which would
+# otherwise stall the scan and blow up the raw-data file.
+MAX_ITEMS_PER_RESOURCE_TYPE = 50_000
+
+
+def extract_result_path(container: Any, result_path: list) -> list:
+    if isinstance(result_path, str):
+        result_path = [result_path]
+    value = container
+    for key in result_path:
+        if not isinstance(value, dict):
+            return []
+        value = value.get(key)
+    return value if isinstance(value, list) else []
+
 
 def paginate(
     client: Any,
     operation_name: str,
-    result_key: str,
+    result_path: list,
+    max_items: int = MAX_ITEMS_PER_RESOURCE_TYPE,
     **kwargs: Any,
 ) -> list:
     items: list = []
     for page in client.get_paginator(operation_name).paginate(**kwargs):
-        items.extend(page.get(result_key, []))
+        items.extend(extract_result_path(page, result_path))
+        if len(items) >= max_items:
+            return items[:max_items]
     return items
 
 
 def paginate_or_call(
     client: Any,
     operation_name: str,
-    result_key: str,
+    result_path: list,
+    max_items: int = MAX_ITEMS_PER_RESOURCE_TYPE,
     **kwargs: Any,
 ) -> list:
     """paginate() when boto3 supports it for this operation, else a single call."""
     if client.can_paginate(operation_name):
-        return paginate(client, operation_name, result_key, **kwargs)
+        return paginate(client, operation_name, result_path, max_items, **kwargs)
     response = getattr(client, operation_name)(**kwargs)
-    if not isinstance(response, dict):
-        return []
-    return response.get(result_key, [])
+    return extract_result_path(response, result_path)[:max_items]
+
+
+def parse_resource_type_params(raw_params: Any) -> dict:
+    if isinstance(raw_params, dict):
+        return raw_params
+    try:
+        parsed = json.loads(raw_params or "{}")
+    except (TypeError, ValueError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def resolve_aws_call_spec(resource_type_code: str, params: dict) -> dict | None:
+    service = params.get("service")
+    operation = params.get("operation")
+    if service and operation:
+        return {
+            "source": "params",
+            "service": service,
+            "operation": operation,
+            "result_path": list(params.get("result_path") or []),
+            "kwargs": dict(params.get("kwargs") or {}),
+        }
+
+    parts = resource_type_code.split(".")
+    if len(parts) >= 4 and parts[0] == "AWS":
+        return {
+            "source": "code",
+            "service": parts[1],
+            "operation": parts[2],
+            "result_path": [part.strip() for part in parts[3:]],
+            "kwargs": {},
+        }
+
+    return None
 
 
 def convert_datetime(obj: Any) -> Any:
@@ -78,7 +132,11 @@ def build_aws_resource_inventory(
 
         # Load the ResourceType mapping
         resource_type_mapping = {
-            item["code"]: {"id": item["id"], "name": item["name"]}
+            item["code"]: {
+                "id": item["id"],
+                "name": item["name"],
+                "params": item.get("params"),
+            }
             for item in load_data("resourcetype")
             if item["csp"] == 2 and item["status"] == "t"
         }
@@ -89,19 +147,49 @@ def build_aws_resource_inventory(
         # Aggregate resources by type and location
         aggregated_resources = defaultdict(int)
 
+        # How each catalogue row was resolved, summarised into run.log once the
+        # sweep is done. Without it a scan result cannot be traced back to the
+        # master data that produced it.
+        spec_sources = defaultdict(int)
+
         # Iterate through each resource type in the JSON
         for idx, (resource_type_code, resource_info) in enumerate(
             resource_type_mapping.items(), start=1
         ):
-            parts = resource_type_code.split(".")
-            if len(parts) != 4 or parts[0] != "AWS":
-                # logger.warning(f"Invalid resource type format: {resource_type_code}. Skipping.")
+            params = parse_resource_type_params(resource_info.get("params"))
+            spec = resolve_aws_call_spec(resource_type_code, params)
+            if spec is None:
+                if len(resource_type_code.split(".")) == 2:
+                    # Service-level placeholder (e.g. AWS.iam) with nothing to
+                    # call yet -- intentional, so keep it off the console.
+                    spec_sources["placeholder"] += 1
+                    logger.debug(
+                        "No call spec for placeholder resource type %s. Skipping.",
+                        resource_type_code,
+                    )
+                else:
+                    spec_sources["invalid"] += 1
+                    logger.warning(
+                        "Invalid resource type format: %s. Skipping.",
+                        resource_type_code,
+                    )
                 continue
 
-            # Extract service name, operation name, and result key
-            service_name, operation_name, result_key = parts[1], parts[2], parts[3]
+            service_name = spec["service"]
+            operation_name = spec["operation"]
+            result_path = spec["result_path"]
+            call_kwargs = spec["kwargs"]
 
-            # logger.info(f"Processing service {service_name} with operation {operation_name}")
+            spec_sources[spec["source"]] += 1
+            logger.debug(
+                "Resolved %s from %s -> %s.%s result_path=%s kwargs=%s",
+                resource_type_code,
+                spec["source"],
+                service_name,
+                operation_name,
+                result_path,
+                call_kwargs,
+            )
 
             try:
                 client = session.client(
@@ -111,7 +199,20 @@ def build_aws_resource_inventory(
                     # logger.error(f"Operation {operation_name} does not exist for service {service_name}")
                     continue
 
-                resources = paginate_or_call(client, operation_name, result_key.strip())
+                resources = paginate_or_call(
+                    client,
+                    operation_name,
+                    result_path,
+                    MAX_ITEMS_PER_RESOURCE_TYPE,
+                    **call_kwargs,
+                )
+                if len(resources) >= MAX_ITEMS_PER_RESOURCE_TYPE:
+                    logger.warning(
+                        "Item cap of %d reached for %s.%s; results truncated.",
+                        MAX_ITEMS_PER_RESOURCE_TYPE,
+                        service_name,
+                        operation_name,
+                    )
 
                 # Aggregate the resources
                 for resource in resources:
@@ -140,6 +241,17 @@ def build_aws_resource_inventory(
                     exc,
                 )
                 continue
+
+        logger.info(
+            "Resource type resolution: %d of %d rows scanned (%d from params, "
+            "%d from code), %d placeholders skipped, %d invalid.",
+            spec_sources["params"] + spec_sources["code"],
+            len(resource_type_mapping),
+            spec_sources["params"],
+            spec_sources["code"],
+            spec_sources["placeholder"],
+            spec_sources["invalid"],
+        )
 
         # Save raw data to a JSON file
         raw_data = convert_datetime(raw_data)
