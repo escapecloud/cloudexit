@@ -1,6 +1,7 @@
 # tests/test_utils_report_egress.py
 import json
 import os
+import pathlib
 import sqlite3
 import tempfile
 import unittest
@@ -11,8 +12,9 @@ from reportlab.platypus import PageBreak, Paragraph, Table
 
 from tests.report_fixtures import stage_report_assets
 
-from core.utils_egress import GIB
+from core.utils_egress import GIB, write_egress_inventory
 from core.utils_report_egress import (
+    CATEGORIES,
     _build_allocation,
     _build_coverage_section,
     _build_data_landscape_section,
@@ -101,6 +103,16 @@ def _totals(rows, unknown_count=0, archive_tier_bytes=0):
     }
 
 
+def _archive_tiers(rows):
+    # Any tier carrying bytes in a fixture that declares archive bytes.
+    return {
+        tier
+        for row in rows
+        for tier in (row.get("tier_bytes") or {})
+        if tier in ("Archive", "Glacier", "Deep Archive")
+    }
+
+
 def _payload(rows, unknown_count=0, archive_tier_bytes=0):
     return {
         "meta": {
@@ -115,6 +127,93 @@ def _payload(rows, unknown_count=0, archive_tier_bytes=0):
             "totals": _totals(rows, unknown_count, archive_tier_bytes),
         },
     }
+
+
+_EGRESS_SCHEMA = """
+CREATE TABLE resourcetype (
+    id INTEGER PRIMARY KEY, csp INTEGER NOT NULL, code TEXT NOT NULL,
+    name TEXT NOT NULL, icon TEXT NOT NULL, status TEXT NOT NULL);
+CREATE TABLE resourcetype_data (
+    id INTEGER PRIMARY KEY, resource_type INTEGER NOT NULL,
+    data_category TEXT NOT NULL, strategy TEXT NOT NULL, params TEXT,
+    status TEXT NOT NULL);
+CREATE TABLE egress_inventory (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, resource_type INTEGER NOT NULL,
+    name TEXT NOT NULL, size_bytes INTEGER,
+    size_unknown INTEGER NOT NULL DEFAULT 0, flags TEXT, notes TEXT);
+CREATE TABLE egress_inventory_tier (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, egress_inventory_id INTEGER NOT NULL,
+    tier TEXT NOT NULL, size_bytes INTEGER NOT NULL,
+    is_archive INTEGER NOT NULL DEFAULT 0);
+"""
+
+
+def _seed_egress_inventory(report_path, rows, archive_tiers=frozenset()):
+    """Store fixture rows the way the engine does, via the real writer."""
+    db_dir = os.path.join(report_path, "data")
+    os.makedirs(db_dir, exist_ok=True)
+    db_path = os.path.join(db_dir, "assessment.db")
+    conn = sqlite3.connect(db_path)
+    conn.executescript(_EGRESS_SCHEMA)
+
+    # One catalogue row per distinct (type, label, category); the report reads
+    # label and category back through the FK.
+    codes, type_ids = {}, {}
+    for row in rows:
+        triple = (row["type"], row["label"], row["category"])
+        if triple in codes:
+            continue
+        rt_id = len(codes) + 1
+        code = row["type"] if row["type"] not in type_ids else f"{row['type']}#{rt_id}"
+        codes[triple] = code
+        type_ids[code] = rt_id
+        conn.execute(
+            "INSERT INTO resourcetype (id, csp, code, name, icon, status) "
+            "VALUES (?, 1, ?, ?, 'icon.png', 't')",
+            (rt_id, code, row["label"]),
+        )
+        conn.execute(
+            "INSERT INTO resourcetype_data (id, resource_type, data_category, "
+            "strategy, params, status) VALUES (?, ?, ?, 'strategy', '{}', 't')",
+            (rt_id, rt_id, row["category"]),
+        )
+    conn.commit()
+    conn.close()
+
+    stored = [
+        {**row, "type": codes[(row["type"], row["label"], row["category"])]}
+        for row in rows
+    ]
+    write_egress_inventory(stored, type_ids, set(archive_tiers), db_path)
+    return db_path
+
+
+class CategoryCoverageTests(unittest.TestCase):
+    # The CHECK constraint on resourcetype_data.data_category. A category the
+    # report does not know about renders an unstyled badge and, worse, drops
+    # out of the allocation chart while still counting towards the totals.
+    DATA_CATEGORIES = {"object", "block", "file", "database", "backup"}
+
+    def test_every_master_data_category_is_known_to_the_report(self):
+        self.assertEqual(set(CATEGORIES), self.DATA_CATEGORIES)
+
+    def test_only_backup_is_left_out_of_the_allocation_chart(self):
+        excluded = {k for k, v in CATEGORIES.items() if not v["in_allocation"]}
+
+        # Backup is enumerated but never sized, so it has nothing to allocate.
+        self.assertEqual(excluded, {"backup"})
+
+    def test_allocated_categories_have_a_colour_and_a_label(self):
+        for key, info in CATEGORIES.items():
+            if info["in_allocation"]:
+                self.assertIsNotNone(info["color"], key)
+                self.assertIsNotNone(info["label"], key)
+
+    def test_template_styles_every_category_badge(self):
+        css = pathlib.Path("assets/template/egress.html").read_text(encoding="utf-8")
+
+        for key in CATEGORIES:
+            self.assertIn(f".category-{key} {{", css, f"no badge rule for {key!r}")
 
 
 class LoadPricingTests(unittest.TestCase):
@@ -384,9 +483,14 @@ class TypeGroupTests(unittest.TestCase):
 class GenerateEgressHtmlReportTests(unittest.TestCase):
     def _generate(self, payload):
         with tempfile.TemporaryDirectory() as tmp_dir:
-            json_path = os.path.join(tmp_dir, "egress_estimate.json")
+            json_path = os.path.join(tmp_dir, "egress_inventory_raw_data.json")
             with open(json_path, "w", encoding="utf-8") as json_file:
                 json.dump(payload, json_file)
+            _seed_egress_inventory(
+                tmp_dir,
+                payload["data"]["resources"],
+                _archive_tiers(payload["data"]["resources"]),
+            )
 
             with patch(
                 "core.utils_report_egress.load_data",
@@ -804,9 +908,14 @@ class GenerateEgressPdfReportTests(unittest.TestCase):
     def _generate(self, payload):
         with tempfile.TemporaryDirectory() as tmp_dir:
             stage_report_assets(tmp_dir)
-            json_path = os.path.join(tmp_dir, "egress_estimate.json")
+            json_path = os.path.join(tmp_dir, "egress_inventory_raw_data.json")
             with open(json_path, "w", encoding="utf-8") as json_file:
                 json.dump(payload, json_file)
+            _seed_egress_inventory(
+                tmp_dir,
+                payload["data"]["resources"],
+                _archive_tiers(payload["data"]["resources"]),
+            )
 
             with patch(
                 "core.utils_report_egress.load_data",

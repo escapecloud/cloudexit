@@ -5,8 +5,12 @@ from typing import Any
 from datetime import datetime, timedelta, timezone
 from botocore.exceptions import BotoCoreError, ClientError
 
-from .utils_aws import AWS_RETRY_CONFIG, paginate
-from .utils_egress import GIB, format_bytes, new_row
+from .utils_aws import (
+    AWS_RETRY_CONFIG,
+    extract_result_path,
+    paginate_or_call,
+)
+from .utils_egress import GIB, format_bytes, load_egress_registry, new_row
 
 logger = logging.getLogger("core.engine.egress.aws")
 
@@ -39,39 +43,6 @@ S3_STORAGE_TYPE_TIERS = {
     "DeepArchiveObjectOverhead": "Deep Archive",
     "DeepArchiveS3ObjectOverhead": "Deep Archive",
     "DeepArchiveStagingStorage": "Deep Archive",
-}
-
-EGRESS_RESOURCE_REGISTRY = {
-    "AWS.s3.list_buckets.Buckets": {
-        "category": "object",
-        "label": "S3 Bucket",
-        "strategy": "s3_bucket_metrics",
-    },
-    "AWS.ec2.describe_volumes.Volumes": {
-        "category": "block",
-        "label": "EBS Volume",
-        "strategy": "ebs_volumes",
-    },
-    "AWS.ec2.describe_snapshots.Snapshots": {
-        "category": "block",
-        "label": "EBS Snapshot",
-        "strategy": "ebs_snapshots",
-    },
-    "AWS.rds.describe_db_instances.DBInstances": {
-        "category": "database",
-        "label": "RDS Instance",
-        "strategy": "rds_instances",
-    },
-    "AWS.dynamodb.list_tables.TableNames": {
-        "category": "database",
-        "label": "DynamoDB Table",
-        "strategy": "dynamodb_tables",
-    },
-    "AWS.backup.list_backup_vaults.BackupVaultList": {
-        "category": "backup",
-        "label": "Backup Vault",
-        "strategy": "backup_vaults",
-    },
 }
 
 
@@ -129,6 +100,67 @@ def fetch_latest_metric_values(
         return None
 
 
+SIZE_UNITS = {
+    "B": 1,
+    "KiB": 1024,
+    "MiB": 1024**2,
+    "GiB": GIB,
+    "TiB": 1024**4,
+}
+
+
+def _nested_get(item: dict[str, Any], path: Any) -> Any:
+    if isinstance(path, str):
+        path = [path]
+    value: Any = item
+    for key in path:
+        if not isinstance(value, dict):
+            return None
+        value = value.get(key)
+    return value
+
+
+def _resource_identity(item: dict[str, Any], sizing: dict[str, Any]) -> tuple[str, str]:
+    # The row id prefers an ARN when the service reports one; the display name
+    # comes from a tag when the service tags resources, else from a field.
+    identifier = item[sizing["id_field"]]
+    name_tag = sizing.get("name_tag")
+    if name_tag:
+        name = next(
+            (
+                tag["Value"]
+                for tag in item.get(sizing.get("tags_field", "Tags"), [])
+                if tag["Key"] == name_tag
+            ),
+            identifier,
+        )
+    else:
+        name = item.get(sizing.get("name_field") or sizing["id_field"], identifier)
+    arn_field = sizing.get("arn_field")
+    row_id = item.get(arn_field, identifier) if arn_field else identifier
+    return row_id, name
+
+
+def _enumeration_client(session: Any, region: str, entry: dict[str, Any]) -> Any:
+    return session.client(
+        entry["enumeration"]["service"], region_name=region, config=AWS_RETRY_CONFIG
+    )
+
+
+def _enumerate(session: Any, region: str, entry: dict[str, Any]) -> tuple[Any, list]:
+    # service/operation/result_path/kwargs all come from resourcetype_data, so a
+    # catalogue change does not need a code change. Sizing stays in the strategy.
+    enumeration = entry["enumeration"]
+    client = _enumeration_client(session, region, entry)
+    items = paginate_or_call(
+        client,
+        enumeration["operation"],
+        enumeration["result_path"],
+        **enumeration.get("kwargs", {}),
+    )
+    return client, items
+
+
 def _bucket_region(s3_client: Any, bucket_name: str) -> str:
     location = s3_client.get_bucket_location(Bucket=bucket_name).get(
         "LocationConstraint"
@@ -140,15 +172,21 @@ def _bucket_region(s3_client: Any, bucket_name: str) -> str:
     return location
 
 
-def _list_buckets_in_region(s3_client: Any, region: str) -> list[str]:
+def _list_buckets_in_region(
+    s3_client: Any, region: str, enumeration: dict[str, Any]
+) -> list[str]:
+    # The region filter is strategy logic, but the call itself is master data.
+    list_buckets = getattr(s3_client, enumeration["operation"])
+    result_path = enumeration["result_path"]
+    kwargs = enumeration.get("kwargs", {})
     try:
-        response = s3_client.list_buckets(BucketRegion=region)
-        return [bucket["Name"] for bucket in response.get("Buckets", [])]
+        response = list_buckets(BucketRegion=region, **kwargs)
+        return [bucket["Name"] for bucket in extract_result_path(response, result_path)]
     except (BotoCoreError, ClientError) as e:
         logger.debug("ListBuckets with BucketRegion filter failed: %s", str(e))
 
     bucket_names = []
-    for bucket in s3_client.list_buckets().get("Buckets", []):
+    for bucket in extract_result_path(list_buckets(**kwargs), result_path):
         name = bucket["Name"]
         bucket_region = bucket.get("BucketRegion")
         if bucket_region is None:
@@ -165,12 +203,12 @@ def _list_buckets_in_region(s3_client: Any, region: str) -> list[str]:
 def _collect_s3_buckets(
     session: Any, region: str, code: str, entry: dict[str, Any]
 ) -> list[dict[str, Any]]:
-    s3_client = session.client("s3", region_name=region, config=AWS_RETRY_CONFIG)
+    s3_client = _enumeration_client(session, region, entry)
     cloudwatch = session.client(
         "cloudwatch", region_name=region, config=AWS_RETRY_CONFIG
     )
 
-    bucket_names = _list_buckets_in_region(s3_client, region)
+    bucket_names = _list_buckets_in_region(s3_client, region, entry["enumeration"])
 
     rows = []
     for name in bucket_names:
@@ -244,49 +282,41 @@ def _collect_s3_buckets(
     return rows
 
 
-def _collect_ebs_volumes(
+def _collect_list_item_size(
     session: Any, region: str, code: str, entry: dict[str, Any]
 ) -> list[dict[str, Any]]:
-    ec2_client = session.client("ec2", region_name=region, config=AWS_RETRY_CONFIG)
+    sizing = entry["sizing"]
+    multiplier = SIZE_UNITS[sizing.get("size_unit", "GiB")]
+    _, items = _enumerate(session, region, entry)
     rows = []
-    for volume in paginate(ec2_client, "describe_volumes", "Volumes"):
-        name = next(
-            (tag["Value"] for tag in volume.get("Tags", []) if tag["Key"] == "Name"),
-            volume["VolumeId"],
-        )
-        row = new_row(volume["VolumeId"], name, code, entry["label"], entry["category"])
-        size_gb = volume.get("Size")
-        if size_gb:
-            row["size_bytes"] = int(size_gb) * GIB
-            row["flags"].append("allocated (upper bound)")
+    for item in items:
+        row_id, name = _resource_identity(item, sizing)
+        row = new_row(row_id, name, code, entry["label"], entry["category"])
+        size = _nested_get(item, sizing["size_field"])
+        if size:
+            row["size_bytes"] = int(size) * multiplier
+            row["flags"].extend(sizing.get("flags", []))
+            row["notes"].extend(sizing.get("notes", []))
         else:
             row["size_unknown"] = True
         rows.append(row)
     return rows
 
 
-def _collect_ebs_snapshots(
+def _collect_not_sizeable(
     session: Any, region: str, code: str, entry: dict[str, Any]
 ) -> list[dict[str, Any]]:
-    ec2_client = session.client("ec2", region_name=region, config=AWS_RETRY_CONFIG)
+    sizing = entry["sizing"]
+    _, items = _enumerate(session, region, entry)
     rows = []
-    for snapshot in paginate(
-        ec2_client, "describe_snapshots", "Snapshots", OwnerIds=["self"]
-    ):
-        row = new_row(
-            snapshot["SnapshotId"],
-            snapshot["SnapshotId"],
-            code,
-            entry["label"],
-            entry["category"],
-        )
-        size_gb = snapshot.get("VolumeSize")
-        if size_gb:
-            row["size_bytes"] = int(size_gb) * GIB
-            row["flags"].append("allocated (upper bound)")
-            row["notes"].append("incremental – shares blocks with sibling snapshots")
-        else:
-            row["size_unknown"] = True
+    for item in items:
+        row_id, name = _resource_identity(item, sizing)
+        row = new_row(row_id, name, code, entry["label"], entry["category"])
+        row["flags"].extend(sizing.get("flags", []))
+        count_field = sizing.get("count_field")
+        count = _nested_get(item, count_field) if count_field else None
+        if count:
+            row["notes"].append(sizing["count_note"].format(count=count))
         rows.append(row)
     return rows
 
@@ -294,7 +324,7 @@ def _collect_ebs_snapshots(
 def _collect_rds_instances(
     session: Any, region: str, code: str, entry: dict[str, Any]
 ) -> list[dict[str, Any]]:
-    rds_client = session.client("rds", region_name=region, config=AWS_RETRY_CONFIG)
+    _, instances = _enumerate(session, region, entry)
     cloudwatch = session.client(
         "cloudwatch", region_name=region, config=AWS_RETRY_CONFIG
     )
@@ -302,9 +332,7 @@ def _collect_rds_instances(
     rows = []
     specs = []
     spec_rows: dict[str, tuple[dict[str, Any], int]] = {}
-    for index, instance in enumerate(
-        paginate(rds_client, "describe_db_instances", "DBInstances")
-    ):
+    for index, instance in enumerate(instances):
         identifier = instance["DBInstanceIdentifier"]
         row = new_row(
             instance.get("DBInstanceArn", identifier),
@@ -348,11 +376,9 @@ def _collect_rds_instances(
 def _collect_dynamodb_tables(
     session: Any, region: str, code: str, entry: dict[str, Any]
 ) -> list[dict[str, Any]]:
-    dynamodb_client = session.client(
-        "dynamodb", region_name=region, config=AWS_RETRY_CONFIG
-    )
+    dynamodb_client, table_names = _enumerate(session, region, entry)
     rows = []
-    for table_name in paginate(dynamodb_client, "list_tables", "TableNames"):
+    for table_name in table_names:
         try:
             table = dynamodb_client.describe_table(TableName=table_name).get(
                 "Table", {}
@@ -383,39 +409,19 @@ def _collect_dynamodb_tables(
     return rows
 
 
-def _collect_backup_vaults(
-    session: Any, region: str, code: str, entry: dict[str, Any]
-) -> list[dict[str, Any]]:
-    backup_client = session.client(
-        "backup", region_name=region, config=AWS_RETRY_CONFIG
-    )
-    rows = []
-    for vault in paginate(backup_client, "list_backup_vaults", "BackupVaultList"):
-        vault_name = vault["BackupVaultName"]
-        row = new_row(
-            vault.get("BackupVaultArn", vault_name),
-            vault_name,
-            code,
-            entry["label"],
-            entry["category"],
-        )
-        row["flags"].append("backup vault – not sized")
-        recovery_points = vault.get("NumberOfRecoveryPoints")
-        if recovery_points:
-            row["notes"].append(
-                f"{recovery_points} recovery points (cannot be exported directly)"
-            )
-        rows.append(row)
-    return rows
-
-
+# Strategy names stay stable so master data and engine can be deployed
+# independently; several of them share one parameterised collector. The
+# service-neutral names are the ones to use for new master-data rows.
 _STRATEGY_COLLECTORS = {
     "s3_bucket_metrics": _collect_s3_buckets,
-    "ebs_volumes": _collect_ebs_volumes,
-    "ebs_snapshots": _collect_ebs_snapshots,
     "rds_instances": _collect_rds_instances,
     "dynamodb_tables": _collect_dynamodb_tables,
-    "backup_vaults": _collect_backup_vaults,
+    "list_item_size": _collect_list_item_size,
+    "not_sizeable": _collect_not_sizeable,
+    # Kept so existing rows keep working; prefer the two names above.
+    "ebs_volumes": _collect_list_item_size,
+    "ebs_snapshots": _collect_list_item_size,
+    "backup_vaults": _collect_not_sizeable,
 }
 
 
@@ -431,13 +437,29 @@ def collect_aws_egress(
     )
 
     rows = []
-    for code, entry in EGRESS_RESOURCE_REGISTRY.items():
-        collector = _STRATEGY_COLLECTORS[entry["strategy"]]
+    for code, entry in load_egress_registry(2).items():
+        collector = _STRATEGY_COLLECTORS.get(entry["strategy"])
+        if collector is None:
+            # Master data can ship a strategy ahead of the engine; skip that one
+            # resource type rather than aborting the whole egress run.
+            logger.warning(
+                "Unknown egress strategy %r for %s; skipping.",
+                entry["strategy"],
+                code,
+            )
+            continue
         try:
             rows.extend(collector(session, region, code, entry))
         except Exception as e:
-            logger.debug(
-                "Egress collection failed for %s: %s", code, str(e), exc_info=True
+            # One failing service must not abort the run, but a whole resource
+            # type dropping out of the estimate has to be visible in run.log.
+            logger.warning(
+                "Egress collection failed for %s (%s: %s); "
+                "this resource type is missing from the estimate.",
+                code,
+                type(e).__name__,
+                str(e),
+                exc_info=True,
             )
 
     return rows, ARCHIVE_TIERS

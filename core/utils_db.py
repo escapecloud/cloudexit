@@ -10,7 +10,10 @@ MASTER_DATABASE = "datasets/data.db"
 
 ALLOWED_TABLES = {
     "resourcetype",
+    "resourcetype_data",
     "resource_inventory",
+    "egress_inventory",
+    "egress_inventory_tier",
     "cost_inventory",
     "risk_inventory",
     "scoring_data",

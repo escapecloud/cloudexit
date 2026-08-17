@@ -23,7 +23,12 @@ from reportlab.platypus import (
 )
 
 from core.utils_db import load_data
-from core.utils_egress import GIB, format_bytes
+from core.utils_egress import (
+    GIB,
+    compute_totals,
+    format_bytes,
+    read_egress_inventory,
+)
 from core.utils_egress_aws import ARCHIVE_TIERS as AWS_ARCHIVE_TIERS
 from core.utils_egress_azure import ARCHIVE_TIERS as AZURE_ARCHIVE_TIERS
 from core.utils_report import (
@@ -53,6 +58,12 @@ CATEGORIES = {
         "label": "Block (allocated)",
         "badge": "Block",
         "color": "rgba(83, 155, 255, 1)",
+        "in_allocation": True,
+    },
+    "file": {
+        "label": "File Storage",
+        "badge": "File",
+        "color": "rgba(245, 158, 11, 1)",
         "in_allocation": True,
     },
     "database": {
@@ -372,9 +383,12 @@ def _load_estimate(
     with open(json_path, "r", encoding="utf-8") as json_file:
         payload = json.load(json_file)
 
+    # Run metadata stays in the raw artifact; the resources come from the
+    # assessment database, which is the store of record for the estimate.
     meta = payload["meta"]
-    rows = payload["data"]["resources"]
-    totals = payload["data"]["totals"]
+    db_path = os.path.join(report_path, "data", "assessment.db")
+    rows, archive_tiers = read_egress_inventory(db_path)
+    totals = compute_totals(rows, archive_tiers)
 
     pricing = load_pricing(report_path)
     total_fee, fees_by_id = build_fee_estimate(

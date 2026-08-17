@@ -613,7 +613,7 @@ class EgressStageTests(unittest.TestCase):
     _ESTIMATE_OK = {
         "success": True,
         "logs": "",
-        "json_path": "/tmp/report/raw/egress_estimate.json",
+        "json_path": "/tmp/report/raw/egress_inventory_raw_data.json",
     }
     _REPORT_OK = {
         "success": True,
@@ -689,16 +689,17 @@ class EgressStageTests(unittest.TestCase):
             1,
             config["providerDetails"],
             "/tmp/report/raw",
+            report_path="/tmp/report",
             name=config["name"],
             exit_strategy=config["exitStrategy"],
             assessment_type=config["assessmentType"],
         )
         mock_render.assert_called_once_with(
-            "/tmp/report", "/tmp/report/raw/egress_estimate.json"
+            "/tmp/report", "/tmp/report/raw/egress_inventory_raw_data.json"
         )
         mock_pdf.assert_called_once_with(
             "/tmp/report",
-            "/tmp/report/raw/egress_estimate.json",
+            "/tmp/report/raw/egress_inventory_raw_data.json",
             config["providerDetails"],
         )
         call_names = [name for name, _, _ in manager.mock_calls]
@@ -806,6 +807,7 @@ class EgressStageTests(unittest.TestCase):
             2,
             config["providerDetails"],
             "/tmp/report/raw",
+            report_path="/tmp/report",
             name=config["name"],
             exit_strategy=config["exitStrategy"],
             assessment_type=config["assessmentType"],

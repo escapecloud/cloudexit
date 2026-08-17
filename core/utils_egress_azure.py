@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from azure.identity import ClientSecretCredential
 from azure.mgmt.resource import ResourceManagementClient
 
-from .utils_egress import GIB, format_bytes, new_row
+from .utils_egress import GIB, format_bytes, load_egress_registry, new_row
 
 logger = logging.getLogger("core.engine.egress.azure")
 
@@ -22,64 +22,14 @@ MANAGEMENT_BASE_URL = "https://management.azure.com"
 
 ARCHIVE_TIERS = {"Archive"}
 
-EGRESS_RESOURCE_REGISTRY = {
-    "microsoft.storage/storageaccounts": {
-        "category": "object",
-        "label": "Storage Account",
-        "strategy": "storage_account_metrics",
-    },
-    "microsoft.compute/disks": {
-        "category": "block",
-        "label": "Managed Disk",
-        "strategy": "allocated_size_property",
-        "api_version": "2024-03-02",
-        "size_property": "diskSizeGB",
-    },
-    "microsoft.compute/snapshots": {
-        "category": "block",
-        "label": "Snapshot",
-        "strategy": "allocated_size_property",
-        "api_version": "2024-03-02",
-        "size_property": "diskSizeGB",
-    },
-    "microsoft.sql/servers/databases": {
-        "category": "database",
-        "label": "SQL Database",
-        "strategy": "monitor_metric",
-        "metrics": ["storage"],
-    },
-    "microsoft.documentdb/databaseaccounts": {
-        "category": "database",
-        "label": "Cosmos DB Account",
-        "strategy": "monitor_metric",
-        "metrics": ["DataUsage", "IndexUsage"],
-    },
-    "microsoft.dbforpostgresql/flexibleservers": {
-        "category": "database",
-        "label": "PostgreSQL Flexible Server",
-        "strategy": "monitor_metric",
-        "metrics": ["storage_used"],
-    },
-    "microsoft.dbformysql/flexibleservers": {
-        "category": "database",
-        "label": "MySQL Flexible Server",
-        "strategy": "monitor_metric",
-        "metrics": ["storage_used"],
-    },
-    "microsoft.recoveryservices/vaults": {
-        "category": "backup",
-        "label": "Recovery Services Vault",
-        "strategy": "vault_warning",
-    },
-}
-
 
 def filter_data_bearing_resources(
     resources: list[Any],
+    registry: dict[str, dict[str, Any]],
 ) -> list[tuple[Any, dict[str, Any]]]:
     matched = []
     for resource in resources:
-        entry = EGRESS_RESOURCE_REGISTRY.get(resource.type.strip().lower())
+        entry = registry.get(resource.type.strip().lower())
         if entry:
             matched.append((resource, entry))
     return matched
@@ -295,8 +245,18 @@ def build_egress_inventory(
 ) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
     rows = []
     findings = []
-    for resource, entry in filter_data_bearing_resources(resources):
-        collector = _STRATEGY_COLLECTORS[entry["strategy"]]
+    registry = load_egress_registry(1)
+    for resource, entry in filter_data_bearing_resources(resources, registry):
+        collector = _STRATEGY_COLLECTORS.get(entry["strategy"])
+        if collector is None:
+            # Master data can ship a strategy ahead of the engine; skip that one
+            # resource type rather than aborting the whole egress run.
+            logger.warning(
+                "Unknown egress strategy %r for %s; skipping.",
+                entry["strategy"],
+                resource.type,
+            )
+            continue
         try:
             row = collector(credential, resource_client, resource, entry)
         except Exception as e:
