@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version, no leading v (e.g. 1.1.5)"
+        description: "Version, no leading v (e.g. 1.1.5, or 2.0.0-rc.1 from a release branch)"
         required: true
 
 permissions:
@@ -18,31 +18,38 @@ jobs:
         with:
           token: ${{ secrets.RELEASE_TOKEN }}
 
-      - name: Guard against non-main dispatch
+      - name: Validate branch, version and guard against existing tag
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          if [ "${{ github.ref }}" != "refs/heads/main" ]; then
-            echo "Release must be dispatched from main, got ${{ github.ref }}"; exit 1
-          fi
-
-      - name: Validate version and guard against existing tag
-        run: |
-          v="${{ inputs.version }}"
-          echo "$v" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "Bad version format: $v"; exit 1; }
-          if git ls-remote --exit-code --tags origin "refs/tags/v$v" >/dev/null 2>&1; then
-            echo "Tag v$v already exists on origin"; exit 1
+          case "$GITHUB_REF" in
+            refs/heads/main)
+              echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "Final versions (X.Y.Z) only from main, got: $VERSION"; exit 1; }
+              ;;
+            refs/heads/release/*)
+              echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$' || { echo "Only release candidates (X.Y.Z-rc.N) from a release branch, got: $VERSION"; exit 1; }
+              ;;
+            *)
+              echo "Release must be dispatched from main or a release/* branch, got $GITHUB_REF"; exit 1
+              ;;
+          esac
+          if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null 2>&1; then
+            echo "Tag v$VERSION already exists on origin"; exit 1
           fi
 
       - name: Bump utils/version.py
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          v="${{ inputs.version }}"
-          sed -i "s/^__version__ = .*/__version__ = \"$v\"/" utils/version.py
-          grep -q "^__version__ = \"$v\"$" utils/version.py || { echo "sed did not update version"; exit 1; }
+          sed -i "s/^__version__ = .*/__version__ = \"$VERSION\"/" utils/version.py
+          grep -q "^__version__ = \"$VERSION\"$" utils/version.py || { echo "sed did not update version"; exit 1; }
 
-      - name: Commit, tag, and push to main
+      - name: Commit, tag, and push to the dispatched branch
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          v="${{ inputs.version }}"
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -am "Release v$v"
-          git tag -a "v$v" -m "Release v$v"
-          git push origin HEAD "refs/tags/v$v"
+          git commit -am "Release v$VERSION"
+          git tag -a "v$VERSION" -m "Release v$VERSION"
+          git push origin HEAD "refs/tags/v$VERSION"

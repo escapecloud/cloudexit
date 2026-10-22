@@ -1,8 +1,11 @@
+import importlib.util
 import json
 import os
+import sys
 import tempfile
 import types
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from core.utils_sync import post_assessment
@@ -64,6 +67,38 @@ class PostAssessmentHostResolutionTests(unittest.TestCase):
 
         self.assertFalse(result["success"])
         self.assertEqual(result["payload"], None)
+        self.assertEqual(result["logs"], "HOST missing in environment and config.py")
+
+
+class MissingConfigModuleTests(unittest.TestCase):
+    def load_without_config(self):
+        path = Path(__file__).resolve().parent.parent / "core" / "utils_sync.py"
+        spec = importlib.util.spec_from_file_location("utils_sync_no_config", path)
+        module = importlib.util.module_from_spec(spec)
+        # None in sys.modules makes `import config` fail as if the file were absent
+        with patch.dict(sys.modules, {"config": None}):
+            spec.loader.exec_module(module)
+        return module
+
+    def test_module_imports_without_config(self):
+        self.assertIsNone(self.load_without_config().config)
+
+    def test_post_assessment_reports_missing_host_without_config(self):
+        module = self.load_without_config()
+        with patch.dict(os.environ, {}, clear=True):
+            result = module.post_assessment(
+                name="Demo",
+                started_at=123,
+                report_path="/tmp/report",
+                meta={
+                    "exit_strategy": 1,
+                    "cloud_service_provider": 2,
+                    "assessment_type": 1,
+                },
+                token="jwt-token",
+            )
+
+        self.assertFalse(result["success"])
         self.assertEqual(result["logs"], "HOST missing in environment and config.py")
 
 

@@ -9,17 +9,17 @@ description = "Open-source cloud exit assessment CLI for evaluating cloud lock-i
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "azure-identity==1.25.3",
+    "azure-identity==1.26.0",
     "azure-mgmt-resource==24.0.0",
     "azure-mgmt-authorization==4.0.0",
     "azure-mgmt-costmanagement==4.0.1",
-    "boto3==1.43.5",
-    "botocore==1.43.5",
+    "boto3==1.43.117",
+    "botocore==1.43.117",
     "rich==15.0.0",
     "Jinja2==3.1.6",
-    "reportlab==4.5.0",
-    "pillow==12.3.0",
-    "requests==2.33.1",
+    "reportlab==5.1.0",
+    "pillow==13.0.0",
+    "requests==2.34.2",
 ]
 
 [project.optional-dependencies]
@@ -31,11 +31,16 @@ dev = [
 [project.scripts]
 cloudexit = "main:main"
 
+[tool.ruff.lint]
+# ruff 0.16 enlarged its default rule set; keep the previous defaults until
+# the new rules are adopted deliberately
+select = ["E4", "E7", "E9", "F"]
+
 [tool.setuptools.dynamic]
 version = {attr = "utils.version.__version__"}
 
 [tool.setuptools]
-py-modules = ["main", "config"]
+py-modules = ["main"]
 
 [tool.setuptools.packages.find]
 where = ["."]

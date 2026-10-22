@@ -856,6 +856,36 @@ class MainExitCodeTests(unittest.TestCase):
                 main.main()
         self.assertEqual(ctx.exception.code, codes.CONFIG)
 
+    def test_ctrl_c_in_handler_exits_interrupted(self):
+        with (
+            patch("main.initialize_dataset"),
+            patch("main.console.print"),
+            patch(
+                "main.parse_arguments",
+                return_value=Namespace(cloud_provider="aws"),
+            ),
+            patch("main.handle_aws", side_effect=KeyboardInterrupt),
+        ):
+            with self.assertRaises(SystemExit) as ctx:
+                main.main()
+        self.assertEqual(ctx.exception.code, codes.INTERRUPTED)
+        self.assertEqual(codes.INTERRUPTED, 130)
+
+    def test_ctrl_c_during_dataset_download_exits_interrupted(self):
+        with (
+            patch("main.initialize_dataset", side_effect=KeyboardInterrupt),
+            patch("main.console.print"),
+            patch(
+                "main.parse_arguments",
+                return_value=Namespace(cloud_provider="aws"),
+            ),
+            patch("main.handle_aws") as mock_handle,
+        ):
+            with self.assertRaises(SystemExit) as ctx:
+                main.main()
+        self.assertEqual(ctx.exception.code, codes.INTERRUPTED)
+        mock_handle.assert_not_called()
+
     def test_bad_config_file_exits_config_end_to_end(self):
         args = Namespace(
             cloud_provider="aws",

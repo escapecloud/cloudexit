@@ -5,12 +5,16 @@ import json
 import logging
 import os
 import time
-import config
 import requests
 from typing import Any
 
 from core.utils_db import load_data
 from utils.version import __version__
+
+try:
+    import config
+except ModuleNotFoundError:
+    config = None
 
 # Configure logger
 logger = logging.getLogger("core.engine.sync")
