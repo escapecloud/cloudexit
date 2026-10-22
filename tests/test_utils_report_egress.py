@@ -13,6 +13,7 @@ from reportlab.platypus import PageBreak, Paragraph, Table
 from tests.report_fixtures import stage_report_assets
 
 from core.utils_egress import GIB, write_egress_inventory
+from utils.data import active_catalogue_path
 from core.utils_report_egress import (
     CATEGORIES,
     _build_allocation,
@@ -262,18 +263,14 @@ class LoadPricingTests(unittest.TestCase):
         self.assertEqual(mock_load.call_args_list[1].kwargs, {})
 
     @unittest.skipUnless(
-        os.path.exists("datasets/data.db"), "master dataset not downloaded"
+        active_catalogue_path().exists(), "master dataset not downloaded"
     )
     def test_shipped_dataset_has_contiguous_zone1_ladders(self):
         from itertools import groupby
 
         from core.utils_db import load_data as db_load
 
-        rows = [
-            row
-            for row in db_load("egresspricing", db_path="datasets/data.db")
-            if not row["valid_to"]
-        ]
+        rows = [row for row in db_load("egresspricing") if not row["valid_to"]]
         rows.sort(key=lambda r: (r["csp"], r["component"], r["zone"], r["tier_from"]))
         seen = set()
         for key, group in groupby(

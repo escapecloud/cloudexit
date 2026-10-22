@@ -2,11 +2,10 @@
 import sqlite3
 import logging
 
+from utils.data import active_catalogue_path
+
 # Configure logger for database operations (level left to the root handlers)
 logger = logging.getLogger("core.engine.db")
-
-# Default master database
-MASTER_DATABASE = "datasets/data.db"
 
 ALLOWED_TABLES = {
     "resourcetype",
@@ -25,7 +24,9 @@ ALLOWED_TABLES = {
 }
 
 
-def connect(db_path=MASTER_DATABASE):
+def connect(db_path=None):
+    # No path means the catalogue dataset this run uses
+    db_path = db_path or active_catalogue_path()
     try:
         conn = sqlite3.connect(db_path)
         return conn
@@ -34,7 +35,7 @@ def connect(db_path=MASTER_DATABASE):
         raise
 
 
-def load_data(table_name, db_path=MASTER_DATABASE):
+def load_data(table_name, db_path=None):
     if table_name not in ALLOWED_TABLES:
         raise ValueError(f"Disallowed table name: {table_name}")
     try:
@@ -50,7 +51,7 @@ def load_data(table_name, db_path=MASTER_DATABASE):
         raise
 
 
-def execute_query(query, params=None, db_path=MASTER_DATABASE):
+def execute_query(query, params=None, db_path=None):
     try:
         conn = connect(db_path)
         cursor = conn.cursor()
@@ -64,7 +65,7 @@ def execute_query(query, params=None, db_path=MASTER_DATABASE):
         raise
 
 
-def fetch_one(query, params=None, db_path=MASTER_DATABASE):
+def fetch_one(query, params=None, db_path=None):
     try:
         conn = connect(db_path)
         cursor = conn.cursor()
@@ -78,7 +79,7 @@ def fetch_one(query, params=None, db_path=MASTER_DATABASE):
         raise
 
 
-def fetch_all(query, params=None, db_path=MASTER_DATABASE):
+def fetch_all(query, params=None, db_path=None):
     try:
         conn = connect(db_path)
         cursor = conn.cursor()

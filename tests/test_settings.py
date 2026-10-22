@@ -468,7 +468,7 @@ class ConfigCommandTests(SettingsTestCase):
         with (
             patch("sys.argv", ["cloudexit", *argv]),
             patch.dict(os.environ, environ, clear=True),
-            patch("main.initialize_dataset") as mock_dataset,
+            patch("main.prepare_catalogue") as mock_dataset,
             patch("main.console.print") as mock_print,
             contextlib.redirect_stdout(out),
         ):
@@ -556,7 +556,7 @@ class ArgumentTests(unittest.TestCase):
         with (
             patch("main.parse_arguments", return_value=args),
             patch("main.load_settings", return_value=Settings()) as mock_load,
-            patch("main.initialize_dataset") as mock_dataset,
+            patch("main.prepare_catalogue") as mock_dataset,
             patch("main.handle_aws") as mock_handle,
             patch("main.console.print"),
         ):
@@ -571,7 +571,7 @@ class ArgumentTests(unittest.TestCase):
         with (
             patch("main.parse_arguments", return_value=Namespace(cloud_provider="aws")),
             patch("main.load_settings", side_effect=SettingsError("bad host")),
-            patch("main.initialize_dataset") as mock_dataset,
+            patch("main.prepare_catalogue") as mock_dataset,
             patch("main.handle_aws") as mock_handle,
             patch("main.console.print"),
             self.assertRaises(SystemExit) as ctx,

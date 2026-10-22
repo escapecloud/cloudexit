@@ -8,12 +8,14 @@ import requests
 RecordedRequest = namedtuple("RecordedRequest", "method url kwargs")
 
 
-def make_response(status=200, json_body=None, text="", headers=None):
+def make_response(status=200, json_body=None, text="", headers=None, content=None):
     response = requests.Response()
     response.status_code = status
     response.encoding = "utf-8"
     response.headers.update(headers or {})
-    if json_body is not None:
+    if content is not None:
+        response._content = content
+    elif json_body is not None:
         response._content = json.dumps(json_body).encode("utf-8")
         response.headers.setdefault("Content-Type", "application/json")
     else:

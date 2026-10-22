@@ -3,6 +3,8 @@ import os
 import shutil
 import logging
 
+from utils.data import active_catalogue_path
+
 logger = logging.getLogger("core.engine.utils")
 
 # Icon folder per cloud service provider id
@@ -59,8 +61,8 @@ def copy_assets(report_path: str, cloud_service_provider: int) -> None:
         if not os.path.exists(dest_path):
             shutil.copytree(src_path, dest_path, ignore=_png_only, dirs_exist_ok=True)
 
-    # Copy datasets/data.db to data/assessment.db
-    db_src_path = "datasets/data.db"
+    # Copy the catalogue this run used to data/assessment.db
+    db_src_path = str(active_catalogue_path())
     db_dest_dir = os.path.join(report_path, "data")
     db_dest_path = os.path.join(db_dest_dir, "assessment.db")
 

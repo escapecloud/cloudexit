@@ -123,6 +123,19 @@ cloudexit config path   # where the config file is looked up
 cloudexit config show   # every resolved value and its source (keys are masked)
 ```
 
+## Catalogue dataset
+
+cloudexit assesses against a catalogue dataset that it keeps up to date. It is stored in your data directory (`~/.local/share/cloudexit/catalogue/`, `$XDG_DATA_HOME/cloudexit/catalogue/`, or `%LOCALAPPDATA%\cloudexit\catalogue\` on Windows) together with the previous version. Each run checks for a newer catalogue first. If that check fails, the run continues with the installed catalogue and says so; without any catalogue it stops.
+
+```bash
+cloudexit catalogue status                # installed and latest catalogue
+cloudexit catalogue update                # download the latest (or --version V)
+cloudexit catalogue import FILE.db.gz     # install a file on an air-gapped machine (--sha256 to verify)
+cloudexit aws --tfstate infra.tfstate --catalogue FILE.db.gz   # use a file for one run, without installing it
+```
+
+Set `CLOUDEXIT_CATALOGUE_URL` to download from a mirror instead of the default location. A `./datasets/data.db` from an earlier version is copied to the data directory once.
+
 ## Data Landscape & Egress Estimation (alpha)
 
 Add `--egress` to any assessment to measure how much data lives in the assessed scope and estimate the one-time internet egress fee for moving it out — based on the provider's tiered list prices, with no additional permissions required.
