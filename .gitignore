@@ -100,9 +100,13 @@ web_modules/
 # Generated reports
 reports/
 
-# Generated reports
-config/aws.json
-config/azure.json
+# Local configs (only the example templates are tracked)
+config/*
+!config/*_example.json
+
+# Terraform state and downloaded datasets
+*.tfstate
+datasets/
 
 # TypeScript cache
 *.tsbuildinfo
