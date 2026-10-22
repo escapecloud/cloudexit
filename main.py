@@ -9,6 +9,7 @@ import getpass
 import traceback
 from rich.console import Console
 from rich.logging import RichHandler
+from rich.markup import escape
 from datetime import datetime
 from botocore.exceptions import NoCredentialsError, ProfileNotFound
 from azure.identity import DefaultAzureCredential, ClientSecretCredential
@@ -50,6 +51,13 @@ from utils.utils import (
     print_step,
     require_env,
     require_env_int,
+)
+from utils.settings import (
+    SettingsError,
+    config_file_path,
+    describe,
+    flags_from_args,
+    load_settings,
 )
 from utils.validate import validate_region, validate_config
 from utils import codes
@@ -237,6 +245,7 @@ def handle_aws(args):
             dry_run=args.dry_run,
             non_interactive=args.non_interactive,
             egress=args.egress,
+            settings=getattr(args, "settings", None),
         )
         return
 
@@ -272,6 +281,7 @@ def handle_aws(args):
         dry_run=args.dry_run,
         non_interactive=args.non_interactive,
         egress=args.egress,
+        settings=getattr(args, "settings", None),
     )
 
 
@@ -450,6 +460,7 @@ def handle_azure(args):
             dry_run=args.dry_run,
             non_interactive=args.non_interactive,
             egress=args.egress,
+            settings=getattr(args, "settings", None),
         )
         return
 
@@ -483,11 +494,18 @@ def handle_azure(args):
         dry_run=args.dry_run,
         non_interactive=args.non_interactive,
         egress=args.egress,
+        settings=getattr(args, "settings", None),
     )
 
 
 def run_assessment(
-    config, provider_name, *, dry_run=False, non_interactive=False, egress=False
+    config,
+    provider_name,
+    *,
+    dry_run=False,
+    non_interactive=False,
+    egress=False,
+    settings=None,
 ):
     # Record the assessment start time to propagate across stages
     started_at = int(time.time())
@@ -519,7 +537,7 @@ def run_assessment(
             sys.exit(codes.CONFIG)
 
         # Detect ExitCloud Integration
-        mode, jwt = resolve_mode()
+        mode, jwt = resolve_mode(settings)
         if dry_run:
             print_step("Dry run mode – no remote sync.", status="ok")
         elif mode == "online":
@@ -746,6 +764,7 @@ def run_assessment(
                 },
                 mode=mode,
                 token=jwt,
+                settings=settings,
             )
 
             status = "ok" if sync_result["success"] else "error"
@@ -916,6 +935,8 @@ def parse_arguments():
             "  python3 main.py azure --config config.json --egress\n"
             "  python3 main.py aws --tfstate infra.tfstate          # Assess a Terraform/OpenTofu state file\n"
             "  python3 main.py azure --tfstate infra.tfstate --dry-run\n"
+            "  python3 main.py config path                # Print the config file location\n"
+            "  python3 main.py config show                # Show resolved settings and their sources\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -928,7 +949,8 @@ def parse_arguments():
     )
 
     subparsers = parser.add_subparsers(
-        dest="cloud_provider", help="Specify the cloud provider (aws or azure)."
+        dest="cloud_provider",
+        help="Specify the cloud provider (aws or azure), or `config`.",
     )
 
     # Shared options available on every subcommand (e.g. `aws --verbose`)
@@ -941,9 +963,34 @@ def parse_arguments():
         help="Increase log verbosity (-v for INFO, -vv for DEBUG + third-party).",
     )
 
+    # Platform options: flags > CLOUDEXIT_* environment > config file > legacy
+    platform = argparse.ArgumentParser(add_help=False)
+    platform.add_argument(
+        "--host", type=str, help="Platform host (https://, or http:// for localhost)."
+    )
+    platform.add_argument(
+        "--api-key-file",
+        type=str,
+        help="Path to a file containing the platform API key.",
+    )
+    platform.add_argument(
+        "--config-profile",
+        type=str,
+        help="Profile to use from the cloudexit config file.",
+    )
+    platform.add_argument(
+        "--assessment-id", type=str, help="Existing platform assessment to use."
+    )
+    platform.add_argument(
+        "--ca-bundle", type=str, help="Path to a CA bundle for TLS verification."
+    )
+    platform.add_argument(
+        "--timeout", type=float, help="Platform request timeout in seconds."
+    )
+
     # Subparser for AWS
     aws_parser = subparsers.add_parser(
-        "aws", parents=[common], help="Perform an AWS assessment."
+        "aws", parents=[common, platform], help="Perform an AWS assessment."
     )
     aws_group = aws_parser.add_mutually_exclusive_group(required=False)
     aws_group.add_argument(
@@ -988,7 +1035,7 @@ def parse_arguments():
 
     # Subparser for Azure
     azure_parser = subparsers.add_parser(
-        "azure", parents=[common], help="Perform an Azure assessment."
+        "azure", parents=[common, platform], help="Perform an Azure assessment."
     )
     azure_group = azure_parser.add_mutually_exclusive_group(required=False)
     azure_group.add_argument(
@@ -1032,7 +1079,35 @@ def parse_arguments():
         ),
     )
 
+    # Subparser for the config helpers
+    config_parser = subparsers.add_parser(
+        "config", help="Inspect where settings come from."
+    )
+    config_commands = config_parser.add_subparsers(dest="config_command", required=True)
+    config_commands.add_parser(
+        "path", parents=[common], help="Print the config file location."
+    )
+    config_commands.add_parser(
+        "show",
+        parents=[common, platform],
+        help="Show every resolved setting and where it came from.",
+    )
+
     return parser.parse_args()
+
+
+def handle_config(args):
+    if args.config_command == "path":
+        print(config_file_path())
+        return
+
+    try:
+        settings = load_settings(flags_from_args(args))
+    except SettingsError as e:
+        console.print(f"[red]{escape(str(e))}[/red]")
+        sys.exit(codes.CONFIG)
+    for line in describe(settings):
+        print(line)
 
 
 def main():
@@ -1046,6 +1121,11 @@ def main():
     # Ctrl+C anywhere below exits with a distinct code, whether the CLI is run
     # as `python3 main.py` or through the `cloudexit` console script.
     try:
+        # The config helpers print plain text and need no dataset.
+        if args.cloud_provider == "config":
+            handle_config(args)
+            return
+
         # Print ASCII art
         console.print(ascii_art, style="bold cyan")
 
@@ -1053,6 +1133,14 @@ def main():
         if not args.cloud_provider:
             print_help_message()
             return
+
+        # Resolve platform settings up front so a bad value fails before any work
+        if args.cloud_provider in ("aws", "azure"):
+            try:
+                args.settings = load_settings(flags_from_args(args))
+            except SettingsError as e:
+                console.print(f"[red]{escape(str(e))}[/red]")
+                sys.exit(codes.CONFIG)
 
         # Ensure latest dataset is available before proceeding
         initialize_dataset()

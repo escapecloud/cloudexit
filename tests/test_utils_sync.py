@@ -1,105 +1,63 @@
-import importlib.util
 import json
 import os
-import sys
 import tempfile
-import types
 import unittest
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from core.utils_sync import post_assessment
+from tests.http_fixtures import fake_http, make_response
+from utils.settings import SettingsError
+
+META = {"exit_strategy": 1, "cloud_service_provider": 2, "assessment_type": 1}
 
 
-class PostAssessmentHostResolutionTests(unittest.TestCase):
-    def test_uses_host_from_environment_when_config_host_empty(self):
-        fake_response = MagicMock()
-        fake_response.ok = True
-        fake_response.status_code = 200
-        fake_response.json.return_value = {"data": {"ok": True}}
+def post(**overrides):
+    kwargs = dict(
+        name="Demo",
+        started_at=123,
+        report_path="/tmp/report",
+        meta=META,
+        token="jwt-token",
+        host="platform.test",
+    )
+    kwargs.update(overrides)
+    return post_assessment(**kwargs)
 
+
+class PostAssessmentTests(unittest.TestCase):
+    def test_posts_to_the_given_host_over_https(self):
         with (
-            patch.dict(os.environ, {"HOST": "env.exitcloud.io"}, clear=False),
-            patch(
-                "core.utils_sync.config",
-                types.SimpleNamespace(HOST=""),
-            ),
             patch("core.utils_sync._build_payload", return_value={"sample": "payload"}),
-            patch(
-                "core.utils_sync.requests.post", return_value=fake_response
-            ) as mock_post,
+            fake_http(make_response(json_body={"data": {"ok": True}})) as fake,
         ):
-            result = post_assessment(
-                name="Demo",
-                started_at=123,
-                report_path="/tmp/report",
-                meta={
-                    "exit_strategy": 1,
-                    "cloud_service_provider": 2,
-                    "assessment_type": 1,
-                },
-                token="jwt-token",
-            )
+            result = post()
 
         self.assertTrue(result["success"])
-        called_url = mock_post.call_args.args[0]
-        self.assertEqual(called_url, "https://env.exitcloud.io/api/v1/assessments/")
+        (request,) = fake.requests
+        self.assertEqual(request.url, "https://platform.test/api/v1/assessments/")
+        self.assertEqual(request.kwargs["json"], {"sample": "payload"})
 
-    def test_returns_clear_error_when_host_missing_everywhere(self):
+    def test_timeout_and_ca_bundle_are_passed_to_requests(self):
         with (
-            patch.dict(os.environ, {}, clear=True),
-            patch(
-                "core.utils_sync.config",
-                types.SimpleNamespace(HOST=""),
-            ),
+            patch("core.utils_sync._build_payload", return_value={}),
+            fake_http(make_response(json_body={})) as fake,
         ):
-            result = post_assessment(
-                name="Demo",
-                started_at=123,
-                report_path="/tmp/report",
-                meta={
-                    "exit_strategy": 1,
-                    "cloud_service_provider": 2,
-                    "assessment_type": 1,
-                },
-                token="jwt-token",
-            )
+            post(timeout=42.5, verify="/etc/ca.pem")
+
+        self.assertEqual(fake.requests[0].kwargs["timeout"], 42.5)
+        self.assertEqual(fake.requests[0].kwargs["verify"], "/etc/ca.pem")
+
+    def test_returns_clear_error_when_no_host_is_configured(self):
+        result = post(host=None)
 
         self.assertFalse(result["success"])
         self.assertEqual(result["payload"], None)
-        self.assertEqual(result["logs"], "HOST missing in environment and config.py")
+        self.assertIn("no upload host configured", result["logs"])
 
-
-class MissingConfigModuleTests(unittest.TestCase):
-    def load_without_config(self):
-        path = Path(__file__).resolve().parent.parent / "core" / "utils_sync.py"
-        spec = importlib.util.spec_from_file_location("utils_sync_no_config", path)
-        module = importlib.util.module_from_spec(spec)
-        # None in sys.modules makes `import config` fail as if the file were absent
-        with patch.dict(sys.modules, {"config": None}):
-            spec.loader.exec_module(module)
-        return module
-
-    def test_module_imports_without_config(self):
-        self.assertIsNone(self.load_without_config().config)
-
-    def test_post_assessment_reports_missing_host_without_config(self):
-        module = self.load_without_config()
-        with patch.dict(os.environ, {}, clear=True):
-            result = module.post_assessment(
-                name="Demo",
-                started_at=123,
-                report_path="/tmp/report",
-                meta={
-                    "exit_strategy": 1,
-                    "cloud_service_provider": 2,
-                    "assessment_type": 1,
-                },
-                token="jwt-token",
-            )
-
-        self.assertFalse(result["success"])
-        self.assertEqual(result["logs"], "HOST missing in environment and config.py")
+    def test_plain_http_to_a_remote_host_is_refused(self):
+        with patch("core.utils_sync._build_payload", return_value={}):
+            with self.assertRaises(SettingsError):
+                post(host="http://platform.test")
 
 
 class WriteAssessmentPayloadTests(unittest.TestCase):

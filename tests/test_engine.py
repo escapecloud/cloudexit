@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from core.engine import _load_tfstate_scope, sync_assessment, test_permissions
+from utils.settings import Settings
 
 
 class TestPermissionsAwsHybridMode(unittest.TestCase):
@@ -135,6 +136,7 @@ class SyncAssessmentContractTests(unittest.TestCase):
                 metadata={},
                 mode="online",
                 token="tok",
+                settings=Settings(),
             )
         self.assertFalse(result["success"])
         self.assertIn("401", result["logs"])
@@ -157,6 +159,7 @@ class SyncAssessmentContractTests(unittest.TestCase):
                 metadata={},
                 mode="online",
                 token="tok",
+                settings=Settings(),
             )
         self.assertFalse(result["success"])
         self.assertIn("store server risks", result["logs"])

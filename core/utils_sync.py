@@ -9,12 +9,8 @@ import requests
 from typing import Any
 
 from core.utils_db import load_data
+from utils.settings import normalize_host
 from utils.version import __version__
-
-try:
-    import config
-except ModuleNotFoundError:
-    config = None
 
 # Configure logger
 logger = logging.getLogger("core.engine.sync")
@@ -23,12 +19,7 @@ _ASSESS_PATH = "/api/v1/assessments/"
 
 
 def _assess_url(host: str) -> str:
-    host = host.strip().rstrip("/")
-    if host.startswith("http://"):
-        host = "https://" + host[len("http://") :]
-    elif not host.startswith("https://"):
-        host = f"https://{host}"
-    return f"{host}{_ASSESS_PATH}"
+    return f"{normalize_host(host)}{_ASSESS_PATH}"
 
 
 def _build_payload(
@@ -122,14 +113,15 @@ def post_assessment(
     report_path: str,
     meta: dict[str, int],
     token: str,
-    timeout: int = 10,
+    host: str | None,
+    timeout: float = 10,
+    verify: str | bool = True,
 ) -> dict[str, Any]:
-    host = os.environ.get("HOST", "").strip() or getattr(config, "HOST", "").strip()
     if not host:
         return {
             "success": False,
             "payload": None,
-            "logs": "HOST missing in environment and config.py",
+            "logs": "no upload host configured (see `cloudexit config show`)",
         }
 
     url = _assess_url(host)
@@ -145,7 +137,9 @@ def post_assessment(
     )
 
     try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
+        resp = requests.post(
+            url, headers=headers, json=payload, timeout=timeout, verify=verify
+        )
         ok = resp.ok
         return {
             "success": ok,
