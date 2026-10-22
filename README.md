@@ -169,7 +169,7 @@ Running cloudexit offline always produces a Basic assessment. Connect it to exit
 
 Contributions are welcome — bug reports, documentation improvements, new service mappings, and pull requests.
 
-See the [contribution guidelines](https://cloudexit.escapecloud.io/contributing/how-to-contribute.html) for details.
+See the [contribution guidelines](https://cloudexit.escapecloud.io/contributing/how-to-contribute.html) for details. Working rules for contributors and AI agents (setup, checks, branches, commits, pull requests) are in [AGENTS.md](./AGENTS.md).
 
 ## License
 
