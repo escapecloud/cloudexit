@@ -1043,43 +1043,45 @@ def main():
     # Configure logging before any side effects so verbosity applies everywhere.
     configure_logging(getattr(args, "verbose", 0))
 
-    # Print ASCII art
-    console.print(ascii_art, style="bold cyan")
-
-    # Nothing to do without a subcommand — show help before any dataset download.
-    if not args.cloud_provider:
-        print_help_message()
-        return
-
-    # Ensure latest dataset is available before proceeding
-    initialize_dataset()
-
-    # Dispatch based on provided arguments
+    # Ctrl+C anywhere below exits with a distinct code, whether the CLI is run
+    # as `python3 main.py` or through the `cloudexit` console script.
     try:
-        if args.cloud_provider == "aws":
-            handle_aws(args)
-        elif args.cloud_provider == "azure":
-            handle_azure(args)
-        else:
-            console.print(
-                "[red]Invalid command. Use 'aws' or 'azure' as the first argument.[/red]"
-            )
-            console.print(
-                "[green]Run 'python3 main.py --help' for usage instructions.[/green]"
-            )
-    except ConfigError:
-        sys.exit(codes.CONFIG)
+        # Print ASCII art
+        console.print(ascii_art, style="bold cyan")
+
+        # Nothing to do without a subcommand — show help before any dataset download.
+        if not args.cloud_provider:
+            print_help_message()
+            return
+
+        # Ensure latest dataset is available before proceeding
+        initialize_dataset()
+
+        # Dispatch based on provided arguments
+        try:
+            if args.cloud_provider == "aws":
+                handle_aws(args)
+            elif args.cloud_provider == "azure":
+                handle_azure(args)
+            else:
+                console.print(
+                    "[red]Invalid command. Use 'aws' or 'azure' as the first argument.[/red]"
+                )
+                console.print(
+                    "[green]Run 'python3 main.py --help' for usage instructions.[/green]"
+                )
+        except ConfigError:
+            sys.exit(codes.CONFIG)
+    except KeyboardInterrupt:
+        console.print(
+            "\n[bold yellow]Operation cancelled by user (Ctrl+C). Exiting gracefully.[/bold yellow]"
+        )
+        sys.exit(codes.INTERRUPTED)
 
 
 if __name__ == "__main__":
     try:
         main()
-    except KeyboardInterrupt:
-        console.print(
-            "\n[bold yellow]Operation cancelled by user (Ctrl+C). Exiting gracefully.[/bold yellow]"
-        )
-        # logger.warning("Process interrupted by user via KeyboardInterrupt.")
-        sys.exit(0)
     except Exception as e:
         # logger.error(f"An unexpected error occurred: {e}", exc_info=True)
         console.print(f"[red]Unexpected error: {e}[/red]")
