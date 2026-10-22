@@ -7,13 +7,14 @@ from pathlib import Path
 from unittest import mock
 
 from core.utils import copy_assets
+from utils.data import active_catalogue_path
 
 SOURCE_ICONS = Path("assets/icons")
 
 
 @contextmanager
 def staged(cloud_service_provider):
-    # datasets/data.db is downloaded at runtime and is absent in CI, so the
+    # The catalogue is downloaded at runtime and is absent in CI, so the
     # assessment.db copy is stubbed out -- it isn't what these tests cover.
     # Replace the module binding inside core.utils rather than the attribute
     # on shutil itself: copytree calls copyfile internally, so patching it
@@ -101,7 +102,7 @@ class CopyAssetsUnrelatedAssetTests(unittest.TestCase):
         with staged(1) as (report_path, copyfile):
             self.assertTrue((report_path / "data").is_dir())
             copyfile.assert_called_once_with(
-                "datasets/data.db",
+                str(active_catalogue_path()),
                 os.path.join(str(report_path), "data", "assessment.db"),
             )
 

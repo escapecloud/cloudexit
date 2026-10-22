@@ -864,7 +864,7 @@ class MainExitCodeTests(unittest.TestCase):
 
     def test_config_error_from_handler_exits_config(self):
         with (
-            patch("main.initialize_dataset"),
+            patch("main.prepare_catalogue"),
             patch("main.console.print"),
             patch(
                 "main.parse_arguments",
@@ -878,7 +878,7 @@ class MainExitCodeTests(unittest.TestCase):
 
     def test_ctrl_c_in_handler_exits_interrupted(self):
         with (
-            patch("main.initialize_dataset"),
+            patch("main.prepare_catalogue"),
             patch("main.console.print"),
             patch(
                 "main.parse_arguments",
@@ -893,7 +893,7 @@ class MainExitCodeTests(unittest.TestCase):
 
     def test_ctrl_c_during_dataset_download_exits_interrupted(self):
         with (
-            patch("main.initialize_dataset", side_effect=KeyboardInterrupt),
+            patch("main.prepare_catalogue", side_effect=KeyboardInterrupt),
             patch("main.console.print"),
             patch(
                 "main.parse_arguments",
@@ -917,7 +917,7 @@ class MainExitCodeTests(unittest.TestCase):
             egress=False,
         )
         with (
-            patch("main.initialize_dataset"),
+            patch("main.prepare_catalogue"),
             patch("main.console.print"),
             patch("main.parse_arguments", return_value=args),
             patch("main.load_config", return_value=None),

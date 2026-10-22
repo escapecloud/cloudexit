@@ -40,7 +40,17 @@ from utils.azure import (
 )
 from utils.aws import is_aws_cli_installed, is_aws_profile_valid
 from utils.connection import resolve_mode
-from utils.data import initialize_dataset
+from utils.data import (
+    CatalogueError,
+    CatalogueUnavailable,
+    catalogue_base_url,
+    ensure_catalogue,
+    import_catalogue,
+    set_active_catalogue,
+    status_lines,
+    update_catalogue,
+    use_catalogue_file,
+)
 from utils.utils import (
     ascii_art,
     build_config,
@@ -937,6 +947,10 @@ def parse_arguments():
             "  python3 main.py azure --tfstate infra.tfstate --dry-run\n"
             "  python3 main.py config path                # Print the config file location\n"
             "  python3 main.py config show                # Show resolved settings and their sources\n"
+            "  python3 main.py catalogue status           # Show the installed and latest catalogue\n"
+            "  python3 main.py catalogue update           # Download the latest catalogue\n"
+            "  python3 main.py catalogue import FILE.db.gz  # Install a catalogue offline\n"
+            "  python3 main.py aws --tfstate infra.tfstate --catalogue FILE.db.gz\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -950,7 +964,7 @@ def parse_arguments():
 
     subparsers = parser.add_subparsers(
         dest="cloud_provider",
-        help="Specify the cloud provider (aws or azure), or `config`.",
+        help="Specify the cloud provider (aws or azure), `config` or `catalogue`.",
     )
 
     # Shared options available on every subcommand (e.g. `aws --verbose`)
@@ -988,9 +1002,19 @@ def parse_arguments():
         "--timeout", type=float, help="Platform request timeout in seconds."
     )
 
+    # Run with a catalogue file instead of the installed one (not installed)
+    catalogue_flag = argparse.ArgumentParser(add_help=False)
+    catalogue_flag.add_argument(
+        "--catalogue",
+        type=str,
+        help="Use this catalogue file (.db or .db.gz) for the run without installing it.",
+    )
+
     # Subparser for AWS
     aws_parser = subparsers.add_parser(
-        "aws", parents=[common, platform], help="Perform an AWS assessment."
+        "aws",
+        parents=[common, platform, catalogue_flag],
+        help="Perform an AWS assessment.",
     )
     aws_group = aws_parser.add_mutually_exclusive_group(required=False)
     aws_group.add_argument(
@@ -1035,7 +1059,9 @@ def parse_arguments():
 
     # Subparser for Azure
     azure_parser = subparsers.add_parser(
-        "azure", parents=[common, platform], help="Perform an Azure assessment."
+        "azure",
+        parents=[common, platform, catalogue_flag],
+        help="Perform an Azure assessment.",
     )
     azure_group = azure_parser.add_mutually_exclusive_group(required=False)
     azure_group.add_argument(
@@ -1093,7 +1119,105 @@ def parse_arguments():
         help="Show every resolved setting and where it came from.",
     )
 
+    # Subparser for the catalogue dataset
+    catalogue_parser = subparsers.add_parser(
+        "catalogue", help="Manage the catalogue dataset."
+    )
+    catalogue_commands = catalogue_parser.add_subparsers(
+        dest="catalogue_command", required=True
+    )
+    catalogue_commands.add_parser(
+        "status", parents=[common], help="Show the installed and the latest catalogue."
+    )
+    update_parser = catalogue_commands.add_parser(
+        "update", parents=[common], help="Download the latest (or a given) catalogue."
+    )
+    update_parser.add_argument(
+        "--version", type=str, help="Install this version listed in the manifest."
+    )
+    import_parser = catalogue_commands.add_parser(
+        "import", parents=[common], help="Install a catalogue file (air-gapped use)."
+    )
+    import_parser.add_argument("file", type=str, help="Path to a .db.gz (or .db) file.")
+    import_parser.add_argument(
+        "--sha256", type=str, help="Expected SHA-256 of the file."
+    )
+
     return parser.parse_args()
+
+
+def _catalogue_settings():
+    try:
+        settings = load_settings()
+        return catalogue_base_url(settings), settings.ca_bundle.value or True
+    except SettingsError as e:
+        console.print(f"[red]{escape(str(e))}[/red]")
+        sys.exit(codes.CONFIG)
+
+
+def prepare_catalogue(args):
+    settings = getattr(args, "settings", None)
+
+    if getattr(args, "catalogue", None):
+        try:
+            path, info = use_catalogue_file(args.catalogue)
+        except CatalogueError as e:
+            console.print(f"[red]{escape(str(e))}[/red]")
+            sys.exit(codes.CONFIG)
+        set_active_catalogue(path)
+        print_step(
+            f"Using catalogue {info.version if info else 'unknown'} from "
+            f"{os.path.basename(args.catalogue)} (not installed).",
+            status="ok",
+        )
+        return
+
+    try:
+        base_url = catalogue_base_url(settings or load_settings())
+        result = ensure_catalogue(
+            base_url, verify=(settings.ca_bundle.value if settings else None) or True
+        )
+    except SettingsError as e:
+        console.print(f"[red]{escape(str(e))}[/red]")
+        sys.exit(codes.CONFIG)
+    except CatalogueUnavailable as e:
+        console.print(f"[red]{escape(str(e))}[/red]")
+        sys.exit(codes.CONFIG)
+
+    version = result.version or "unknown"
+    if result.migrated:
+        print_step("Catalogue copied from ./datasets to the data directory.", "ok")
+    if result.status == "failed":
+        print_step(
+            f"Catalogue update failed, using {version} from {result.date}.",
+            status="warning",
+            logs=result.reason,
+        )
+    elif result.status == "updated":
+        print_step(f"Catalogue updated to {version}.", status="ok")
+    else:
+        print_step(f"Catalogue {version} is up to date.", status="ok")
+
+
+def handle_catalogue(args):
+    base_url, verify = _catalogue_settings()
+    try:
+        if args.catalogue_command == "status":
+            for line in status_lines(base_url, verify=verify):
+                print(line)
+        elif args.catalogue_command == "update":
+            result = update_catalogue(base_url, version=args.version, verify=verify)
+            version = result.info.version if result.info else "unknown"
+            if result.status == "current":
+                print(f"Catalogue {version} is already installed.")
+            else:
+                print(f"Catalogue updated to {version}.")
+        else:
+            info = import_catalogue(args.file, sha256=args.sha256)
+            print(f"Catalogue {info.version if info else 'unknown'} installed.")
+    except (CatalogueError, OSError) as e:
+        console.print(f"[red]{escape(str(e))}[/red]")
+        sys.exit(codes.CONFIG)
 
 
 def handle_config(args):
@@ -1121,9 +1245,12 @@ def main():
     # Ctrl+C anywhere below exits with a distinct code, whether the CLI is run
     # as `python3 main.py` or through the `cloudexit` console script.
     try:
-        # The config helpers print plain text and need no dataset.
+        # The config and catalogue helpers print plain text and need no banner.
         if args.cloud_provider == "config":
             handle_config(args)
+            return
+        if args.cloud_provider == "catalogue":
+            handle_catalogue(args)
             return
 
         # Print ASCII art
@@ -1142,8 +1269,8 @@ def main():
                 console.print(f"[red]{escape(str(e))}[/red]")
                 sys.exit(codes.CONFIG)
 
-        # Ensure latest dataset is available before proceeding
-        initialize_dataset()
+            # Make sure a catalogue is available before any work starts
+            prepare_catalogue(args)
 
         # Dispatch based on provided arguments
         try:
