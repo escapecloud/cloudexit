@@ -185,3 +185,5 @@ def print_help_message():
     console.print("  python3 main.py azure --cli")
     console.print("  python3 main.py azure --name 'DMS System'")
     console.print("  python3 main.py azure --tfstate infra.tfstate --dry-run")
+    console.print("  python3 main.py config path")
+    console.print("  python3 main.py config show")

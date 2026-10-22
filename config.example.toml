@@ -1,0 +1,41 @@
+# Copy this file to the location printed by `cloudexit config path`
+# (default: ~/.config/cloudexit/config.toml, or $XDG_CONFIG_HOME/cloudexit/config.toml;
+# %APPDATA%\cloudexit\config.toml on Windows) and restrict it:
+#
+#   chmod 600 ~/.config/cloudexit/config.toml
+#
+# Every setting is optional. Without any configuration cloudexit runs fully
+# offline. Precedence, highest first:
+#   1. command-line flags (--host, --api-key-file, --config-profile, ...)
+#   2. CLOUDEXIT_* environment variables
+#   3. this file ([profiles.<name>] first, then [default])
+#   4. deprecated: the HOST and KEY environment variables (only when both are
+#      set) and config.py
+# Run `cloudexit config show` to see each value and where it came from.
+
+[default]
+# Platform host. https:// is assumed when no scheme is given; http:// is only
+# accepted for localhost and 127.0.0.1.
+# host = "platform.example.com"
+
+# Prefer a key file over a key in this file. The path may be relative to this
+# file, and `~` is expanded. Keep the key file readable by you only.
+# api_key_file = "~/.config/cloudexit/api-key"
+
+# Only if you cannot use a key file. If both are set, api_key_file wins.
+# api_key = "..."
+
+# Use an existing platform assessment.
+# assessment_id = "..."
+
+# CA bundle for platforms that use a private certificate authority.
+# ca_bundle = "/etc/ssl/certs/company-ca.pem"
+
+# Whether to upload results to the platform.
+# upload = true
+
+# Select a profile with --config-profile NAME or CLOUDEXIT_PROFILE=NAME.
+# Values in a profile override [default].
+# [profiles.staging]
+# host = "staging.platform.example.com"
+# api_key_file = "~/.config/cloudexit/staging-key"

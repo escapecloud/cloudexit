@@ -107,6 +107,22 @@ See the [configuration reference](https://cloudexit.escapecloud.io/config/config
 
 Want to see how a regulatory-aligned report looks (DORA / FINMA / UK PRA)? Run with `--dry-run` and send the output `payload.json` to request_report@escapecloud.io — we'll generate a sample you can share with your risk or compliance team.
 
+## Platform settings
+
+Connecting to a platform is optional. Without any settings cloudexit runs fully offline. Each value is resolved separately, highest precedence first:
+
+1. **Flags**: `--host`, `--api-key-file`, `--config-profile`, `--assessment-id`, `--ca-bundle`, `--timeout`
+2. **Environment**: `CLOUDEXIT_HOST`, `CLOUDEXIT_API_KEY_FILE`, `CLOUDEXIT_API_KEY`, `CLOUDEXIT_PROFILE`, `CLOUDEXIT_ASSESSMENT_ID`, `CLOUDEXIT_UPLOAD`, `CLOUDEXIT_CA_BUNDLE`, `CLOUDEXIT_TIMEOUT`
+3. **Config file**: `~/.config/cloudexit/config.toml` (`$XDG_CONFIG_HOME/cloudexit/config.toml`, or `%APPDATA%\cloudexit\config.toml` on Windows), with a `[default]` table and optional `[profiles.<name>]` tables. See [`config.example.toml`](./config.example.toml).
+4. **Deprecated**: the `HOST` and `KEY` environment variables (only when both are set) and `config.py`. Both still work and print a warning.
+
+Prefer a key file (`--api-key-file`, `CLOUDEXIT_API_KEY_FILE` or `api_key_file`) over a key in plain text, and keep it readable by you only. The CLI warns when the config file or a key file is readable by group or others. `http://` hosts are rejected, except `localhost` and `127.0.0.1`.
+
+```bash
+cloudexit config path   # where the config file is looked up
+cloudexit config show   # every resolved value and its source (keys are masked)
+```
+
 ## Data Landscape & Egress Estimation (alpha)
 
 Add `--egress` to any assessment to measure how much data lives in the assessed scope and estimate the one-time internet egress fee for moving it out — based on the provider's tiered list prices, with no additional permissions required.

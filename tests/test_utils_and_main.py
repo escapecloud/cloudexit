@@ -1,7 +1,6 @@
 import json
 import os
 import tempfile
-import types
 import unittest
 from argparse import Namespace
 from pathlib import Path
@@ -10,6 +9,7 @@ from unittest.mock import ANY, MagicMock, patch
 import main
 from utils import codes
 from utils.connection import resolve_mode
+from utils.settings import Setting, Settings
 from utils.utils import load_config
 
 VALID_CONFIG = {
@@ -422,7 +422,12 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
             main.handle_aws(_ni_aws_args(dry_run=True))
 
         mock_run.assert_called_once_with(
-            ANY, "aws", dry_run=True, non_interactive=True, egress=False
+            ANY,
+            "aws",
+            dry_run=True,
+            non_interactive=True,
+            egress=False,
+            settings=None,
         )
 
 
@@ -824,7 +829,12 @@ class EgressStageTests(unittest.TestCase):
             main.handle_azure(_ni_azure_args(egress=True))
 
         mock_run.assert_called_once_with(
-            ANY, "azure", dry_run=False, non_interactive=True, egress=True
+            ANY,
+            "azure",
+            dry_run=False,
+            non_interactive=True,
+            egress=True,
+            settings=None,
         )
 
     def test_handle_aws_passes_egress_flag(self):
@@ -837,11 +847,21 @@ class EgressStageTests(unittest.TestCase):
             main.handle_aws(_ni_aws_args(egress=True))
 
         mock_run.assert_called_once_with(
-            ANY, "aws", dry_run=False, non_interactive=True, egress=True
+            ANY,
+            "aws",
+            dry_run=False,
+            non_interactive=True,
+            egress=True,
+            settings=None,
         )
 
 
 class MainExitCodeTests(unittest.TestCase):
+    def setUp(self):
+        patcher = patch("main.load_settings", return_value=Settings())
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_config_error_from_handler_exits_config(self):
         with (
             patch("main.initialize_dataset"),
@@ -909,32 +929,48 @@ class MainExitCodeTests(unittest.TestCase):
         mock_run.assert_not_called()
 
 
-class ResolveModeEnvVarTests(unittest.TestCase):
-    def test_host_and_key_env_override_config(self):
-        fake_config = types.SimpleNamespace(HOST="config-host.io", KEY="config-key")
-        with (
-            patch("utils.connection.config", fake_config),
-            patch.dict(
-                os.environ, {"HOST": "env-host.io", "KEY": "env-key"}, clear=False
-            ),
-            patch("utils.connection.get_jwt_token", return_value="tok123"),
-        ):
-            mode, token = resolve_mode()
+class ResolveModeSettingsTests(unittest.TestCase):
+    def test_host_and_key_from_settings_go_online(self):
+        settings = Settings(
+            host=Setting("https://platform.test", "env CLOUDEXIT_HOST"),
+            api_key=Setting("k" * 16, "env CLOUDEXIT_API_KEY"),
+            timeout=Setting(30.0, "flag --timeout"),
+            ca_bundle=Setting("/etc/ca.pem", "flag --ca-bundle"),
+        )
+        with patch(
+            "utils.connection.get_jwt_token", return_value="tok123"
+        ) as mock_token:
+            mode, token = resolve_mode(settings)
 
         self.assertEqual(mode, "online")
         self.assertEqual(token, "tok123")
+        mock_token.assert_called_once_with(
+            host="https://platform.test",
+            key="k" * 16,
+            timeout=30.0,
+            verify="/etc/ca.pem",
+        )
 
-    def test_falls_back_to_config_when_env_not_set(self):
-        fake_config = types.SimpleNamespace(HOST="", KEY="")
-        env = {k: v for k, v in os.environ.items() if k not in ("HOST", "KEY")}
-        with (
-            patch("utils.connection.config", fake_config),
-            patch.dict(os.environ, env, clear=True),
+    def test_no_host_or_key_stays_offline_without_a_request(self):
+        for settings in (
+            Settings(),
+            Settings(host=Setting("https://platform.test", "flag --host")),
+            Settings(api_key=Setting("k" * 16, "env CLOUDEXIT_API_KEY")),
         ):
-            mode, token = resolve_mode()
+            with patch("utils.connection.get_jwt_token") as mock_token:
+                mode, token = resolve_mode(settings)
 
-        self.assertEqual(mode, "offline")
-        self.assertIsNone(token)
+            self.assertEqual(mode, "offline")
+            self.assertIsNone(token)
+            mock_token.assert_not_called()
+
+    def test_failed_authentication_falls_back_to_offline(self):
+        settings = Settings(
+            host=Setting("https://platform.test", "flag --host"),
+            api_key=Setting("k" * 16, "env CLOUDEXIT_API_KEY"),
+        )
+        with patch("utils.connection.get_jwt_token", return_value=None):
+            self.assertEqual(resolve_mode(settings), ("offline", None))
 
 
 TFSTATE_CONFIG = {

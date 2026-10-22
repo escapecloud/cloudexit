@@ -22,6 +22,7 @@ from .utils_report import (
     generate_json_report,
 )
 from .utils_sync import post_assessment
+from utils.settings import Settings, load_settings
 
 # Configure the logger
 logger = logging.getLogger("core.engine")
@@ -316,6 +317,7 @@ def sync_assessment(
     metadata: dict[str, Any],
     mode: str,
     token: str | None,
+    settings: Settings | None = None,
 ) -> dict[str, Any]:
     if mode != "online" or not token:
         return {
@@ -325,12 +327,16 @@ def sync_assessment(
             "logs": "offline – sync skipped.",
         }
 
+    settings = settings or load_settings()
     result = post_assessment(
         name=name,
         started_at=started_at,
         report_path=report_path,
         meta=metadata,
         token=token,
+        host=settings.host.value,
+        timeout=settings.timeout.value,
+        verify=settings.ca_bundle.value or True,
     )
 
     if not result.get("success"):

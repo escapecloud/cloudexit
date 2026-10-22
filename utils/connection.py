@@ -2,54 +2,38 @@
 from __future__ import annotations
 
 import logging
-import os
 import requests
 
-logger = logging.getLogger("main.utils.connection")
+from utils.settings import Settings, load_settings, normalize_host
 
-try:
-    import config
-except ModuleNotFoundError:
-    config = None
+logger = logging.getLogger("main.utils.connection")
 
 _AUTH_PATH = "/api/v1/auth/token/"
 
 
 def _build_url(host: str) -> str:
-    host = host.strip().rstrip("/")
-    if host.startswith("http://"):
-        host = "https://" + host[len("http://") :]
-    elif not host.startswith("https://"):
-        host = f"https://{host}"
-    return f"{host}{_AUTH_PATH}"
+    return f"{normalize_host(host)}{_AUTH_PATH}"
 
 
 def get_jwt_token(
-    host: str | None = None, key: str | None = None, *, timeout: int = 10
+    host: str | None = None,
+    key: str | None = None,
+    *,
+    timeout: float = 10,
+    verify: str | bool = True,
 ) -> str | None:
-    host = (
-        host
-        or os.environ.get("HOST", "").strip()
-        or (getattr(config, "HOST", "") if config else "")
-    )
-    key = (
-        key
-        or os.environ.get("KEY", "").strip()
-        or (getattr(config, "KEY", "") if config else "")
-    )
-
     if not host:
-        logger.debug("HOST empty – skipping ExitCloud authentication.")
+        logger.debug("Host empty – skipping ExitCloud authentication.")
         return None
     if not key:
-        logger.debug("KEY empty – skipping ExitCloud authentication.")
+        logger.debug("API key empty – skipping ExitCloud authentication.")
         return None
 
     url = _build_url(host)
     headers = {"Authorization": f"Bearer {key}"}
 
     try:
-        resp = requests.post(url, headers=headers, timeout=timeout)
+        resp = requests.post(url, headers=headers, timeout=timeout, verify=verify)
         resp.raise_for_status()
         data = resp.json()
 
@@ -77,22 +61,24 @@ def get_jwt_token(
     return None
 
 
-def resolve_mode() -> tuple[str, str | None]:
-    host = os.environ.get("HOST", "").strip() or (
-        getattr(config, "HOST", "") if config else ""
-    )
-    key = os.environ.get("KEY", "").strip() or (
-        getattr(config, "KEY", "") if config else ""
-    )
+def resolve_mode(settings: Settings | None = None) -> tuple[str, str | None]:
+    settings = settings or load_settings()
+    host = settings.host.value
+    key = settings.api_key.value
 
     if not host:
-        logger.debug("HOST empty – running in offline mode.")
+        logger.debug("Host empty – running in offline mode.")
         return "offline", None
     if not key:
-        logger.debug("KEY empty – running in offline mode.")
+        logger.debug("API key empty – running in offline mode.")
         return "offline", None
 
-    token = get_jwt_token(host=host, key=key)
+    token = get_jwt_token(
+        host=host,
+        key=key,
+        timeout=settings.timeout.value,
+        verify=settings.ca_bundle.value or True,
+    )
     if token:
         return "online", token
 
