@@ -1,0 +1,126 @@
+{
+  "name": "get sync",
+  "description": "A sync can be fetched by the host's id.",
+  "fixtures": {
+    "catalogue": "standard",
+    "assessments": [
+      {
+        "name": "main",
+        "provider": "aws",
+        "exit_strategy": "repatriation",
+        "assessment_type": 2,
+        "scope_key": null
+      }
+    ],
+    "keys": [
+      {
+        "name": "assessment_key",
+        "kind": "assessment",
+        "assessment": "main"
+      }
+    ]
+  },
+  "before": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/syncs",
+        "headers": {
+          "Authorization": "Bearer {{assessment_key}}",
+          "Idempotency-Key": "01933b9e-7c2a-7d41-9a51-3c8f0a6e0023",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "schema_version": "2.0",
+          "sync": {
+            "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e0023",
+            "started_at": "{{now-300}}",
+            "completed_at": "{{now-60}}",
+            "collector": {
+              "name": "cloudexit",
+              "version": "2.0.0",
+              "mode": "api",
+              "catalogue": {
+                "version": "2026-11-02",
+                "sequence": 41,
+                "sha256": "9f1c5b7a3e2d4c6b8a0f1e2d3c4b5a69788796a5b4c3d2e1f0a9b8c7d6e5f4a3",
+                "resource_type_ids": [
+                  12,
+                  40,
+                  41,
+                  55
+                ]
+              }
+            }
+          },
+          "assessment_type": 2,
+          "scope": {
+            "provider": "aws",
+            "aws": {
+              "account_id": "123456789012",
+              "regions": [
+                "eu-central-1"
+              ]
+            }
+          },
+          "inventory": {
+            "resources": [
+              {
+                "type_id": 12,
+                "type_code": "AWS::S3::Bucket",
+                "location": "eu-central-1",
+                "count": 36
+              },
+              {
+                "type_id": 40,
+                "type_code": "AWS::EC2::Instance",
+                "location": "eu-central-1",
+                "count": 8
+              }
+            ],
+            "costs": [
+              {
+                "month": "2026-10",
+                "amount": "1234.56",
+                "currency": "USD",
+                "final": true
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 201
+      },
+      "save": {
+        "first_sync_id": "/id"
+      }
+    }
+  ],
+  "request": {
+    "method": "GET",
+    "path": "/api/v2/syncs/{{first_sync_id}}",
+    "headers": {
+      "Authorization": "Bearer {{assessment_key}}"
+    }
+  },
+  "expect": {
+    "status": 200,
+    "body_subset": {
+      "object": "sync",
+      "id": "{{first_sync_id}}",
+      "client_sync_id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e0023",
+      "status": "completed"
+    },
+    "exists": [
+      "/id",
+      "/request_id",
+      "/timestamps/received_at",
+      "/content/payload_sha256",
+      "/content/content_sha256",
+      "/results/scoring_version",
+      "/links/self",
+      "/links/assessment"
+    ]
+  }
+}

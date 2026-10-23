@@ -30,7 +30,12 @@ from core.utils_report_egress import (
     generate_egress_html_report,
     generate_egress_pdf_report,
 )
-from core.utils_sync import write_assessment_payload
+from core.sync_document import (
+    RunContext,
+    SyncDocumentError,
+    new_uuid7,
+    prepare_sync_document,
+)
 from utils.azure import (
     select_subscription,
     select_resource_group,
@@ -256,6 +261,8 @@ def handle_aws(args):
             non_interactive=args.non_interactive,
             egress=args.egress,
             settings=getattr(args, "settings", None),
+            emit_payload=getattr(args, "emit_payload", None),
+            egress_names=getattr(args, "egress_names", "plain"),
         )
         return
 
@@ -292,6 +299,8 @@ def handle_aws(args):
         non_interactive=args.non_interactive,
         egress=args.egress,
         settings=getattr(args, "settings", None),
+        emit_payload=getattr(args, "emit_payload", None),
+        egress_names=getattr(args, "egress_names", "plain"),
     )
 
 
@@ -471,6 +480,8 @@ def handle_azure(args):
             non_interactive=args.non_interactive,
             egress=args.egress,
             settings=getattr(args, "settings", None),
+            emit_payload=getattr(args, "emit_payload", None),
+            egress_names=getattr(args, "egress_names", "plain"),
         )
         return
 
@@ -505,6 +516,8 @@ def handle_azure(args):
         non_interactive=args.non_interactive,
         egress=args.egress,
         settings=getattr(args, "settings", None),
+        emit_payload=getattr(args, "emit_payload", None),
+        egress_names=getattr(args, "egress_names", "plain"),
     )
 
 
@@ -516,9 +529,13 @@ def run_assessment(
     non_interactive=False,
     egress=False,
     settings=None,
+    emit_payload=None,
+    egress_names="plain",
 ):
-    # Record the assessment start time to propagate across stages
+    # Record the assessment start time to propagate across stages. The sync id
+    # is created here, at collection start, and identifies the whole run.
     started_at = int(time.time())
+    sync_id = new_uuid7()
 
     # Bound up front so the error handler can reference it even if the crash
     # happens before the report directory is created.
@@ -730,18 +747,6 @@ def run_assessment(
             or f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}"
         )
 
-        payload_path = None
-        if dry_run:
-            payload_path = write_assessment_payload(
-                raw_data_path,
-                report_path=report_path,
-                name=name,
-                started_at=started_at,
-                exit_strategy=config["exitStrategy"],
-                cloud_service_provider=config["cloudServiceProvider"],
-                assessment_type=config["assessmentType"],
-            )
-
         # Stage 5 – Online / Offline Risk Assessment
         if dry_run or mode == "offline":
             console.print("Stage #5 – Offline Risk Assessment", style="bold")
@@ -811,6 +816,7 @@ def run_assessment(
         # Stage 7: Egress Estimation (opt-in via --egress).
         # A failure here must not discard the completed assessment.
         egress_failed = False
+        egress_collected = False
         egress_json_path = None
         egress_html_path = None
         egress_pdf_path = None
@@ -832,6 +838,7 @@ def run_assessment(
             if egress_result["success"]:
                 print_step("Estimating egress data...", status="ok")
                 egress_json_path = egress_result.get("json_path")
+                egress_collected = True
 
                 with console.status("Generating egress report...", spinner="dots"):
                     egress_report_result = generate_egress_html_report(
@@ -872,6 +879,37 @@ def run_assessment(
                 )
                 egress_failed = True
 
+        # Sync document: the run's result in the API v2 shape. Without
+        # --dry-run or --emit-payload a problem here does not discard the
+        # finished report.
+        sync_output = None
+        try:
+            sync_output = prepare_sync_document(
+                report_path,
+                RunContext(
+                    sync_id=sync_id,
+                    started_at=started_at,
+                    cloud_service_provider=config["cloudServiceProvider"],
+                    assessment_type=config["assessmentType"],
+                    provider_details=config["providerDetails"],
+                    egress_collected=egress_collected,
+                    egress_names=egress_names,
+                ),
+                emit_dir=emit_payload,
+            )
+        except (SyncDocumentError, OSError) as e:
+            wanted = bool(dry_run or emit_payload)
+            console.print("-------------------------------------------")
+            print_step(
+                "Writing the sync document...",
+                status="error" if wanted else "warning",
+                logs=str(e),
+            )
+            for problem in getattr(e, "problems", [])[:10]:
+                console.print(f"   ↳ {problem}", style="dim")
+            if wanted:
+                sys.exit(codes.REPORT)
+
         # Output the report path after the separator
         if not (dry_run or non_interactive):
             console.print("-------------------------------------------")
@@ -887,8 +925,10 @@ def run_assessment(
             console.print("Contact: request_report@escapecloud.io")
         console.print("-------------------------------------------")
         console.print("Outputs:", style="bold")
-        if payload_path:
-            console.print(f"Payload: {payload_path}", style="cyan")
+        if sync_output:
+            console.print(f"Sync document: {sync_output.path}", style="cyan")
+            if sync_output.emitted:
+                console.print(f"Emitted copy: {sync_output.emitted}", style="cyan")
         html_report_path = report_status.get("reports", {}).get("HTML")
         if html_report_path:
             console.print(f"HTML Report: {html_report_path}", style="cyan")
@@ -939,7 +979,7 @@ def parse_arguments():
             "  python3 main.py azure --config config.json # Use a configuration file for Azure\n"
             "  python3 main.py azure --cli                # Use Azure CLI credentials\n"
             "  python3 main.py azure --name 'DMS System'  # Use a pre-defined assessment name\n"
-            "  python3 main.py aws --config config.json --dry-run  # Local report + payload.json, no remote sync\n"
+            "  python3 main.py aws --config config.json --dry-run  # Local report, no remote sync\n"
             "  python3 main.py azure --config config.json --dry-run\n"
             "  python3 main.py aws --config config.json --egress    # Estimate egress data volume\n"
             "  python3 main.py azure --config config.json --egress\n"
@@ -951,6 +991,8 @@ def parse_arguments():
             "  python3 main.py catalogue update           # Download the latest catalogue\n"
             "  python3 main.py catalogue import FILE.db.gz  # Install a catalogue offline\n"
             "  python3 main.py aws --tfstate infra.tfstate --catalogue FILE.db.gz\n"
+            "  python3 main.py aws --config config.json --emit-payload out/   # Copy sync.json to out/\n"
+            "  python3 main.py aws --config config.json --egress --egress-names hashed\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -1010,10 +1052,25 @@ def parse_arguments():
         help="Use this catalogue file (.db or .db.gz) for the run without installing it.",
     )
 
+    # Options for the sync document every assessment writes
+    sync_flags = argparse.ArgumentParser(add_help=False)
+    sync_flags.add_argument(
+        "--emit-payload",
+        metavar="DIR",
+        type=str,
+        help="Also write a copy of the sync document to DIR/<sync id>.json.",
+    )
+    sync_flags.add_argument(
+        "--egress-names",
+        choices=("plain", "hashed"),
+        default="plain",
+        help="Send egress resource names as they are, or as salted hashes.",
+    )
+
     # Subparser for AWS
     aws_parser = subparsers.add_parser(
         "aws",
-        parents=[common, platform, catalogue_flag],
+        parents=[common, platform, catalogue_flag, sync_flags],
         help="Perform an AWS assessment.",
     )
     aws_group = aws_parser.add_mutually_exclusive_group(required=False)
@@ -1045,8 +1102,8 @@ def parse_arguments():
         "--dry-run",
         action="store_true",
         help=(
-            "Run a local assessment and also write raw_data/payload.json without "
-            "remote sync."
+            "Run a local assessment without remote sync. The sync document "
+            "raw_data/sync.json is written in every run."
         ),
     )
     aws_parser.add_argument(
@@ -1060,7 +1117,7 @@ def parse_arguments():
     # Subparser for Azure
     azure_parser = subparsers.add_parser(
         "azure",
-        parents=[common, platform, catalogue_flag],
+        parents=[common, platform, catalogue_flag, sync_flags],
         help="Perform an Azure assessment.",
     )
     azure_group = azure_parser.add_mutually_exclusive_group(required=False)
@@ -1092,8 +1149,8 @@ def parse_arguments():
         "--dry-run",
         action="store_true",
         help=(
-            "Run a local assessment and also write raw_data/payload.json without "
-            "remote sync."
+            "Run a local assessment without remote sync. The sync document "
+            "raw_data/sync.json is written in every run."
         ),
     )
     azure_parser.add_argument(

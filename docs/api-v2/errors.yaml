@@ -1,0 +1,277 @@
+version: "2.0"
+envelope:
+  example:
+    object: error
+    api_version: "2"
+    error:
+      code: validation_failed
+      message: 2 fields are invalid.
+      retryable: false
+      request_id: 9a3f0c1d2e4b5a67
+      details:
+        - pointer: /inventory/resources/3/count
+          code: out_of_range
+          message: must be between 0 and 10000
+      docs_url: https://cloudexit.escapecloud.io/errors/validation_failed
+  rules:
+    - Messages are safe to show to a user and never contain exception text or secrets.
+    - Clients branch on error.code. For an unknown code they fall back to the HTTP status class and error.retryable.
+    - details is always a list. An item has a code and a message, and a pointer (a JSON pointer into the request body) or a parameter (a query or header name) when it points at one input. Code-specific values are further keys of an item; the details entries below name them.
+    - request_id is the same value as the X-Request-ID response header.
+detail_codes:
+  required: A required field is missing.
+  invalid_type: The value has the wrong type.
+  invalid_format: The value does not match the expected format or pattern.
+  out_of_range: A number is outside its allowed range.
+  too_long: A string is longer than allowed.
+  too_many_items: A list is longer than allowed.
+  not_allowed: The value is not one of the allowed values, or the combination of fields is not allowed.
+  before_started_at: completed_at is earlier than started_at.
+  too_old: completed_at is older than limits.max_collection_age_days.
+  in_the_future: A time is further in the future than limits.clock_skew_seconds allows.
+exit_codes:
+  10: The request was rejected as invalid. Fix the input; retrying the same request will not help.
+  11: Authentication or authorisation failed. Check the key, its scopes and its binding.
+  12: A temporary condition. Retrying with the same Idempotency-Key is safe.
+  13: Credits or a quota ran out.
+  14: The target assessment is missing, deleted, archived or does not match the sync.
+  15: The client version, schema version or catalogue is not accepted.
+errors:
+  unauthenticated:
+    http: 401
+    retryable: false
+    cli_exit: 11
+    hosts: [escapecloud, exitcloud]
+    meaning: The Authorization header is missing or not a Bearer credential.
+  invalid_api_key:
+    http: 401
+    retryable: false
+    cli_exit: 11
+    hosts: [escapecloud, exitcloud]
+    meaning: The key is malformed, has a bad checksum or is unknown (also for keys of another host).
+  api_key_expired:
+    http: 401
+    retryable: false
+    cli_exit: 11
+    hosts: [escapecloud, exitcloud]
+    meaning: The key is past its expiry date.
+  api_key_revoked:
+    http: 401
+    retryable: false
+    cli_exit: 11
+    hosts: [escapecloud, exitcloud]
+    meaning: The key was revoked, or the assessment it was bound to was deleted.
+  wrong_region:
+    http: 403
+    retryable: false
+    cli_exit: 11
+    hosts: [exitcloud]
+    meaning: The key belongs to the other ExitCloud region.
+    details: expected_host, the base URL of the region the key belongs to.
+  principal_inactive:
+    http: 403
+    retryable: false
+    cli_exit: 11
+    hosts: [escapecloud, exitcloud]
+    meaning: The service account or user behind the key is deactivated.
+  insufficient_scope:
+    http: 403
+    retryable: false
+    cli_exit: 11
+    hosts: [escapecloud, exitcloud]
+    meaning: The key lacks the scope the request needs.
+    details: required, the list of accepted scopes.
+  key_binding_violation:
+    http: 403
+    retryable: false
+    cli_exit: 11
+    hosts: [escapecloud, exitcloud]
+    meaning: An assessment key was used for an assessment other than its own.
+  assessment_key_v1:
+    http: 403
+    retryable: false
+    cli_exit: 11
+    hosts: [escapecloud, exitcloud]
+    api: v1
+    meaning: An assessment key was used on the v1 API, which accepts account keys only. Returned by /api/v1 in the v1 error envelope, never by /api/v2.
+  idempotency_key_missing:
+    http: 400
+    retryable: false
+    cli_exit: 10
+    hosts: [escapecloud, exitcloud]
+    meaning: A POST without an Idempotency-Key header, or with one that does not match ^[A-Za-z0-9_-]{16,64}$.
+  idempotency_key_mismatch:
+    http: 422
+    retryable: false
+    cli_exit: 10
+    hosts: [escapecloud, exitcloud]
+    meaning: The Idempotency-Key header differs from sync.id.
+  idempotency_key_reused:
+    http: 422
+    retryable: false
+    cli_exit: 10
+    hosts: [escapecloud, exitcloud]
+    meaning: The Idempotency-Key was used before with a different request body.
+  request_in_progress:
+    http: 409
+    retryable: true
+    cli_exit: 12
+    hosts: [escapecloud, exitcloud]
+    meaning: A request with the same Idempotency-Key is still being processed. Retry after Retry-After.
+  invalid_json:
+    http: 400
+    retryable: false
+    cli_exit: 10
+    hosts: [escapecloud, exitcloud]
+    meaning: The body is not valid UTF-8 JSON.
+  unsupported_media_type:
+    http: 415
+    retryable: false
+    cli_exit: 10
+    hosts: [escapecloud, exitcloud]
+    meaning: The Content-Type is not application/json.
+  payload_too_large:
+    http: 413
+    retryable: false
+    cli_exit: 10
+    hosts: [escapecloud, exitcloud]
+    meaning: The body is larger than limits.max_body_bytes.
+    details: limit, the name of the limit (max_body_bytes).
+  limit_exceeded:
+    http: 422
+    retryable: false
+    cli_exit: 10
+    hosts: [escapecloud, exitcloud]
+    meaning: A list or value is beyond a limit announced in /meta.
+    details: limit, the name of the limit, from limits in /meta.
+  validation_failed:
+    http: 422
+    retryable: false
+    cli_exit: 10
+    hosts: [escapecloud, exitcloud]
+    meaning: The body does not match the schema, or a value is out of range. details lists every problem with a JSON pointer.
+  catalogue_mismatch:
+    http: 422
+    retryable: false
+    cli_exit: 10
+    hosts: [escapecloud, exitcloud]
+    meaning: Every resource in the sync is of a type the host does not know.
+  catalogue_sha256_mismatch:
+    http: 422
+    retryable: false
+    cli_exit: 10
+    hosts: [escapecloud, exitcloud]
+    meaning: The collector's catalogue has the same version as the host's but a different sha256 (a corrupt or tampered dataset).
+    details: host_version and host_sha256, the catalogue the host has.
+  unsupported_schema_version:
+    http: 400
+    retryable: false
+    cli_exit: 15
+    hosts: [escapecloud, exitcloud]
+    meaning: schema_version is not one the host accepts.
+    details: supported, the list from /meta.contract.schema_versions.
+  client_version_unsupported:
+    http: 400
+    retryable: false
+    cli_exit: 15
+    hosts: [escapecloud, exitcloud]
+    meaning: The collector version is below the host's minimum or is blocked.
+    details: min_supported and recommended, from /meta.clients.
+  assessment_not_found:
+    http: 404
+    retryable: false
+    cli_exit: 14
+    hosts: [escapecloud, exitcloud]
+    meaning: There is no such assessment for this tenant (also for assessments of another tenant).
+  sync_not_found:
+    http: 404
+    retryable: false
+    cli_exit: 14
+    hosts: [escapecloud, exitcloud]
+    meaning: There is no such sync for this tenant (also for syncs of another tenant).
+  assessment_deleted:
+    http: 410
+    retryable: false
+    cli_exit: 14
+    hosts: [escapecloud, exitcloud]
+    meaning: The assessment was deleted. Deleting an assessment also revokes its keys, so a bound key normally gets api_key_revoked.
+  assessment_archived:
+    http: 409
+    retryable: false
+    cli_exit: 14
+    hosts: [escapecloud, exitcloud]
+    meaning: An archived assessment does not accept new syncs.
+  target_mismatch:
+    http: 409
+    retryable: false
+    cli_exit: 14
+    hosts: [escapecloud, exitcloud]
+    meaning: The sync does not fit the assessment.
+    details: field (provider, exit_strategy, scope_key or assessment_type), expected (the assessment's value) and actual (the sync's value).
+  insufficient_credits:
+    http: 402
+    retryable: false
+    cli_exit: 13
+    hosts: [exitcloud]
+    meaning: The organization has too few credits for this sync.
+    details: required (the credits the sync costs) and balance, both credit amounts.
+  quota_exceeded:
+    http: 429
+    retryable: false
+    cli_exit: 13
+    hosts: [escapecloud, exitcloud]
+    meaning: A daily or monthly quota of the tenant is used up.
+    details: resets_at, when the quota resets, in epoch seconds.
+  rate_limited:
+    http: 429
+    retryable: true
+    cli_exit: 12
+    hosts: [escapecloud, exitcloud]
+    meaning: Too many requests. Retry after Retry-After.
+  maintenance:
+    http: 503
+    retryable: true
+    cli_exit: 12
+    hosts: [escapecloud, exitcloud]
+    meaning: The host is in maintenance. Retry after Retry-After.
+  service_unavailable:
+    http: 503
+    retryable: true
+    cli_exit: 12
+    hosts: [escapecloud, exitcloud]
+    meaning: A dependency of the host is unavailable.
+  internal_error:
+    http: 500
+    retryable: true
+    cli_exit: 12
+    hosts: [escapecloud, exitcloud]
+    meaning: Something failed on the host. Retrying with the same Idempotency-Key is safe.
+warnings:
+  unknown_resource_types:
+    meaning: Resources of types unknown to the host's catalogue were stored but not scored.
+    details: type_ids lists the types.
+  resource_type_inactive:
+    meaning: Resources of types the host has deactivated were stored but not scored.
+    details: type_ids lists the types.
+  resource_type_code_mismatch:
+    meaning: A resource's type_code differs from the host's code for that type_id. The type_id wins.
+    details: type_ids lists the types.
+  duplicate_items_merged:
+    meaning: Resource items with the same type_id and location were merged by summing their counts.
+  tier_downgraded:
+    meaning: Depth 3 was requested without collected egress data, so the sync was recorded as depth 2.
+  name_ignored:
+    meaning: A name was sent for an existing assessment and differs from its name. Names are set at creation.
+  key_expiring:
+    meaning: The key expires within 14 days.
+    details: expires_at is the expiry, in epoch seconds.
+  client_version_deprecated:
+    meaning: The collector version is deprecated (below clients.cloudexit.deprecated_below).
+  collector_catalogue_outdated:
+    meaning: The collector's catalogue is older than the host's, so types added since were not collected.
+    details: missing_resource_types lists the host's active types for the provider that are not in the collector's resource_type_ids.
+  host_catalogue_outdated:
+    meaning: The collector's catalogue is newer than the host's, or it names types the host does not know yet.
+    details: unknown_type_ids lists the ids the host does not know.
+  collector_catalogue_unknown:
+    meaning: The sync carries no catalogue block, so the catalogues cannot be compared.

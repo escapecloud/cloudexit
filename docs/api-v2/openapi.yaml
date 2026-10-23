@@ -1,0 +1,1109 @@
+openapi: 3.1.0
+info:
+  title: cloudexit platform API
+  version: 2.0.0
+  summary: Push syncs from the cloudexit CLI to EscapeCloud or ExitCloud.
+  description: |
+    One contract for two hosts. A sync is one pushed result: the CLI collects an inventory of a cloud scope and the
+    host evaluates it and appends it to an assessment.
+
+    - The API key itself is the credential (`Authorization: Bearer <key>`). There is no token exchange.
+    - The key decides the target. An assessment key appends to its own assessment. An account key with
+      `assessments:create` creates an assessment with `target.create`, and with `syncs:write` it may name
+      `target.assessment_id`.
+    - Every `POST` carries an `Idempotency-Key` (the sync's own id), so retries never duplicate or double-charge.
+    - Changes inside this major version are additive only. A breaking change is a new `/api/v3`.
+
+    Fields marked `x-host: exitcloud` or `x-host: escapecloud` appear on that host only. Everything else is the same
+    on both. Error and warning codes are in `errors.yaml`; hash and key rules have test vectors in `vectors/`.
+  license:
+    name: AGPL-3.0
+    identifier: AGPL-3.0-only
+servers:
+  - url: https://{host}/api/v2
+    description: A host of this contract (EscapeCloud on a customer's own host, or an ExitCloud region).
+    variables:
+      host:
+        default: eu.exitcloud.io
+security:
+  - apiKey: []
+tags:
+  - name: discovery
+  - name: syncs
+  - name: assessments
+paths:
+  /meta:
+    get:
+      operationId: getMeta
+      tags: [discovery]
+      summary: Capabilities, limits and policies of the host.
+      description: Needs no key and contains nothing tenant-specific. Cacheable for 5 minutes.
+      security: []
+      responses:
+        "200":
+          description: The host's capabilities.
+          headers:
+            X-Request-ID: {$ref: "#/components/headers/RequestId"}
+            Cache-Control:
+              description: public, max-age=300
+              schema: {type: string}
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Meta"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+        "503": {$ref: "#/components/responses/Unavailable"}
+  /whoami:
+    get:
+      operationId: getWhoami
+      tags: [discovery]
+      summary: What this key is and what it may do.
+      parameters:
+        - {$ref: "#/components/parameters/RequestIdHeader"}
+      responses:
+        "200":
+          description: The principal behind the key.
+          headers:
+            X-Request-ID: {$ref: "#/components/headers/RequestId"}
+            RateLimit: {$ref: "#/components/headers/RateLimit"}
+            RateLimit-Policy: {$ref: "#/components/headers/RateLimitPolicy"}
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Whoami"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+        "503": {$ref: "#/components/responses/Unavailable"}
+  /syncs:
+    post:
+      operationId: createSync
+      tags: [syncs]
+      summary: Push a sync.
+      description: |
+        The single push endpoint. Needs `syncs:write` (an assessment key, or an account key naming
+        `target.assessment_id`) or `assessments:create` (an account key with `target.create`).
+
+        The host answers `201` in 2.0 (processing is inline, `meta.processing.modes` is `["inline"]`). `202` plus
+        polling `GET /syncs/{sync_id}` is defined for later and clients must handle it.
+
+        A replay of a completed request returns `200` with `Idempotent-Replayed: true` and the original body. It never
+        charges, notifies or scores again. `Prefer: wait=N` is accepted and ignored in 2.0.
+      parameters:
+        - {$ref: "#/components/parameters/IdempotencyKey"}
+        - {$ref: "#/components/parameters/RequestIdHeader"}
+        - {$ref: "#/components/parameters/Prefer"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/SyncRequest"}
+      responses:
+        "200":
+          description: A replay of a completed request.
+          headers:
+            X-Request-ID: {$ref: "#/components/headers/RequestId"}
+            Idempotent-Replayed: {$ref: "#/components/headers/IdempotentReplayed"}
+            RateLimit: {$ref: "#/components/headers/RateLimit"}
+            RateLimit-Policy: {$ref: "#/components/headers/RateLimitPolicy"}
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Sync"}
+        "201":
+          description: The sync was processed and stored.
+          headers:
+            X-Request-ID: {$ref: "#/components/headers/RequestId"}
+            Location: {$ref: "#/components/headers/Location"}
+            RateLimit: {$ref: "#/components/headers/RateLimit"}
+            RateLimit-Policy: {$ref: "#/components/headers/RateLimitPolicy"}
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Sync"}
+        "202":
+          description: |
+            Accepted and still processing. Not sent by 2.0 hosts. The body has `status: processing` and no `results`.
+          headers:
+            X-Request-ID: {$ref: "#/components/headers/RequestId"}
+            Location: {$ref: "#/components/headers/Location"}
+            Retry-After: {$ref: "#/components/headers/RetryAfter"}
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Sync"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "402": {$ref: "#/components/responses/PaymentRequired"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+        "410": {$ref: "#/components/responses/Gone"}
+        "413": {$ref: "#/components/responses/PayloadTooLarge"}
+        "415": {$ref: "#/components/responses/UnsupportedMediaType"}
+        "422": {$ref: "#/components/responses/Unprocessable"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+        "500": {$ref: "#/components/responses/InternalError"}
+        "503": {$ref: "#/components/responses/Unavailable"}
+  /syncs/{sync_id}:
+    get:
+      operationId: getSync
+      tags: [syncs]
+      summary: A sync's status and result.
+      description: "Needs `syncs:write` or `assessments:read`. Polled after a `202`. A failed sync has `status: failed` and an `error`."
+      parameters:
+        - {$ref: "#/components/parameters/SyncId"}
+        - {$ref: "#/components/parameters/RequestIdHeader"}
+      responses:
+        "200":
+          description: The sync.
+          headers:
+            X-Request-ID: {$ref: "#/components/headers/RequestId"}
+            RateLimit: {$ref: "#/components/headers/RateLimit"}
+            RateLimit-Policy: {$ref: "#/components/headers/RateLimitPolicy"}
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Sync"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+        "503": {$ref: "#/components/responses/Unavailable"}
+  /assessments:
+    get:
+      operationId: listAssessments
+      tags: [assessments]
+      summary: List assessments.
+      description: Needs an account key with `assessments:read`. Newest first, cursor pagination.
+      parameters:
+        - {$ref: "#/components/parameters/Limit"}
+        - {$ref: "#/components/parameters/Cursor"}
+        - name: provider
+          in: query
+          schema: {$ref: "#/components/schemas/Provider"}
+        - name: state
+          in: query
+          schema: {type: string, enum: [active, archived], default: active}
+        - {$ref: "#/components/parameters/RequestIdHeader"}
+      responses:
+        "200":
+          description: A page of assessments.
+          headers:
+            X-Request-ID: {$ref: "#/components/headers/RequestId"}
+            RateLimit: {$ref: "#/components/headers/RateLimit"}
+            RateLimit-Policy: {$ref: "#/components/headers/RateLimitPolicy"}
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/AssessmentList"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "422": {$ref: "#/components/responses/Unprocessable"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+        "503": {$ref: "#/components/responses/Unavailable"}
+  /assessments/{assessment_id}:
+    get:
+      operationId: getAssessment
+      tags: [assessments]
+      summary: One assessment with its latest sync.
+      description: Needs an account key with `assessments:read`.
+      parameters:
+        - {$ref: "#/components/parameters/AssessmentId"}
+        - {$ref: "#/components/parameters/RequestIdHeader"}
+      responses:
+        "200":
+          description: The assessment.
+          headers:
+            X-Request-ID: {$ref: "#/components/headers/RequestId"}
+            RateLimit: {$ref: "#/components/headers/RateLimit"}
+            RateLimit-Policy: {$ref: "#/components/headers/RateLimitPolicy"}
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Assessment"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+        "503": {$ref: "#/components/responses/Unavailable"}
+  /assessments/{assessment_id}/syncs:
+    get:
+      operationId: listAssessmentSyncs
+      tags: [assessments]
+      summary: The sync history of an assessment.
+      description: Needs an account key with `assessments:read`. Ordered by collection time, newest first, then by id.
+      parameters:
+        - {$ref: "#/components/parameters/AssessmentId"}
+        - {$ref: "#/components/parameters/Limit"}
+        - {$ref: "#/components/parameters/Cursor"}
+        - {$ref: "#/components/parameters/RequestIdHeader"}
+      responses:
+        "200":
+          description: A page of syncs.
+          headers:
+            X-Request-ID: {$ref: "#/components/headers/RequestId"}
+            RateLimit: {$ref: "#/components/headers/RateLimit"}
+            RateLimit-Policy: {$ref: "#/components/headers/RateLimitPolicy"}
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SyncList"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "422": {$ref: "#/components/responses/Unprocessable"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+        "503": {$ref: "#/components/responses/Unavailable"}
+components:
+  securitySchemes:
+    apiKey:
+      type: http
+      scheme: bearer
+      bearerFormat: "esc_sk_… (EscapeCloud), exc_eu_sk_… or exc_us_sk_… (ExitCloud)"
+      description: |
+        The API key as issued, `<prefix>_sk_` + 16 characters key id + 32 characters secret + 6 characters CRC32
+        checksum (all base62). A key with a wrong prefix, length or checksum is refused without a lookup.
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: The sync's own id (`sync.id`). A different value gives `422 idempotency_key_mismatch`.
+      schema: {type: string, pattern: "^[A-Za-z0-9_-]{16,64}$"}
+    RequestIdHeader:
+      name: X-Request-ID
+      in: header
+      required: false
+      description: Echoed back if it matches the pattern, otherwise replaced by a generated value. Always returned.
+      schema: {type: string, pattern: "^[A-Za-z0-9._-]{8,64}$"}
+    Prefer:
+      name: Prefer
+      in: header
+      required: false
+      description: "`wait=<seconds>` (RFC 7240). Accepted and ignored in 2.0, where processing is inline."
+      schema: {type: string, pattern: "^wait=[0-9]{1,3}$"}
+    SyncId:
+      name: sync_id
+      in: path
+      required: true
+      description: The host's id of the sync (`Sync ID` in the UI), not the client's `sync.id`.
+      schema: {type: string, format: uuid}
+    AssessmentId:
+      name: assessment_id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    Limit:
+      name: limit
+      in: query
+      schema: {type: integer, minimum: 1, maximum: 100, default: 25}
+    Cursor:
+      name: cursor
+      in: query
+      description: The `next_cursor` of the previous page. Opaque.
+      schema: {type: string, minLength: 1, maxLength: 512}
+  headers:
+    RequestId:
+      description: The request id, also in `error.request_id` of an error body.
+      schema: {type: string, pattern: "^[A-Za-z0-9._-]{8,64}$"}
+    IdempotentReplayed:
+      description: "`true` on a replayed response."
+      schema: {type: string, enum: ["true"]}
+    Location:
+      description: Where to fetch the sync, `/api/v2/syncs/{id}`.
+      schema: {type: string}
+    RetryAfter:
+      description: Seconds to wait before retrying.
+      schema: {type: integer, minimum: 0}
+    RateLimit:
+      description: "IETF httpapi ratelimit header, for example `limit=60, remaining=12, reset=31`."
+      schema: {type: string}
+    RateLimitPolicy:
+      description: "For example `60;w=60`."
+      schema: {type: string}
+    Deprecation:
+      description: Sent for a deprecated contract major or client version (RFC 9745).
+      schema: {type: string}
+    Sunset:
+      description: When a deprecated major or client version stops working (RFC 8594).
+      schema: {type: string}
+    Link:
+      description: "`<…>; rel=\"deprecation\"` pointing at the migration notes."
+      schema: {type: string}
+  responses:
+    BadRequest:
+      description: Malformed request (`invalid_json`, `idempotency_key_missing`, `unsupported_schema_version`, `client_version_unsupported`).
+      headers: &errorHeaders
+        X-Request-ID: {$ref: "#/components/headers/RequestId"}
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ErrorResponse"}
+    Unauthorized:
+      description: The key is missing, malformed, unknown, expired or revoked.
+      headers: *errorHeaders
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ErrorResponse"}
+    PaymentRequired:
+      description: Not enough credits (`insufficient_credits`).
+      x-host: exitcloud
+      headers: *errorHeaders
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ErrorResponse"}
+    Forbidden:
+      description: The key may not do this (`insufficient_scope`, `key_binding_violation`, `principal_inactive`, `wrong_region`).
+      headers: *errorHeaders
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ErrorResponse"}
+    NotFound:
+      description: No such assessment or sync for this tenant.
+      headers: *errorHeaders
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ErrorResponse"}
+    Conflict:
+      description: The sync does not fit the assessment (`target_mismatch`), the assessment is archived, or the same request is in progress.
+      headers:
+        X-Request-ID: {$ref: "#/components/headers/RequestId"}
+        Retry-After: {$ref: "#/components/headers/RetryAfter"}
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ErrorResponse"}
+    Gone:
+      description: The assessment was deleted (`assessment_deleted`).
+      headers: *errorHeaders
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ErrorResponse"}
+    PayloadTooLarge:
+      description: The body is beyond `limits.max_body_bytes`.
+      headers: *errorHeaders
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ErrorResponse"}
+    UnsupportedMediaType:
+      description: The Content-Type is not `application/json`.
+      headers: *errorHeaders
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ErrorResponse"}
+    Unprocessable:
+      description: Validation failed, a limit was exceeded, the idempotency key was reused or mismatched, or the catalogue does not fit.
+      headers: *errorHeaders
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ErrorResponse"}
+    RateLimited:
+      description: Too many requests (`rate_limited`) or a quota is used up (`quota_exceeded`).
+      headers:
+        X-Request-ID: {$ref: "#/components/headers/RequestId"}
+        Retry-After: {$ref: "#/components/headers/RetryAfter"}
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ErrorResponse"}
+    InternalError:
+      description: Something failed on the host. Retrying with the same Idempotency-Key is safe.
+      headers: *errorHeaders
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ErrorResponse"}
+    Unavailable:
+      description: The host is in maintenance or a dependency is down.
+      headers:
+        X-Request-ID: {$ref: "#/components/headers/RequestId"}
+        Retry-After: {$ref: "#/components/headers/RetryAfter"}
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ErrorResponse"}
+  schemas:
+    ApiVersion:
+      type: string
+      const: "2"
+    Provider:
+      type: string
+      enum: [aws, azure]
+      description: The cloud providers a sync can carry. More are added additively.
+    ExitStrategy:
+      type: string
+      enum: [repatriation, hybrid_cloud, alternate_cloud]
+    AssessmentType:
+      type: integer
+      minimum: 1
+      maximum: 3
+      description: The depth. 1 = inventory, cost and risks; 2 = plus scores and alternatives; 3 = plus detailed collection and egress.
+    EpochSeconds:
+      type: integer
+      minimum: 0
+      maximum: 4102444800
+    Sha256:
+      type: string
+      pattern: "^[0-9a-f]{64}$"
+    CatalogueVersion:
+      type: string
+      pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}(\\.[0-9]+)?$"
+      description: "`YYYY-MM-DD[.N]`. Compare as (date, N), never as text."
+    ErrorCode:
+      type: string
+      description: See errors.yaml. Unknown codes must be handled by HTTP class and `retryable`.
+      enum:
+        - unauthenticated
+        - invalid_api_key
+        - api_key_expired
+        - api_key_revoked
+        - wrong_region
+        - principal_inactive
+        - insufficient_scope
+        - key_binding_violation
+        - assessment_key_v1
+        - idempotency_key_missing
+        - idempotency_key_mismatch
+        - idempotency_key_reused
+        - request_in_progress
+        - invalid_json
+        - unsupported_media_type
+        - payload_too_large
+        - limit_exceeded
+        - validation_failed
+        - catalogue_mismatch
+        - catalogue_sha256_mismatch
+        - unsupported_schema_version
+        - client_version_unsupported
+        - assessment_not_found
+        - sync_not_found
+        - assessment_deleted
+        - assessment_archived
+        - target_mismatch
+        - insufficient_credits
+        - quota_exceeded
+        - rate_limited
+        - maintenance
+        - service_unavailable
+        - internal_error
+    WarningCode:
+      type: string
+      description: See errors.yaml. Clients must tolerate unknown codes.
+      enum:
+        - unknown_resource_types
+        - resource_type_inactive
+        - resource_type_code_mismatch
+        - duplicate_items_merged
+        - tier_downgraded
+        - name_ignored
+        - key_expiring
+        - client_version_deprecated
+        - collector_catalogue_outdated
+        - host_catalogue_outdated
+        - collector_catalogue_unknown
+    ErrorDetail:
+      type: object
+      description: |
+        One problem. `pointer` or `parameter` says where. Code-specific values are further keys of the item, for
+        example `field`, `expected` and `actual` on `target_mismatch`; they are listed per code in errors.yaml.
+      required: [code, message]
+      additionalProperties: true
+      properties:
+        pointer: {type: string, description: A JSON pointer into the request body.}
+        parameter: {type: string, description: A query parameter or header name.}
+        code: {type: string}
+        message: {type: string}
+        field: {type: string}
+        expected: {}
+        actual: {}
+        required: {type: array, items: {type: string}}
+        limit: {type: string}
+        balance: {type: integer}
+        resets_at: {$ref: "#/components/schemas/EpochSeconds"}
+        supported: {type: array, items: {type: string}}
+        expected_host: {type: string, format: uri}
+        min_supported: {type: string}
+        recommended: {type: string}
+        host_version: {$ref: "#/components/schemas/CatalogueVersion"}
+        host_sha256: {$ref: "#/components/schemas/Sha256"}
+    Error:
+      type: object
+      required: [code, message, retryable, request_id, details]
+      properties:
+        code: {$ref: "#/components/schemas/ErrorCode"}
+        message: {type: string}
+        retryable: {type: boolean}
+        request_id: {type: string}
+        details:
+          type: array
+          items: {$ref: "#/components/schemas/ErrorDetail"}
+        docs_url: {type: string, format: uri}
+    ErrorResponse:
+      type: object
+      required: [object, api_version, error]
+      properties:
+        object: {const: error}
+        api_version: {$ref: "#/components/schemas/ApiVersion"}
+        error: {$ref: "#/components/schemas/Error"}
+    Warning:
+      type: object
+      required: [code, message]
+      properties:
+        code: {$ref: "#/components/schemas/WarningCode"}
+        message: {type: string}
+        details:
+          type: object
+          additionalProperties: true
+    AwsScope:
+      type: object
+      required: [provider, aws]
+      properties:
+        provider: {const: aws}
+        aws:
+          type: object
+          required: [account_id, regions]
+          properties:
+            account_id: {type: string, pattern: "^[0-9]{12}$"}
+            regions:
+              type: array
+              minItems: 1
+              maxItems: 40
+              items:
+                type: string
+                pattern: "^(\\*|[a-z]{2}(-[a-z]+)+-[0-9]+)$"
+    AzureScope:
+      type: object
+      required: [provider, azure]
+      properties:
+        provider: {const: azure}
+        azure:
+          type: object
+          required: [tenant_id, subscription_id]
+          properties:
+            tenant_id: {type: string, format: uuid}
+            subscription_id: {type: string, format: uuid}
+            resource_group:
+              type: [string, "null"]
+              minLength: 1
+              maxLength: 90
+              description: Missing or null means the whole subscription.
+    TfstateScope:
+      type: object
+      required: [provider, tfstate]
+      properties:
+        provider: {$ref: "#/components/schemas/Provider"}
+        tfstate:
+          type: object
+          required: [lineage]
+          properties:
+            lineage: {type: string, format: uuid}
+            serial: {type: [integer, "null"], minimum: 0}
+    Scope:
+      description: |
+        What the sync covers. The host derives the `scope_key` from it (rules and vectors in `vectors/scope_key.json`)
+        and checks that `provider` matches the assessment. `collector.mode` is `tfstate` exactly when `tfstate` is sent.
+      oneOf:
+        - {$ref: "#/components/schemas/AwsScope"}
+        - {$ref: "#/components/schemas/AzureScope"}
+        - {$ref: "#/components/schemas/TfstateScope"}
+    CatalogueClaim:
+      type: object
+      description: The catalogue the collector ran with, from its dataset's `catalogue_meta`.
+      required: [version, sequence, sha256, resource_type_ids]
+      properties:
+        version: {$ref: "#/components/schemas/CatalogueVersion"}
+        sequence: {type: integer, minimum: 0}
+        sha256: {$ref: "#/components/schemas/Sha256"}
+        resource_type_ids:
+          type: array
+          description: The sorted ids of the dataset's active resource types for the sync's provider.
+          maxItems: 5000
+          uniqueItems: true
+          items: {type: integer, minimum: 1}
+    Collector:
+      type: object
+      required: [name, version, mode]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 64}
+        version: {type: string, minLength: 1, maxLength: 64}
+        mode: {type: string, enum: [api, tfstate]}
+        catalogue: {$ref: "#/components/schemas/CatalogueClaim"}
+    CiContext:
+      type: object
+      properties:
+        provider: {type: string, maxLength: 64}
+        run_url: {type: string, format: uri, maxLength: 2048}
+    SyncInfo:
+      type: object
+      required: [id, started_at, completed_at, collector]
+      properties:
+        id:
+          type: string
+          pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          description: A UUIDv7 created at collection time. Also the Idempotency-Key.
+        started_at: {$ref: "#/components/schemas/EpochSeconds"}
+        completed_at:
+          allOf:
+            - {$ref: "#/components/schemas/EpochSeconds"}
+          description: Not before `started_at`, not older than `limits.max_collection_age_days`, not more than `limits.clock_skew_seconds` in the future.
+        collector: {$ref: "#/components/schemas/Collector"}
+        ci: {$ref: "#/components/schemas/CiContext"}
+    Target:
+      type: object
+      description: |
+        Optional with an assessment key (the binding decides; a different `assessment_id` gives `403 key_binding_violation`).
+        With an account key send exactly one of `assessment_id` (needs `syncs:write`) or `create` (needs `assessments:create`).
+      properties:
+        assessment_id: {type: string, format: uuid}
+        create:
+          type: object
+          required: [name, exit_strategy]
+          properties:
+            name: {type: string, minLength: 1, maxLength: 255}
+            exit_strategy: {$ref: "#/components/schemas/ExitStrategy"}
+            group: {type: string, minLength: 1, maxLength: 255}
+      not:
+        required: [assessment_id, create]
+    ResourceItem:
+      type: object
+      required: [type_id, location, count]
+      properties:
+        type_id: {type: integer, minimum: 1}
+        type_code: {type: string, maxLength: 255, description: A cross-check label. A mismatch with the host gives the warning `resource_type_code_mismatch`.}
+        location: {type: string, maxLength: 255}
+        count: {type: integer, minimum: 0, maximum: 10000}
+    CostItem:
+      type: object
+      required: [month, amount, currency]
+      properties:
+        month: {type: string, pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"}
+        amount: {type: string, pattern: "^-?[0-9]+(\\.[0-9]+)?$", maxLength: 40, description: A decimal string, never a float.}
+        currency: {type: string, pattern: "^[A-Za-z]{3}$"}
+        final: {type: boolean, default: false}
+    EgressTier:
+      type: object
+      required: [tier]
+      properties:
+        tier: {type: string, minLength: 1, maxLength: 50}
+        size_bytes: {type: [integer, "null"], minimum: 0, maximum: 9007199254740991}
+        is_archive: {type: boolean, default: false}
+    EgressItem:
+      type: object
+      required: [type_id, name]
+      properties:
+        type_id: {type: integer, minimum: 1}
+        name: {type: string, maxLength: 255}
+        size_bytes: {type: [integer, "null"], minimum: 0, maximum: 9007199254740991}
+        flags:
+          type: array
+          maxItems: 10
+          items: {type: string, maxLength: 64}
+        notes:
+          type: array
+          maxItems: 10
+          items: {type: string, maxLength: 255}
+        tiers:
+          type: array
+          maxItems: 10
+          items: {$ref: "#/components/schemas/EgressTier"}
+    Egress:
+      type: object
+      required: [collected]
+      properties:
+        collected: {type: boolean}
+        truncated: {type: boolean, default: false}
+        names: {type: string, enum: [plain, hashed], default: plain}
+        items:
+          type: array
+          maxItems: 1000
+          items: {$ref: "#/components/schemas/EgressItem"}
+    Inventory:
+      type: object
+      required: [resources]
+      properties:
+        resources:
+          type: array
+          maxItems: 1000
+          items: {$ref: "#/components/schemas/ResourceItem"}
+        costs:
+          type: array
+          maxItems: 12
+          items: {$ref: "#/components/schemas/CostItem"}
+        egress: {$ref: "#/components/schemas/Egress"}
+    SyncRequest:
+      type: object
+      description: |
+        Unknown fields are ignored within a major version. The body is at most `limits.max_body_bytes`.
+        `size_bytes` values are capped at 2^53-1 so that hashes are exact.
+      required: [schema_version, sync, assessment_type, scope, inventory]
+      properties:
+        schema_version: {type: string, pattern: "^2\\.[0-9]+$"}
+        sync: {$ref: "#/components/schemas/SyncInfo"}
+        target: {$ref: "#/components/schemas/Target"}
+        assessment_type: {$ref: "#/components/schemas/AssessmentType"}
+        scope: {$ref: "#/components/schemas/Scope"}
+        inventory: {$ref: "#/components/schemas/Inventory"}
+    SyncStatus:
+      type: string
+      enum: [accepted, processing, completed, completed_with_warnings, failed]
+    AssessmentRef:
+      type: object
+      required: [id, name, created, scope_key, url]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        created: {type: boolean, description: "`true` when this request created the assessment."}
+        scope_key: {type: [string, "null"], maxLength: 255}
+        url: {type: string, format: uri}
+    Timestamps:
+      type: object
+      required: [collected_at, received_at]
+      properties:
+        collected_at: {$ref: "#/components/schemas/EpochSeconds"}
+        received_at: {$ref: "#/components/schemas/EpochSeconds"}
+        processed_at: {anyOf: [{$ref: "#/components/schemas/EpochSeconds"}, {type: "null"}]}
+    Ordering:
+      type: object
+      required: [latest, late]
+      properties:
+        latest: {type: boolean, description: This sync is now the assessment's latest.}
+        late: {type: boolean, description: A newer sync (by collection time) was already stored.}
+    ContentInfo:
+      type: object
+      required: [payload_sha256, content_sha256]
+      properties:
+        payload_sha256: {$ref: "#/components/schemas/Sha256"}
+        content_sha256: {$ref: "#/components/schemas/Sha256"}
+        unchanged_from:
+          type: [string, "null"]
+          format: uuid
+          description: Always null in 2.0, where an unchanged sync is stored like any other.
+    AssessmentTypeResult:
+      type: object
+      required: [requested, granted]
+      properties:
+        requested: {$ref: "#/components/schemas/AssessmentType"}
+        granted: {$ref: "#/components/schemas/AssessmentType"}
+    ResourceTypeCount:
+      type: object
+      required: [type_id, count]
+      properties:
+        type_id: {type: integer}
+        type_code: {type: string}
+        count: {type: integer, minimum: 0}
+    CatalogueResult:
+      type: object
+      required: [client, host, unknown_resource_types, inactive_resource_types]
+      properties:
+        client:
+          description: What the collector claimed. Null without a catalogue block.
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [version, sequence]
+              properties:
+                version: {$ref: "#/components/schemas/CatalogueVersion"}
+                sequence: {type: integer}
+        host:
+          type: object
+          required: [version, sha256]
+          properties:
+            version: {$ref: "#/components/schemas/CatalogueVersion"}
+            sha256: {$ref: "#/components/schemas/Sha256"}
+        unknown_resource_types:
+          type: array
+          items: {$ref: "#/components/schemas/ResourceTypeCount"}
+        inactive_resource_types:
+          type: array
+          items: {$ref: "#/components/schemas/ResourceTypeCount"}
+    Billing:
+      type: object
+      x-host: exitcloud
+      required: [class, charged_credits, balance]
+      properties:
+        class: {type: string, enum: [new]}
+        charged_credits: {type: integer, minimum: 0}
+        balance: {type: integer}
+        transaction_id: {type: [string, "null"]}
+    ReviewState:
+      type: object
+      x-host: escapecloud
+      properties:
+        pending: {type: boolean}
+        approved_sync_id: {type: [string, "null"], format: uuid}
+    Severity:
+      type: string
+      enum: [low, medium, high, critical]
+    Results:
+      type: object
+      description: Only risks that have a severity are returned, identified by code.
+      required: [scoring_version, risks]
+      properties:
+        scoring_version: {type: string}
+        scores:
+          description: Present from depth 2.
+          type: object
+          required: [exit, human, technology, operational]
+          properties:
+            exit: {type: integer, minimum: 0, maximum: 100}
+            human: {type: integer, minimum: 0, maximum: 100}
+            technology: {type: integer, minimum: 0, maximum: 100}
+            operational: {type: integer, minimum: 0, maximum: 100}
+        risks:
+          type: array
+          items:
+            type: object
+            required: [code, severity, impacted_resource_type_ids]
+            properties:
+              code: {type: string}
+              severity: {$ref: "#/components/schemas/Severity"}
+              impacted_resource_type_ids:
+                type: array
+                items: {type: integer}
+    SyncLinks:
+      type: object
+      required: [self, assessment]
+      properties:
+        self: {type: string}
+        assessment: {type: string}
+    Sync:
+      type: object
+      required: [object, api_version, id, client_sync_id, request_id, status, assessment, timestamps, ordering, content, assessment_type, catalogue, warnings, links]
+      properties:
+        object: {const: sync}
+        api_version: {$ref: "#/components/schemas/ApiVersion"}
+        id: {type: string, format: uuid, description: "The host's id (`Sync.order`, `Sync ID` in the UI)."}
+        client_sync_id: {type: [string, "null"], description: "The CLI's `sync.id`. Null for syncs the host collected itself."}
+        request_id: {type: [string, "null"]}
+        status: {$ref: "#/components/schemas/SyncStatus"}
+        assessment: {$ref: "#/components/schemas/AssessmentRef"}
+        timestamps: {$ref: "#/components/schemas/Timestamps"}
+        ordering: {$ref: "#/components/schemas/Ordering"}
+        content: {$ref: "#/components/schemas/ContentInfo"}
+        assessment_type: {$ref: "#/components/schemas/AssessmentTypeResult"}
+        catalogue: {$ref: "#/components/schemas/CatalogueResult"}
+        warnings:
+          type: array
+          items: {$ref: "#/components/schemas/Warning"}
+        billing: {$ref: "#/components/schemas/Billing"}
+        review_state: {$ref: "#/components/schemas/ReviewState"}
+        results: {$ref: "#/components/schemas/Results"}
+        error:
+          description: Present when `status` is `failed`.
+          allOf:
+            - {$ref: "#/components/schemas/Error"}
+        links: {$ref: "#/components/schemas/SyncLinks"}
+    AssessmentSource:
+      type: string
+      enum: [engine, cli]
+    Assessment:
+      type: object
+      required: [object, api_version, id, name, source, provider, exit_strategy, assessment_type, scope_key, state, created, latest_sync, url]
+      properties:
+        object: {const: assessment}
+        api_version: {$ref: "#/components/schemas/ApiVersion"}
+        id: {type: string, format: uuid}
+        name: {type: string}
+        source: {$ref: "#/components/schemas/AssessmentSource"}
+        provider: {type: string, description: The provider code, for example `aws` or `azure`.}
+        exit_strategy: {$ref: "#/components/schemas/ExitStrategy"}
+        assessment_type: {$ref: "#/components/schemas/AssessmentType"}
+        scope_key: {type: [string, "null"], maxLength: 255, description: Recorded by the first sync.}
+        state: {type: string, enum: [active, archived]}
+        created: {$ref: "#/components/schemas/EpochSeconds"}
+        latest_sync:
+          description: The newest sync by collection time. Null before the first sync.
+          oneOf:
+            - type: "null"
+            - {$ref: "#/components/schemas/Sync"}
+        url: {type: string, format: uri}
+    ListPage:
+      type: object
+      required: [object, api_version, data, has_more, next_cursor]
+      properties:
+        object: {const: list}
+        api_version: {$ref: "#/components/schemas/ApiVersion"}
+        has_more: {type: boolean}
+        next_cursor: {type: [string, "null"], maxLength: 512}
+    AssessmentList:
+      allOf:
+        - {$ref: "#/components/schemas/ListPage"}
+        - type: object
+          properties:
+            data:
+              type: array
+              items: {$ref: "#/components/schemas/Assessment"}
+    SyncList:
+      allOf:
+        - {$ref: "#/components/schemas/ListPage"}
+        - type: object
+          properties:
+            data:
+              type: array
+              items: {$ref: "#/components/schemas/Sync"}
+    Tenant:
+      type: object
+      required: [type, id, name]
+      properties:
+        type: {type: string, enum: [organization, user]}
+        id: {type: string}
+        name: {type: string}
+    WhoamiKey:
+      type: object
+      required: [id, name, display, kind, scopes, assessment_id, expires_at]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        display: {type: string, description: "The prefix and the last four characters, for example `esc_sk_…a1b2`."}
+        kind: {type: string, enum: [assessment, account]}
+        scopes:
+          type: array
+          items: {type: string, enum: [assessments:create, assessments:read, syncs:write]}
+        assessment_id: {type: [string, "null"], format: uuid, description: The binding of an assessment key.}
+        expires_at: {$ref: "#/components/schemas/EpochSeconds"}
+        last_used_at: {anyOf: [{$ref: "#/components/schemas/EpochSeconds"}, {type: "null"}]}
+    Whoami:
+      type: object
+      required: [object, api_version, request_id, tenant, key, warnings]
+      properties:
+        object: {const: whoami}
+        api_version: {$ref: "#/components/schemas/ApiVersion"}
+        request_id: {type: string}
+        tenant: {$ref: "#/components/schemas/Tenant"}
+        key: {$ref: "#/components/schemas/WhoamiKey"}
+        warnings:
+          type: array
+          items: {$ref: "#/components/schemas/Warning"}
+        billing:
+          type: object
+          x-host: exitcloud
+          required: [balance]
+          properties:
+            balance: {type: integer}
+        licensing:
+          type: object
+          x-host: escapecloud
+          description: Informational. Never blocks a sync.
+          properties:
+            active_assessments: {type: integer}
+            cloud_providers: {type: integer}
+            resources: {type: integer}
+    MetaHost:
+      type: object
+      required: [product, region, app_version, base_url]
+      properties:
+        product: {type: string, enum: [escapecloud, exitcloud]}
+        region: {type: [string, "null"], description: "`eu` or `us` on ExitCloud, null on EscapeCloud."}
+        app_version: {type: string}
+        base_url: {type: string, format: uri}
+    MetaLimits:
+      type: object
+      required: [max_body_bytes, max_resource_items, max_count_per_item, max_location_chars, max_cost_items, max_egress_items, max_name_chars, clock_skew_seconds, max_collection_age_days, idempotency_replay_hours]
+      properties:
+        max_body_bytes: {type: integer, const: 1000000}
+        max_resource_items: {type: integer, const: 1000}
+        max_count_per_item: {type: integer, const: 10000}
+        max_location_chars: {type: integer, const: 255}
+        max_cost_items: {type: integer, const: 12}
+        max_egress_items: {type: integer, const: 1000}
+        max_name_chars: {type: integer, const: 255}
+        max_egress_tiers_per_item: {type: integer, const: 10}
+        max_egress_flags_per_item: {type: integer, const: 10}
+        max_egress_notes_per_item: {type: integer, const: 10}
+        max_catalogue_type_ids: {type: integer, const: 5000}
+        clock_skew_seconds: {type: integer, const: 86400}
+        max_collection_age_days: {type: integer, const: 30}
+        idempotency_replay_hours: {type: integer, const: 168}
+      description: The values are the defaults of both hosts; a host may announce others.
+    AssessmentTypeInfo:
+      type: object
+      required: [id, code, name]
+      properties:
+        id: {$ref: "#/components/schemas/AssessmentType"}
+        code: {type: string, enum: [basic, standard, premium]}
+        name: {type: string, description: The host's own display name.}
+        requires: {type: array, items: {type: string}}
+        downgrade_to: {type: integer}
+    Meta:
+      type: object
+      required: [object, api_version, host, contract, clients, catalogue, limits, rate_limits, processing, features, assessment_types]
+      properties:
+        object: {const: meta}
+        api_version: {$ref: "#/components/schemas/ApiVersion"}
+        host: {$ref: "#/components/schemas/MetaHost"}
+        contract:
+          type: object
+          required: [schema_versions, current]
+          properties:
+            schema_versions: {type: array, items: {type: string, pattern: "^2\\.[0-9]+$"}}
+            current: {type: string, pattern: "^2\\.[0-9]+$"}
+            legacy:
+              type: object
+              additionalProperties:
+                type: object
+                properties:
+                  status: {type: string}
+                  sunset: {type: string, format: date}
+        clients:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              min_supported: {type: string}
+              deprecated_below: {type: [string, "null"]}
+              recommended: {type: string}
+              blocked: {type: array, items: {type: string}}
+        catalogue:
+          type: object
+          required: [version, sha256]
+          properties:
+            version: {$ref: "#/components/schemas/CatalogueVersion"}
+            sha256: {$ref: "#/components/schemas/Sha256"}
+            loaded_at: {$ref: "#/components/schemas/EpochSeconds"}
+            collector_min_version: {type: [string, "null"], description: Always null in 2.0, where no tenant policy rejects old catalogues.}
+            collector_warn_after_days: {type: integer}
+        limits: {$ref: "#/components/schemas/MetaLimits"}
+        rate_limits:
+          type: object
+          properties:
+            per_key:
+              type: object
+              properties:
+                requests_per_minute: {type: integer}
+                syncs_per_hour: {type: integer}
+            per_tenant:
+              type: object
+              properties:
+                syncs_per_day: {type: integer}
+        processing:
+          type: object
+          required: [modes]
+          properties:
+            modes:
+              type: array
+              items: {type: string, enum: [inline, queued]}
+              description: '`["inline"]` in 2.0.'
+            max_wait_seconds: {type: integer}
+        features:
+          type: object
+          properties:
+            upsert_by_scope_key: {type: boolean, const: false}
+            content_dedupe: {type: boolean, const: false}
+            results_in_response: {type: boolean}
+            egress_inventory: {type: boolean}
+            reviews: {type: boolean, x-host: escapecloud}
+            oidc:
+              type: object
+              properties:
+                enabled: {type: boolean, const: false}
+                issuers: {type: array, items: {type: string}}
+        assessment_types:
+          type: array
+          items: {$ref: "#/components/schemas/AssessmentTypeInfo"}
+        billing:
+          type: [object, "null"]
+          x-host: exitcloud
+          properties:
+            model: {type: string, enum: [credits]}
+            prices:
+              type: object
+              properties:
+                new:
+                  type: object
+                  additionalProperties: {type: integer}
+        licensing:
+          type: [object, "null"]
+          x-host: escapecloud
+          properties:
+            model: {type: string, enum: [licence]}
+            enforcement: {type: string, enum: [none]}
+            reported:
+              type: array
+              items: {type: string}

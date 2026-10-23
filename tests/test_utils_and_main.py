@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import ANY, MagicMock, patch
 
 import main
+from core.sync_document import SyncOutput
 from utils import codes
 from utils.connection import resolve_mode
 from utils.settings import Setting, Settings
@@ -346,13 +347,15 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
 
         self.assertIsNone(result)
 
-    def test_dry_run_writes_payload_generates_report_and_skips_sync(self):
+    def test_dry_run_writes_the_sync_document_generates_report_and_skips_sync(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             raw_data_path = os.path.join(tmp_dir, "raw_data")
             os.makedirs(raw_data_path, exist_ok=True)
-            payload_path = os.path.join(raw_data_path, "payload.json")
             config = VALID_CONFIG.copy()
             config["assessmentType"] = 2
+            output = SyncOutput(
+                Path(raw_data_path) / "sync.json", 10, "0" * 64, None, "summary"
+            )
 
             with (
                 patch("main.validate_config"),
@@ -371,10 +374,7 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
                     "main.create_cost_inventory",
                     return_value={"success": True, "logs": ""},
                 ),
-                patch(
-                    "main.write_assessment_payload",
-                    return_value=payload_path,
-                ) as mock_write,
+                patch("main.prepare_sync_document", return_value=output) as mock_write,
                 patch(
                     "main.perform_risk_assessment",
                     return_value={"success": True, "logs": ""},
@@ -395,15 +395,13 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
             ):
                 main.run_assessment(config, "aws", dry_run=True)
 
-            mock_write.assert_called_once_with(
-                raw_data_path,
-                report_path=tmp_dir,
-                name=config["name"],
-                started_at=ANY,
-                exit_strategy=config["exitStrategy"],
-                cloud_service_provider=config["cloudServiceProvider"],
-                assessment_type=2,
-            )
+            report_path, context = mock_write.call_args.args
+            self.assertEqual(report_path, tmp_dir)
+            self.assertEqual(context.assessment_type, 2)
+            self.assertEqual(context.cloud_service_provider, 2)
+            self.assertFalse(context.egress_collected)
+            self.assertEqual(context.egress_names, "plain")
+            self.assertIsNone(mock_write.call_args.kwargs["emit_dir"])
             mock_risk.assert_called_once_with(
                 exit_strategy=config["exitStrategy"],
                 report_path=tmp_dir,
@@ -428,6 +426,8 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
             non_interactive=True,
             egress=False,
             settings=None,
+            emit_payload=None,
+            egress_names="plain",
         )
 
 
@@ -835,6 +835,8 @@ class EgressStageTests(unittest.TestCase):
             non_interactive=True,
             egress=True,
             settings=None,
+            emit_payload=None,
+            egress_names="plain",
         )
 
     def test_handle_aws_passes_egress_flag(self):
@@ -853,6 +855,8 @@ class EgressStageTests(unittest.TestCase):
             non_interactive=True,
             egress=True,
             settings=None,
+            emit_payload=None,
+            egress_names="plain",
         )
 
 

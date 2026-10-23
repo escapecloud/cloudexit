@@ -1,0 +1,47 @@
+{
+  "name": "key bad checksum",
+  "description": "A key with a wrong checksum is refused without a lookup.",
+  "fixtures": {
+    "catalogue": "standard",
+    "assessments": [
+      {
+        "name": "main",
+        "provider": "aws",
+        "exit_strategy": "repatriation",
+        "assessment_type": 2,
+        "scope_key": null
+      }
+    ],
+    "keys": [
+      {
+        "name": "assessment_key",
+        "kind": "assessment",
+        "assessment": "main"
+      }
+    ]
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v2/whoami",
+    "headers": {
+      "Authorization": "Bearer {{assessment_key|corrupt}}"
+    }
+  },
+  "expect": {
+    "status": 401,
+    "headers_present": [
+      "X-Request-ID"
+    ],
+    "body_subset": {
+      "object": "error",
+      "api_version": "2",
+      "error": {
+        "code": "invalid_api_key"
+      }
+    },
+    "exists": [
+      "/error/message",
+      "/error/request_id"
+    ]
+  }
+}

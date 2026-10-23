@@ -1,0 +1,94 @@
+{
+  "name": "list assessments second page",
+  "description": "Assessments are listed newest first. The cursor of the first page gives the rest.",
+  "fixtures": {
+    "catalogue": "standard",
+    "assessments": [
+      {
+        "name": "a1",
+        "provider": "aws",
+        "exit_strategy": "repatriation",
+        "assessment_type": 2,
+        "scope_key": null
+      },
+      {
+        "name": "a2",
+        "provider": "aws",
+        "exit_strategy": "repatriation",
+        "assessment_type": 2,
+        "scope_key": null
+      },
+      {
+        "name": "a3",
+        "provider": "aws",
+        "exit_strategy": "repatriation",
+        "assessment_type": 2,
+        "scope_key": null
+      }
+    ],
+    "keys": [
+      {
+        "name": "reader_key",
+        "kind": "account",
+        "scopes": [
+          "assessments:read"
+        ]
+      }
+    ]
+  },
+  "before": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/assessments?limit=2",
+        "headers": {
+          "Authorization": "Bearer {{reader_key}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body_subset": {
+          "has_more": true,
+          "data": [
+            {
+              "id": "{{a3_id}}"
+            },
+            {
+              "id": "{{a2_id}}"
+            }
+          ]
+        },
+        "lengths": {
+          "/data": 2
+        }
+      },
+      "save": {
+        "cursor": "/next_cursor"
+      }
+    }
+  ],
+  "request": {
+    "method": "GET",
+    "path": "/api/v2/assessments?limit=2&cursor={{cursor}}",
+    "headers": {
+      "Authorization": "Bearer {{reader_key}}"
+    }
+  },
+  "expect": {
+    "status": 200,
+    "body_subset": {
+      "object": "list",
+      "has_more": false,
+      "next_cursor": null,
+      "data": [
+        {
+          "id": "{{a1_id}}",
+          "object": "assessment"
+        }
+      ]
+    },
+    "lengths": {
+      "/data": 1
+    }
+  }
+}
