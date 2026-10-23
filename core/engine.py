@@ -16,9 +16,11 @@ from .utils_aws import build_aws_resource_inventory, build_aws_cost_inventory
 from .utils_azure import build_azure_resource_inventory, build_azure_cost_inventory
 from .utils_db import connect, load_data
 from .utils_tfstate import build_tfstate_resource_inventory
+from .report.context import build_context, collect_provenance
+from .report.executive_summary import generate_executive_summary
+from .report.html_sections import html_sections
 from .utils_report import (
     generate_html_report,
-    generate_pdf_report,
     generate_json_report,
 )
 
@@ -421,6 +423,7 @@ def generate_report(
     report_path: str,
     raw_data_path: str,
     upload: dict[str, str] | None = None,
+    sync_id: str | None = None,
 ) -> dict[str, Any]:
     try:
         db_path = os.path.join(report_path, "data", "assessment.db")
@@ -459,6 +462,30 @@ def generate_report(
         # Generate Outputs
         reports = {}
 
+        # One context feeds all three reports, so they say the same things
+        tfstate_scope = (
+            _load_tfstate_scope(raw_data_path)
+            if provider_details.get("tfstatePath")
+            else None
+        )
+        provenance = collect_provenance(db_path, run_id=sync_id, upload=upload)
+        context = build_context(
+            metadata=metadata,
+            provider_details=provider_details,
+            resource_type_mapping=resource_type_mapping,
+            resource_inventory=resource_inventory,
+            cost_data=cost_data,
+            risk_data=risk_data,
+            risk_definitions=risk_definitions,
+            alternatives=alternatives,
+            alternative_technologies=alternative_technologies,
+            alternative_technology_organizations=alternative_technology_organizations,
+            exit_strategy=exit_strategy,
+            tfstate_scope=tfstate_scope,
+            provenance=provenance,
+            report_path=report_path,
+        )
+
         # Generate HTML report
         reports["HTML"] = generate_html_report(
             report_path,
@@ -473,29 +500,11 @@ def generate_report(
             alternative_technologies,
             exit_strategy,
             alternative_technology_organizations,
+            summary=html_sections(context),
         )
 
         # Generate PDF report
-        tfstate_scope = (
-            _load_tfstate_scope(raw_data_path)
-            if provider_details.get("tfstatePath")
-            else None
-        )
-        reports["PDF"] = generate_pdf_report(
-            provider_details,
-            report_path,
-            metadata,
-            resource_type_mapping,
-            resource_inventory,
-            cost_data,
-            scoring_data,
-            risk_data,
-            risk_definitions,
-            alternatives,
-            alternative_technologies,
-            exit_strategy,
-            tfstate_scope=tfstate_scope,
-        )
+        reports["PDF"] = generate_executive_summary(context)
 
         # Generate JSON report
         reports["JSON"] = generate_json_report(
@@ -510,6 +519,7 @@ def generate_report(
             alternatives,
             alternative_technologies,
             exit_strategy,
+            provenance=provenance.as_dict(),
         )
 
         return {"success": True, "reports": reports}

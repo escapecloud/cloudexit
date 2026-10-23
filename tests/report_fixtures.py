@@ -124,3 +124,56 @@ def stage_report_assets(report_path: str) -> None:
             report_assets / folder,
             dirs_exist_ok=True,
         )
+
+
+def build_fixture_context(fixture, report_dir, **overrides):
+    # A report context from a fixture, for rendering the Basic report.
+    from datetime import datetime, timezone
+
+    from core.report.context import Provenance, build_context
+
+    collected = datetime(2026, 5, 7, 12, 0, tzinfo=timezone.utc)
+    provenance = overrides.pop(
+        "provenance",
+        Provenance(
+            collector_version="2.0.0",
+            collected_at=collected,
+            generated_at=collected,
+            run_id="01939b8e-7c2a-7d41-9a51-3c8f0a6e21d4",
+            catalogue_version="2026-11-02",
+            catalogue_sequence=41,
+            catalogue_sha256="c" * 64,
+        ),
+    )
+    values = dict(
+        metadata=fixture["metadata"],
+        provider_details=fixture["provider_details"],
+        resource_type_mapping=fixture["resource_type_mapping"],
+        resource_inventory=fixture["resource_inventory"],
+        cost_data=fixture["cost_data"],
+        risk_data=fixture["risk_data"],
+        risk_definitions=fixture["risk_definitions"],
+        alternatives=fixture["alternatives"],
+        alternative_technologies=fixture["alternative_technologies"],
+        alternative_technology_organizations=fixture[
+            "alternative_technology_organizations"
+        ],
+        exit_strategy=fixture["exit_strategy"],
+        tfstate_scope=None,
+        provenance=provenance,
+        report_path=str(report_dir),
+    )
+    values.update(overrides)
+    return build_context(**values)
+
+
+def stage_minimal_assets(report_path: str) -> None:
+    # What the Basic report needs: the logo and the fallback icon. Copying the
+    # whole icon set for every render would dominate the test time.
+    report_assets = Path(report_path) / "assets"
+    shutil.copytree(Path("assets") / "img", report_assets / "img", dirs_exist_ok=True)
+    shutil.copytree(
+        Path("assets") / "icons" / "misc",
+        report_assets / "icons" / "misc",
+        dirs_exist_ok=True,
+    )

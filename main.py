@@ -936,6 +936,7 @@ def run_assessment(
                 report_path,
                 raw_data_path,
                 upload=report_info(upload_result),
+                sync_id=sync_id,
             )
 
         # Handle the result

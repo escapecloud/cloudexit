@@ -7,17 +7,12 @@ from typing import Any
 from jinja2 import Environment
 
 # ReportLab
-from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.colors import HexColor
 from reportlab.platypus import (
-    SimpleDocTemplate,
     Paragraph,
     Spacer,
-    PageBreak,
-    Image,
     Table,
     TableStyle,
 )
@@ -33,17 +28,6 @@ from core.utils_report_json import (
     transform_cost_inventory_for_json,
     transform_risk_inventory_for_json,
     transform_alt_tech_for_json,
-)
-from core.utils_report_pdf import (
-    transform_resource_inventory_for_pdf,
-    transform_cost_inventory_for_pdf,
-    transform_risk_inventory_for_pdf,
-    transform_alt_tech_for_pdf,
-    draw_header_footer,
-    draw_risk_chart,
-    draw_cost_chart,
-    draw_vendor_lockin_radar_chart,
-    draw_exitscore_pie_chart,
 )
 
 # Configure logger
@@ -74,6 +58,7 @@ def generate_html_report(
     alternative_technologies: list[dict[str, Any]],
     exit_strategy: int,
     alternative_technology_organizations: list[dict[str, Any]] | None = None,
+    summary: dict[str, Any] | None = None,
 ) -> str:
 
     # Transform resource inventory
@@ -155,6 +140,7 @@ def generate_html_report(
         total_resources=total_resources,
         resource_inventory=resource_counts,
         alternative_technologies=alternative_technologies_data,
+        summary=summary,
     )
 
     # Save HTML report
@@ -177,6 +163,7 @@ def generate_json_report(
     alternatives: list[dict[str, Any]],
     alternative_technologies: list[dict[str, Any]],
     exit_strategy: int,
+    provenance: dict[str, Any] | None = None,
 ) -> str:
     # Transform data for JSON
     transformed_resource_inventory = transform_resource_inventory_for_json(
@@ -199,6 +186,9 @@ def generate_json_report(
             "risk_inventory": transformed_risk_inventory,
         },
     }
+
+    if provenance:
+        report_json["provenance"] = provenance
 
     # Add scoring_data only if present
     if scoring_data:
@@ -403,451 +393,3 @@ def _build_scope_section(
     content.append(scope_table)
     content.append(Spacer(1, 12))
     return content
-
-
-def _build_cost_section(cost_data, styles, content_style):
-    """Page 1: Cost chart and table."""
-    content = []
-    content.append(Paragraph("Costs", styles["Heading2"]))
-
-    tablecontent_style = styles["BodyText"]
-    costs_block = "Examining the costs reveals the financial impact of the transition, allowing for more informed decision-making and strategic planning."
-    costs_paragraph = Paragraph(costs_block, tablecontent_style)
-
-    months, costs, currency_symbol = transform_cost_inventory_for_pdf(cost_data)
-    cost_chart = draw_cost_chart(months, costs)
-
-    costcharts_table_data = [
-        [costs_paragraph, "", "", cost_chart, "", ""],
-        months,
-        [f"{currency_symbol} {cost:.2f}" for cost in costs],
-    ]
-
-    costcharts_table = Table(costcharts_table_data, colWidths=[2.58333333333 * cm] * 6)
-    costcharts_table_style = TableStyle(
-        [
-            ("SPAN", (0, 0), (2, 0)),
-            ("SPAN", (3, 0), (5, 0)),
-            ("VALIGN", (0, 0), (2, 0), "TOP"),
-            ("ALIGN", (0, 0), (2, 0), "LEFT"),
-            ("LEFTPADDING", (0, 0), (2, 0), 0),
-            ("RIGHTPADDING", (0, 0), (2, 0), 0),
-            ("TOPPADDING", (0, 0), (2, 0), 0),
-            ("BOTTOMPADDING", (0, 0), (2, 0), 0),
-            ("BACKGROUND", (0, 1), (-1, 1), HexColor("#115e59")),
-            ("TEXTCOLOR", (0, 1), (-1, 1), colors.white),
-            ("FONTNAME", (0, 1), (-1, 1), "Helvetica-Bold"),
-            ("ALIGN", (0, 1), (-1, 1), "CENTER"),
-            ("FONTNAME", (0, 2), (-1, 2), "Helvetica"),
-            ("ALIGN", (0, 2), (-1, 2), "CENTER"),
-            ("GRID", (0, 1), (-1, 2), 1, colors.black),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("VALIGN", (0, 0), (2, 0), "TOP"),
-        ]
-    )
-    costcharts_table.setStyle(costcharts_table_style)
-    content.append(costcharts_table)
-    content.append(PageBreak())
-    return content
-
-
-def _build_risk_section(
-    risk_data, risk_definitions, resource_inventory, report_path, styles, content_style
-):
-    """Page 2: Risk Assessment chart and table."""
-    content = []
-    tablecontent_style = styles["BodyText"]
-
-    content.append(Spacer(1, 12))
-    content.append(Paragraph("Risk Assessment", styles["Heading1"]))
-    content.append(
-        Paragraph(
-            "The Risk Assessment provides a thorough evaluation of potential risks "
-            "associated with the cloud resources utilized in the project and the "
-            "alternative technologies available in the market:",
-            content_style,
-        )
-    )
-    content.append(Spacer(1, 12))
-
-    risks, severity_counts = transform_risk_inventory_for_pdf(
-        risk_data, risk_definitions, resource_inventory
-    )
-
-    risk_chart_data = {
-        "high": severity_counts["high"],
-        "medium": severity_counts["medium"],
-        "low": severity_counts["low"],
-    }
-    content.append(draw_risk_chart(risk_chart_data))
-    content.append(Spacer(1, 12))
-
-    severity_order = {"high": 1, "medium": 2, "low": 3}
-    risks.sort(key=lambda r: severity_order[r["severity"]])
-
-    severity_icon_map = {
-        "high": (os.path.join(report_path, "assets/icons/severity/high.png"), 22.5, 12),
-        "medium": (
-            os.path.join(report_path, "assets/icons/severity/medium.png"),
-            39,
-            12,
-        ),
-        "low": (os.path.join(report_path, "assets/icons/severity/low.png"), 20.5, 12),
-    }
-
-    risk_table_data = [["#", "Risk name", "Impacted", "Severity"]]
-    for i, risk in enumerate(risks):
-        impacted_str = (
-            str(risk["impacted_resources_count"])
-            if risk["impacted_resources_count"] > 0
-            else "-"
-        )
-        severity_level = risk["severity"].lower()
-        icon_details = severity_icon_map.get(severity_level, None)
-
-        if icon_details:
-            icon_path, icon_width, icon_height = icon_details
-            if os.path.exists(icon_path):
-                severity_icon = Image(icon_path, width=icon_width, height=icon_height)
-            else:
-                severity_icon = Paragraph("N/A", tablecontent_style)
-        else:
-            severity_icon = Paragraph("N/A", tablecontent_style)
-
-        risk_table_data.append([str(i + 1), risk["name"], impacted_str, severity_icon])
-
-    total_risks = len(risks)
-    risk_table_data.append(["Total Risks", "", "", str(total_risks)])
-
-    risk_table = Table(risk_table_data, colWidths=[0.5 * cm, 10 * cm, 3 * cm, 2 * cm])
-    risk_table_style_commands = [
-        ("BACKGROUND", (0, 0), (-1, 0), HexColor("#115e59")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("BACKGROUND", (0, -1), (-1, -1), HexColor("#115e59")),
-        ("TEXTCOLOR", (0, -1), (-1, -1), colors.white),
-        ("BOX", (0, 0), (-1, -1), 1, HexColor("#112726")),
-        ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
-        ("TOPPADDING", (0, 0), (-1, 0), 12),
-        ("ALIGN", (0, 1), (0, -2), "LEFT"),
-        ("VALIGN", (0, 1), (0, -2), "MIDDLE"),
-        ("ALIGN", (1, 1), (1, -2), "LEFT"),
-        ("VALIGN", (1, 1), (1, -2), "MIDDLE"),
-        ("ALIGN", (2, 1), (2, -2), "CENTER"),
-        ("VALIGN", (2, 1), (2, -2), "MIDDLE"),
-        ("ALIGN", (3, 1), (3, -2), "CENTER"),
-        ("VALIGN", (3, 1), (3, -2), "MIDDLE"),
-        ("ALIGN", (-1, 0), (-1, 0), "CENTER"),
-        ("VALIGN", (-1, 0), (-1, 0), "MIDDLE"),
-        ("ALIGN", (-1, -1), (-1, -1), "CENTER"),
-        ("VALIGN", (-1, -1), (-1, -1), "MIDDLE"),
-    ]
-    risk_table.setStyle(TableStyle(risk_table_style_commands))
-    content.append(risk_table)
-    content.append(PageBreak())
-    return content
-
-
-def _build_scoring_section(scoring_data, report_path, styles, content_style):
-    """Page 3: EscapeCloud Scoring (exit score gauge + vendor lock-in radar)."""
-    content = []
-    content.append(Spacer(1, 12))
-    content.append(Paragraph("EscapeCloud Scoring", styles["Heading1"]))
-    content.append(Paragraph("Scoring #1 - Exit Readiness", styles["Heading2"]))
-    content.append(
-        Paragraph(
-            "The Exit Readiness Grade provides a consolidated indicator of how prepared "
-            "the assessed environment is for a potential cloud exit or migration scenario:",
-            content_style,
-        )
-    )
-    content.append(Spacer(1, 12))
-
-    exit_score = scoring_data.get("exit_score", 0) if scoring_data else 0
-    exit_score_chart = draw_exitscore_pie_chart(exit_score, size=5 * cm)
-
-    exitscore_table_data = [
-        ["", ""],
-        ["A - Seamless", ""],
-        ["B - Smooth Transition", ""],
-        ["C - Manageable", ""],
-        ["D - Challenging", ""],
-        ["E - Complex", ""],
-        ["F - Very Complex", ""],
-    ]
-    exitscore_table_data[1][1] = exit_score_chart
-
-    exitscore_table = Table(exitscore_table_data, colWidths=[5 * cm, 10.5 * cm])
-    exitscore_table_style = TableStyle(
-        [
-            ("SPAN", (0, 0), (1, 0)),
-            ("BACKGROUND", (0, 0), (1, 0), HexColor("#115e59")),
-            ("TEXTCOLOR", (0, 0), (1, 0), colors.white),
-            ("FONTNAME", (0, 0), (1, 0), "Helvetica-Bold"),
-            ("ALIGN", (0, 0), (1, 0), "CENTER"),
-            ("VALIGN", (0, 0), (1, 0), "MIDDLE"),
-            ("SPAN", (1, 1), (1, 6)),
-            ("GRID", (0, 0), (-1, -1), 1, colors.black),
-            ("ALIGN", (0, 1), (0, 6), "LEFT"),
-            ("VALIGN", (0, 1), (0, 6), "MIDDLE"),
-            ("ALIGN", (1, 1), (1, 1), "CENTER"),
-            ("VALIGN", (1, 1), (1, 1), "MIDDLE"),
-        ]
-    )
-    exitscore_table.setStyle(exitscore_table_style)
-    content.append(exitscore_table)
-    content.append(Spacer(1, 12))
-
-    # Vendor Lock-In Score
-    content.append(Paragraph("Scoring #2 - Vendor Lock-In Score", styles["Heading2"]))
-    content.append(
-        Paragraph(
-            "The following radar chart visualizes the assessment of alternative "
-            "technologies across three dimensions: Human (skills availability), "
-            "Technology (maturity and vendor stability), and Operational (ecosystem "
-            "and support services) — only where viable alternatives exist:",
-            content_style,
-        )
-    )
-    content.append(Spacer(1, 12))
-
-    human_score = scoring_data.get("human_score", 0) if scoring_data else 0
-    technology_score = scoring_data.get("technology_score", 0) if scoring_data else 0
-    operational_score = scoring_data.get("operational_score", 0) if scoring_data else 0
-
-    content.append(
-        draw_vendor_lockin_radar_chart(human_score, technology_score, operational_score)
-    )
-
-    vendor_lockin_table = Table(
-        [
-            ["Human", "Technology", "Operational"],
-            [human_score, technology_score, operational_score],
-        ],
-        colWidths=[5 * cm, 5 * cm, 5 * cm],
-    )
-    vendor_lockin_table_style = TableStyle(
-        [
-            ("BACKGROUND", (0, 0), (-1, 0), HexColor("#115e59")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("ALIGN", (0, 0), (-1, 0), "CENTER"),
-            ("VALIGN", (0, 0), (-1, 0), "MIDDLE"),
-            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("GRID", (0, 0), (-1, -1), 1, colors.black),
-        ]
-    )
-    vendor_lockin_table.setStyle(vendor_lockin_table_style)
-    content.append(vendor_lockin_table)
-    content.append(PageBreak())
-    return content
-
-
-def _build_resource_section(
-    resource_inventory, resource_type_mapping, report_path, styles, content_style
-):
-    """Page 4: Resource Inventory table."""
-    content = []
-    content.append(Spacer(1, 12))
-    content.append(Paragraph("Resource Inventory", styles["Heading1"]))
-    content.append(
-        Paragraph(
-            "The Resource Inventory provides a summary of the cloud resources "
-            "provisioned within the defined scope:",
-            content_style,
-        )
-    )
-    content.append(Spacer(1, 12))
-
-    resources = transform_resource_inventory_for_pdf(
-        resource_inventory, resource_type_mapping, report_path
-    )
-    total_resources = sum(res["count"] for res in resources)
-
-    resource_data = [["#", "Resource type", "", "No."]]
-    for res in resources:
-        resource_data.append(
-            [
-                str(res["id"]),
-                res["resource_name"],
-                Image(res["icon_url"], width=20, height=20),
-                str(res["count"]),
-            ]
-        )
-    resource_data.append(["Total Resources", "", "", str(total_resources)])
-
-    res_table = Table(resource_data, colWidths=[1 * cm, 11.5 * cm, 1.5 * cm, 1.5 * cm])
-    res_table_style_commands = [
-        ("BACKGROUND", (0, 0), (-1, 0), HexColor("#115e59")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("BACKGROUND", (0, -1), (-1, -1), HexColor("#115e59")),
-        ("TEXTCOLOR", (0, -1), (-1, -1), colors.white),
-        ("BOX", (0, 0), (-1, -1), 1, HexColor("#112726")),
-        ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
-        ("TOPPADDING", (0, 0), (-1, 0), 12),
-        ("ALIGN", (0, 1), (0, -2), "LEFT"),
-        ("VALIGN", (0, 1), (0, -2), "MIDDLE"),
-        ("ALIGN", (1, 1), (1, -2), "LEFT"),
-        ("VALIGN", (1, 1), (1, -2), "MIDDLE"),
-        ("ALIGN", (2, 1), (2, -2), "CENTER"),
-        ("VALIGN", (2, 1), (2, -2), "MIDDLE"),
-        ("ALIGN", (3, 1), (3, -2), "CENTER"),
-        ("VALIGN", (3, 1), (3, -2), "MIDDLE"),
-        ("ALIGN", (-1, 0), (-1, 0), "CENTER"),
-        ("VALIGN", (-1, 0), (-1, 0), "MIDDLE"),
-        ("ALIGN", (-1, -1), (-1, -1), "CENTER"),
-        ("VALIGN", (-1, -1), (-1, -1), "MIDDLE"),
-    ]
-    res_table.setStyle(TableStyle(res_table_style_commands))
-    content.append(res_table)
-    content.append(PageBreak())
-    return content
-
-
-def _build_alt_tech_section(
-    resource_inventory,
-    resource_type_mapping,
-    alternatives,
-    alternative_technologies,
-    exit_strategy,
-    report_path,
-    styles,
-    content_style,
-):
-    """Page 5: Alternative Technologies table."""
-    content = []
-    content.append(Spacer(1, 12))
-    content.append(Paragraph("Alternative Technologies", styles["Heading1"]))
-    content.append(
-        Paragraph(
-            "The Alternative Technology provides a summary of the alternative technology "
-            "landscape for each identified resource in the Resource Inventory, based on "
-            "our dataset and market research. It also includes a count of the available "
-            "alternative technologies for each resource:",
-            content_style,
-        )
-    )
-    content.append(Spacer(1, 12))
-
-    alttech = transform_alt_tech_for_pdf(
-        resource_inventory,
-        resource_type_mapping,
-        alternatives,
-        alternative_technologies,
-        exit_strategy,
-        report_path,
-    )
-
-    alttech_data = [["#", "Resource type", "", "No."]]
-    for res in alttech:
-        alttech_data.append(
-            [
-                str(res["id"]),
-                res["resource_name"],
-                Image(res["icon_url"], width=20, height=20) if res["icon_url"] else "",
-                str(res["count"]),
-            ]
-        )
-
-    alttech_table = Table(
-        alttech_data, colWidths=[1 * cm, 11.5 * cm, 1.5 * cm, 1.5 * cm]
-    )
-    alttech_table_style_commands = [
-        ("BACKGROUND", (0, 0), (-1, 0), HexColor("#115e59")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("BOX", (0, 0), (-1, -1), 1, HexColor("#000000")),
-        ("BOTTOMPADDING", (0, 1), (-1, -1), 6),
-        ("TOPPADDING", (0, 1), (-1, -1), 6),
-        ("ALIGN", (2, 0), (2, -1), "CENTER"),
-        ("VALIGN", (2, 0), (2, -1), "MIDDLE"),
-        ("ALIGN", (0, 1), (0, -1), "LEFT"),
-        ("VALIGN", (0, 1), (0, -1), "MIDDLE"),
-        ("ALIGN", (1, 1), (1, -1), "LEFT"),
-        ("VALIGN", (1, 1), (1, -1), "MIDDLE"),
-        ("ALIGN", (2, 1), (2, -1), "CENTER"),
-        ("VALIGN", (2, 1), (2, -1), "MIDDLE"),
-        ("ALIGN", (3, 1), (3, -1), "CENTER"),
-        ("VALIGN", (3, 1), (3, -1), "MIDDLE"),
-        ("ALIGN", (-1, 0), (-1, 0), "CENTER"),
-        ("VALIGN", (-1, 0), (-1, 0), "MIDDLE"),
-    ]
-    alttech_table.setStyle(TableStyle(alttech_table_style_commands))
-    content.append(alttech_table)
-    content.append(PageBreak())
-    return content
-
-
-def generate_pdf_report(
-    provider_details: dict[str, Any],
-    report_path: str,
-    metadata: dict[str, Any],
-    resource_type_mapping: dict[str, Any],
-    resource_inventory: list[dict[str, Any]],
-    cost_data: list[dict[str, Any]],
-    scoring_data: dict[str, Any] | None,
-    risk_data: list[dict[str, Any]],
-    risk_definitions: list[dict[str, Any]],
-    alternatives: list[dict[str, Any]],
-    alternative_technologies: list[dict[str, Any]],
-    exit_strategy: int,
-    tfstate_scope: dict[str, Any] | None = None,
-) -> str:
-    pdf_path = os.path.join(report_path, "report.pdf")
-
-    def header_footer(canvas, doc):
-        draw_header_footer(report_path, canvas, doc)
-
-    doc = SimpleDocTemplate(
-        pdf_path, pagesize=A4, title="EscapeCloud_-_Cloud_Exit_Assessment"
-    )
-    styles = getSampleStyleSheet()
-    content_style = ParagraphStyle(
-        "ContentStyle", fontSize=10, leading=12, spaceAfter=10
-    )
-    styles["Heading1"].leading = 1.5 * styles["Heading1"].fontSize
-    styles["Heading1"].textColor = HexColor("#112726")
-    styles["Heading2"].leading = 1.5 * styles["Heading2"].fontSize
-    styles["Heading2"].textColor = HexColor("#112726")
-
-    content = []
-    content += _build_summary_section(metadata, styles, content_style)
-    content += _build_scope_section(
-        metadata, provider_details, styles, content_style, tfstate_scope
-    )
-    content += _build_cost_section(cost_data, styles, content_style)
-    content += _build_risk_section(
-        risk_data,
-        risk_definitions,
-        resource_inventory,
-        report_path,
-        styles,
-        content_style,
-    )
-    if metadata.get("assessment_type") == 2:
-        content += _build_scoring_section(
-            scoring_data,
-            report_path,
-            styles,
-            content_style,
-        )
-    content += _build_resource_section(
-        resource_inventory,
-        resource_type_mapping,
-        report_path,
-        styles,
-        content_style,
-    )
-    content += _build_alt_tech_section(
-        resource_inventory,
-        resource_type_mapping,
-        alternatives,
-        alternative_technologies,
-        exit_strategy,
-        report_path,
-        styles,
-        content_style,
-    )
-
-    logger.debug("Building the PDF document...")
-    doc.build(content, onFirstPage=header_footer, onLaterPages=header_footer)
-
-    return pdf_path
