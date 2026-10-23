@@ -4,8 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from core.engine import _load_tfstate_scope, sync_assessment, test_permissions
-from utils.settings import Settings
+from core.engine import _load_tfstate_scope, test_permissions
 
 
 class TestPermissionsAwsHybridMode(unittest.TestCase):
@@ -107,62 +106,6 @@ class TestPermissionsAwsHybridMode(unittest.TestCase):
         self.assertTrue(permission_reader)
         self.assertFalse(permission_cost)
         self.assertIn("ce:GetCostAndUsage failed", logs)
-
-
-class SyncAssessmentContractTests(unittest.TestCase):
-    def test_offline_returns_success_without_calling_the_api(self):
-        with patch("core.engine.post_assessment") as mock_post:
-            result = sync_assessment(
-                report_path="/tmp",
-                name="n",
-                started_at=0,
-                metadata={},
-                mode="offline",
-                token=None,
-            )
-        self.assertTrue(result["success"])
-        self.assertFalse(result["online"])
-        mock_post.assert_not_called()
-
-    def test_server_failure_returns_dict_not_raises(self):
-        with patch(
-            "core.engine.post_assessment",
-            return_value={"success": False, "payload": None, "logs": "401"},
-        ):
-            result = sync_assessment(
-                report_path="/tmp",
-                name="n",
-                started_at=0,
-                metadata={},
-                mode="online",
-                token="tok",
-                settings=Settings(),
-            )
-        self.assertFalse(result["success"])
-        self.assertIn("401", result["logs"])
-
-    def test_local_db_failure_returns_dict_not_raises(self):
-        good = {
-            "success": True,
-            "payload": {
-                "data": {"risk_inventory": [{"id": 1, "impacted_resources": []}]}
-            },
-        }
-        with (
-            patch("core.engine.post_assessment", return_value=good),
-            patch("core.engine.connect", side_effect=Exception("db down")),
-        ):
-            result = sync_assessment(
-                report_path="/tmp",
-                name="n",
-                started_at=0,
-                metadata={},
-                mode="online",
-                token="tok",
-                settings=Settings(),
-            )
-        self.assertFalse(result["success"])
-        self.assertIn("store server risks", result["logs"])
 
 
 class LoadTfstateScopeTests(unittest.TestCase):

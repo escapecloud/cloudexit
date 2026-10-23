@@ -21,8 +21,6 @@ from .utils_report import (
     generate_pdf_report,
     generate_json_report,
 )
-from .utils_sync import post_assessment
-from utils.settings import Settings, load_settings
 
 # Configure the logger
 logger = logging.getLogger("core.engine")
@@ -312,123 +310,8 @@ def create_cost_inventory(
         return {"success": False, "logs": str(e)}
 
 
-# Stage 5 - Online
-def sync_assessment(
-    report_path: str,
-    name: str,
-    started_at: int,
-    metadata: dict[str, Any],
-    mode: str,
-    token: str | None,
-    settings: Settings | None = None,
-) -> dict[str, Any]:
-    if mode != "online" or not token:
-        return {
-            "success": True,
-            "online": False,
-            "payload": None,
-            "logs": "offline – sync skipped.",
-        }
-
-    settings = settings or load_settings()
-    result = post_assessment(
-        name=name,
-        started_at=started_at,
-        report_path=report_path,
-        meta=metadata,
-        token=token,
-        host=settings.host.value,
-        timeout=settings.timeout.value,
-        verify=settings.ca_bundle.value or True,
-    )
-
-    if not result.get("success"):
-        return {
-            "success": False,
-            "online": True,
-            "payload": None,
-            "logs": f"Assessment sync failed: {result.get('logs')}",
-        }
-
-    logger.debug(result)
-
-    try:
-        payload = result["payload"].get("data", {})
-        server_risks = payload.get("risk_inventory", [])
-
-        rows = []
-        for entry in server_risks:
-            rid = entry["id"]
-            impacted = entry.get("impacted_resources", [])
-            if impacted:
-                for rt in impacted:
-                    rows.append((rt, rid))
-            else:
-                rows.append(("null", rid))
-
-        db_path = os.path.join(report_path, "data", "assessment.db")
-        with connect(db_path=db_path) as conn:
-            cursor = conn.cursor()
-            cursor.executemany(
-                """
-                INSERT INTO risk_inventory (resource_type, risk)
-                VALUES (?, ?)
-                """,
-                rows,
-            )
-            conn.commit()
-
-    except Exception as e:
-        logger.error("Error saving server risks to local DB: %s", str(e), exc_info=True)
-        return {
-            "success": False,
-            "online": True,
-            "payload": None,
-            "logs": f"Failed to store server risks: {str(e)}",
-        }
-
-    try:
-        scoring = payload.get("scoring_data")
-        if scoring:
-            db_path = os.path.join(report_path, "data", "assessment.db")
-            with connect(db_path=db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    """
-                    INSERT INTO scoring_data (exit_score, human_score, technology_score, operational_score)
-                    VALUES (?, ?, ?, ?)
-                    """,
-                    (
-                        int(scoring["exit_score"]),
-                        int(scoring["human_score"]),
-                        int(scoring["technology_score"]),
-                        int(scoring["operational_score"]),
-                    ),
-                )
-                conn.commit()
-                logger.debug("Scoring data saved to local DB.")
-
-    except Exception as e:
-        logger.error("Error saving scoring data to local DB: %s", str(e), exc_info=True)
-        return {
-            "success": False,
-            "online": True,
-            "payload": None,
-            "logs": f"Failed to store scoring data: {str(e)}",
-        }
-
-    return result
-
-
-# Stage 5 - Offline
-def perform_risk_assessment(
-    exit_strategy: int, report_path: str, mode: str
-) -> dict[str, Any]:
-
-    if mode != "offline":
-        logger.debug("Online mode – skipping local risk assessment.")
-        return {"success": True, "logs": "online mode – local risk skipped."}
-
+# Stage 6 - Local risk assessment (every run, connected or not)
+def perform_risk_assessment(exit_strategy: int, report_path: str) -> dict[str, Any]:
     try:
         # Define the database path
         db_path = os.path.join(report_path, "data", "assessment.db")
@@ -528,7 +411,7 @@ def _load_tfstate_scope(raw_data_path: str) -> dict[str, Any] | None:
         return None
 
 
-# Stage 6
+# Stage 8
 def generate_report(
     cloud_service_provider: int,
     provider_details: dict[str, Any],
@@ -537,6 +420,7 @@ def generate_report(
     name: str,
     report_path: str,
     raw_data_path: str,
+    upload: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     try:
         db_path = os.path.join(report_path, "data", "assessment.db")
@@ -554,7 +438,9 @@ def generate_report(
         resource_inventory = load_data("resource_inventory", db_path=db_path)
         cost_data = load_data("cost_inventory", db_path=db_path)
         risk_data = load_data("risk_inventory", db_path=db_path)
-        scoring_data = load_data("scoring_data", db_path=db_path)
+        # The local report is always the Basic report: platform results are
+        # never rendered here, whatever the database holds.
+        scoring_data = None
 
         # Timestamp
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -566,18 +452,9 @@ def generate_report(
             "assessment_type": assessment_type,
             "timestamp": timestamp,
         }
-
-        # Handle scoring_data
-        if isinstance(scoring_data, list):
-            if len(scoring_data) == 1:
-                scoring_data = scoring_data[0]
-            elif len(scoring_data) == 0:
-                scoring_data = None
-            else:
-                logger.warning(
-                    "Unexpected multiple rows in scoring_data: %d", len(scoring_data)
-                )
-                scoring_data = scoring_data[0]
+        if upload:
+            # Only the link (or why there is none): never platform results
+            metadata["upload"] = upload
 
         # Generate Outputs
         reports = {}

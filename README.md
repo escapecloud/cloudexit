@@ -147,6 +147,10 @@ cloudexit aws --config config.json --egress --egress-names hashed   # send egres
 
 With `--egress-names hashed` each egress resource name is replaced by an HMAC-SHA256 with a random per-scope salt that stays on your machine (`~/.local/share/cloudexit/salts/`), so the same name hashes the same way in later runs of the same scope.
 
+## Reports and uploads
+
+The local report is always the Basic report, computed on your machine, whether or not a platform is configured. Anything the platform computes stays on the platform: after an upload the local report only records the link (also stored in `raw_data/upload.json`). If an upload fails, the report is still written, with a short "Not uploaded: <reason>" banner, and the run exits with an upload code (10 or 12 for now) after everything else has finished. Problems in the collection stages take precedence over upload codes.
+
 ## Data Landscape & Egress Estimation (alpha)
 
 Add `--egress` to any assessment to measure how much data lives in the assessed scope and estimate the one-time internet egress fee for moving it out — based on the provider's tiered list prices, with no additional permissions required.

@@ -122,6 +122,7 @@ def post_assessment(
         return {
             "success": ok,
             "payload": resp.json() if ok else None,
+            "status": resp.status_code,
             "logs": f"server responded {resp.status_code}",
         }
     except requests.RequestException as exc:

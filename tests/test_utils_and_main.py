@@ -293,32 +293,6 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
             self.assertIn("Traceback", body)
             self.assertIn("boom-unexpected", body)
 
-    def test_online_sync_failure_exits_risk_assessment(self):
-        with self.assertRaises(SystemExit) as ctx:
-            with (
-                patch("main.validate_config"),
-                patch("main.resolve_mode", return_value=("online", "jwt-token")),
-                patch("main.create_directory", return_value=("/tmp/r", "/tmp/r/raw")),
-                patch("main.verify_credentials", return_value=(True, "ok")),
-                patch("main.test_permissions", return_value=(True, True, True, "ok")),
-                patch(
-                    "main.create_resource_inventory",
-                    return_value={"success": True, "logs": ""},
-                ),
-                patch(
-                    "main.create_cost_inventory",
-                    return_value={"success": True, "logs": ""},
-                ),
-                patch(
-                    "main.sync_assessment",
-                    return_value={"success": False, "logs": "server responded 401"},
-                ),
-                patch("main.print_step"),
-                patch("main.console.print"),
-            ):
-                main.run_assessment(VALID_CONFIG.copy(), "aws")
-        self.assertEqual(ctx.exception.code, codes.RISK_ASSESSMENT)
-
     def test_full_success_exits_0(self):
         with (
             patch("main.validate_config"),
@@ -354,7 +328,7 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
             config = VALID_CONFIG.copy()
             config["assessmentType"] = 2
             output = SyncOutput(
-                Path(raw_data_path) / "sync.json", 10, "0" * 64, None, "summary"
+                Path(raw_data_path) / "sync.json", 10, "0" * 64, None, "summary", {}
             )
 
             with (
@@ -389,7 +363,7 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
                         },
                     },
                 ) as mock_report,
-                patch("main.sync_assessment") as mock_sync,
+                patch("main.upload") as mock_upload,
                 patch("main.print_step"),
                 patch("main.console.print"),
             ):
@@ -403,12 +377,10 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
             self.assertEqual(context.egress_names, "plain")
             self.assertIsNone(mock_write.call_args.kwargs["emit_dir"])
             mock_risk.assert_called_once_with(
-                exit_strategy=config["exitStrategy"],
-                report_path=tmp_dir,
-                mode="offline",
+                exit_strategy=config["exitStrategy"], report_path=tmp_dir
             )
             mock_report.assert_called_once()
-            mock_sync.assert_not_called()
+            mock_upload.assert_not_called()
 
     def test_dry_run_flag_passed_from_handle_aws(self):
         with (
@@ -662,7 +634,7 @@ class EgressStageTests(unittest.TestCase):
         mock_render.assert_not_called()
         mock_pdf.assert_not_called()
 
-    def test_egress_invoked_after_report_generation(self):
+    def test_egress_runs_in_the_collection_stages_before_the_report(self):
         manager = MagicMock()
         patches = _base_patches()
         for p in patches:
@@ -709,15 +681,17 @@ class EgressStageTests(unittest.TestCase):
         )
         call_names = [name for name, _, _ in manager.mock_calls]
         self.assertLess(
-            call_names.index("generate_report"), call_names.index("estimate_egress")
-        )
-        self.assertLess(
             call_names.index("estimate_egress"),
             call_names.index("generate_egress_html_report"),
         )
         self.assertLess(
             call_names.index("generate_egress_html_report"),
             call_names.index("generate_egress_pdf_report"),
+        )
+        # The estimate is part of the collection stages, before the local report
+        self.assertLess(
+            call_names.index("generate_egress_pdf_report"),
+            call_names.index("generate_report"),
         )
 
     def test_egress_failure_still_prints_outputs_and_exits_egress(self):
