@@ -1,7 +1,7 @@
 import sqlite3
 from pathlib import Path
 
-from tests.report_fixtures import stage_report_assets
+from tests.report_fixtures import stage_minimal_assets
 from tests.sync_fixtures import build_run
 
 FLOW_TABLES = """
@@ -65,5 +65,5 @@ def build_flow_run(report_path, *, platform_scores=False, **kwargs):
         )
     conn.commit()
     conn.close()
-    stage_report_assets(report)
+    stage_minimal_assets(report)
     return report

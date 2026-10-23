@@ -147,6 +147,10 @@ cloudexit aws --config config.json --egress --egress-names hashed   # send egres
 
 With `--egress-names hashed` each egress resource name is replaced by an HMAC-SHA256 with a random per-scope salt that stays on your machine (`~/.local/share/cloudexit/salts/`), so the same name hashes the same way in later runs of the same scope.
 
+## The report
+
+Every run writes the same three files: `report.pdf`, `index.html` and `raw_data/assessment_result.json`. The PDF is the Basic Executive Summary, set in IBM Plex (SIL Open Font License, in `assets/fonts/`). It opens with a cover and a document information page that record where the data came from: the cloudexit version, the run ID, the data catalogue version and hash, and either a link to the platform's reports or the statement that the data was self-collected. The same facts are in the PDF metadata and in a `provenance` object in the JSON report. The last page says what the full assessment on a platform adds.
+
 ## Reports and uploads
 
 The local report is always the Basic report, computed on your machine, whether or not a platform is configured. Anything the platform computes stays on the platform: after an upload the local report only records the link (also stored in `raw_data/upload.json`). If an upload fails, the report is still written, with a short "Not uploaded: <reason>" banner, and the run exits with an upload code (10 or 12 for now) after everything else has finished. Problems in the collection stages take precedence over upload codes.

@@ -3,16 +3,17 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from core.report.executive_summary import generate_executive_summary
 from core.utils_report import (
     generate_html_report,
     generate_json_report,
-    generate_pdf_report,
 )
 from core.utils_report_json import transform_cost_inventory_for_json
 from tests.report_fixtures import (
     build_empty_report_fixture,
+    build_fixture_context,
     build_report_fixture,
-    stage_report_assets,
+    stage_minimal_assets,
 )
 
 
@@ -72,8 +73,8 @@ class ReportPipelineSmokeTests(unittest.TestCase):
         self.assertIn("Empty State Assessment", html)
         self.assertIn("No risk data available.", html)
         self.assertIn("No cost data available.", html)
-        self.assertIn("No exit score data available.", html)
-        self.assertIn("No vendor lock-in score data available.", html)
+        self.assertNotIn("exit score", html.lower())
+        self.assertNotIn("lock-in score", html.lower())
         self.assertIn("No resources were discovered during the assessment.", html)
         self.assertIn("No alternative technologies are available", html)
         self.assertNotIn('id="risksChart"', html)
@@ -118,25 +119,15 @@ class ReportPipelineSmokeTests(unittest.TestCase):
         fixture = build_report_fixture()
 
         with tempfile.TemporaryDirectory() as report_dir:
-            stage_report_assets(report_dir)
+            stage_minimal_assets(report_dir)
 
-            pdf_path = generate_pdf_report(
-                fixture["provider_details"],
-                report_dir,
-                fixture["metadata"],
-                fixture["resource_type_mapping"],
-                fixture["resource_inventory"],
-                fixture["cost_data"],
-                None,
-                fixture["risk_data"],
-                fixture["risk_definitions"],
-                fixture["alternatives"],
-                fixture["alternative_technologies"],
-                fixture["exit_strategy"],
+            pdf_path = generate_executive_summary(
+                build_fixture_context(fixture, report_dir)
             )
 
             pdf_file = Path(pdf_path)
 
+            self.assertEqual(pdf_file.name, "report.pdf")
             self.assertTrue(pdf_file.exists())
             self.assertGreater(pdf_file.stat().st_size, 0)
 
@@ -202,21 +193,10 @@ class EmptyCostInventoryReportTests(unittest.TestCase):
         fixture = build_report_fixture()
 
         with tempfile.TemporaryDirectory() as report_dir:
-            stage_report_assets(report_dir)
+            stage_minimal_assets(report_dir)
 
-            pdf_path = generate_pdf_report(
-                fixture["provider_details"],
-                report_dir,
-                fixture["metadata"],
-                fixture["resource_type_mapping"],
-                fixture["resource_inventory"],
-                [],
-                None,
-                fixture["risk_data"],
-                fixture["risk_definitions"],
-                fixture["alternatives"],
-                fixture["alternative_technologies"],
-                fixture["exit_strategy"],
+            pdf_path = generate_executive_summary(
+                build_fixture_context(fixture, report_dir, cost_data=[])
             )
 
             pdf_file = Path(pdf_path)

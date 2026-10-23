@@ -9,7 +9,7 @@
       sizes="16x16"
       href="assets/img/logo/favicon.png"
     />
-    <title>EscapeCloud Community Edition - Cloud Exit Assessment Report</title>
+    <title>Executive Summary – {{ name }}</title>
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css"
@@ -40,7 +40,7 @@
         class="d-flex flex-column flex-md-row align-items-start justify-content-between align-self-md-center gap-3 py-4 px-4 project-title"
       >
         <h2 class="d-flex align-items-center gap-3 px-4">
-          <img src="assets/img/logo/logo.png" width="30" alt="EscapeCloud" />
+          <img src="assets/img/logo/logo.png" width="30" alt="cloudexit" />
           <span>{{ name }}</span>
         </h2>
         <div class="d-flex align-items-center gap-3 px-4 flex-wrap flex-sm-nowrap">
@@ -68,6 +68,79 @@
     {% endif %}
 
     <main id="main-content">
+      {% if summary %}
+      <div class="px-3 px-md-4 pt-3">
+        <div class="bg-white shadow-s rounded-4 p-4">
+          <h2 class="h4 mb-3">{{ summary.brief.heading }}</h2>
+          <p>{{ summary.brief.lead | safe }}</p>
+          <h3 class="h6 mt-4">{{ summary.brief.findings_heading }}</h3>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  {% for header in summary.brief.headers %}
+                  <th scope="col">{{ header }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in summary.brief.rows %}
+                <tr{% if row.attention %} class="table-warning"{% endif %}>
+                  <th scope="row">{{ row.area }}</th>
+                  <td>{{ row.finding | safe }}</td>
+                  <td class="text-muted small">{{ row.details }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <p class="text-muted small mb-0">{{ summary.brief.caption | safe }}</p>
+        </div>
+        <div class="bg-white shadow-s rounded-4 p-4 mt-3">
+          <h2 class="h5 mb-3">{{ summary.provenance.heading }}</h2>
+          <dl class="row mb-0">
+            {% for label, value in summary.provenance.rows %}
+            <dt class="col-sm-3">{{ label }}</dt>
+            <dd class="col-sm-9">{{ value }}</dd>
+            {% endfor %}
+            {% if summary.provenance.platform_url %}
+            <dt class="col-sm-3">&nbsp;</dt>
+            <dd class="col-sm-9">
+              <a
+                href="{{ summary.provenance.platform_url }}"
+                target="_blank"
+                rel="noopener noreferrer"
+                >{{ summary.provenance.platform_url }}</a
+              >
+            </dd>
+            {% endif %}
+          </dl>
+        </div>
+        <div class="bg-white shadow-s rounded-4 p-4 mt-3">
+          <h2 class="h4 mb-3">{{ summary.introduction.heading }}</h2>
+          <h3 class="h6">{{ summary.introduction.purpose_heading }}</h3>
+          <p>{{ summary.introduction.purpose }}</p>
+          <h3 class="h6">{{ summary.introduction.scope_heading }}</h3>
+          {% for paragraph in summary.introduction.scope %}
+          <p>{{ paragraph | safe }}</p>
+          {% endfor %}
+          <h3 class="h6">{{ summary.introduction.method_heading }}</h3>
+          {% for paragraph in summary.introduction.method %}
+          <p>{{ paragraph }}</p>
+          {% endfor %}
+          <ul>
+            {% for phase, text in summary.introduction.phases %}
+            <li><strong>{{ phase }}</strong> {{ text }}</li>
+            {% endfor %}
+          </ul>
+          <p>{{ summary.introduction.method_catalogue }}</p>
+          <h3 class="h6">{{ summary.introduction.limitations_heading }}</h3>
+          {% for paragraph in summary.introduction.limitations %}
+          <p class="mb-2">{{ paragraph }}</p>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
       <div class="px-3 px-md-4">
         <div class="mt-1 row g-3 stats">
           <div class="col-xl-4 col-lg-6 col-md-6 chart-box">
@@ -177,7 +250,7 @@
               <div class="px-3 px-lg-4 py-3 risk-dashboard">
                 <div class="risk-header">
                   <div class="risk-count">
-                    <h2>Risks</h2>
+                    <h2>Risk Inventory</h2>
                     <div class="count counter">{{ total_risks }}</div>
                   </div>
                 </div>
@@ -202,7 +275,7 @@
               <div class="px-3 px-lg-4 py-3 risk-dashboard">
                 <div class="risk-header">
                   <div class="risk-count">
-                    <h2>Costs (last 6 months)</h2>
+                    <h2>Costs Overview</h2>
                     <div class="count">
                       {% if total_cost > 0 %}{{ currency_symbol }}{{ total_cost }}{% else
                       %}-{% endif %}
@@ -226,118 +299,13 @@
           </div>
         </div>
 
-        {% if assessment_type == 2 %}
-        <div class="mt-1 row g-3">
-          <div class="col-md-6">
-            <div class="bg-white shadow-s rounded-4 h-100 scoring-card">
-              <div class="scoring-title">
-                <div
-                  class="d-flex align-items-center justify-content-between chart-card-head"
-                >
-                  <div>
-                    <h3 class="m-0">Scoring #1 - Exit Readiness</h3>
-                  </div>
-                  <div class="info-hint-box">
-                    <i class="bi bi-info-circle"></i>
-                    <div class="hint-hoverbox">
-                      <h5>Exit Readiness Grade</h5>
-                      <div class="hint-dt">
-                        <p>
-                          This grade reflects how ready your environment is to
-                          exit the cloud. It's based on how dependent your setup
-                          is on provider-specific services and whether mature
-                          alternatives exist - the lower the dependency, the
-                          higher the grade.
-                          <br /><br />A - Seamless
-                          <br />B - Smooth Transition
-                          <br />C - Manageable
-                          <br />D - Challenging
-                          <br />E - Complex
-                          <br />F - Very Complex
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="divider-border"></div>
-              {% if scoring_data %}
-              <div class="scoring-inner py-4">
-                <div class="chart-wrapper">
-                  <div
-                    class="scoring"
-                    id="exitScoreChart"
-                    style="width: 100%; height: 100%;"
-                  ></div>
-                </div>
-              </div>
-              {% else %}
-              <div class="chart-empty-state scoring-empty-state">
-                <div class="chart-empty-state-inner">
-                  <i class="bi bi-speedometer2"></i>
-                  <p>No exit score data available.</p>
-                </div>
-              </div>
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="col-md-6">
-            <div class="bg-white shadow-s rounded-4 h-100 scoring-card">
-              <div class="scoring-title">
-                <div
-                  class="d-flex align-items-center justify-content-between chart-card-head"
-                >
-                  <div>
-                    <h3 class="m-0">Scoring #2 - Vendor Lock-In Score</h3>
-                  </div>
-                  <div class="info-hint-box">
-                    <i class="bi bi-info-circle"></i>
-                    <div class="hint-hoverbox">
-                      <h5>Vendor Lock-In Score</h5>
-                      <div class="hint-dt">
-                        <p>
-                          The radar chart visualizes alternative technologies
-                          across three dimensions:
-                          <br />- Human (skills availability)
-                          <br />- Technology (maturity and vendor stability)
-                          <br />- Operational (ecosystem and support services)
-                          <br /><br /><b>Only where viable alternatives exist.</b>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="divider-border"></div>
-              {% if scoring_data %}
-              <div class="py-4 scoring-inner">
-                <div
-                  class="scoring"
-                  id="vendorLockInScoreChart"
-                  style="width: 100%; height: 100%;"
-                ></div>
-              </div>
-              {% else %}
-              <div class="chart-empty-state scoring-empty-state">
-                <div class="chart-empty-state-inner">
-                  <i class="bi bi-stack"></i>
-                  <p>No vendor lock-in score data available.</p>
-                </div>
-              </div>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-        {% endif %}
-
         <div class="mt-4 row g-0">
           <div class="col-12">
             <div class="bg-white shadow-s rounded-4">
               <div
                 class="d-flex align-items-center justify-content-between px-3 px-lg-4 py-3"
               >
-                <h3 class="form-title">Risks</h3>
+                <h3 class="form-title">Risk Inventory</h3>
                 <div class="btn-group d-inline-block">
                   <button
                     class="btn-outline-primary btn dropdown-toggle"
@@ -1062,277 +1030,76 @@
       </script>
       {% endif %}
 
-      {% if scoring_data %}
-      <script>
-        const radarSpec = {
-          type: "radar",
-          height: 350,
-          data: [
-            {
-              id: "radarData",
-              values: [
-                { key: "Human", value: {{ human | default(0) }} },
-                { key: "Technology", value: {{ technology | default(0) }} },
-                { key: "Operational", value: {{ operational | default(0) }} },
-              ],
-            },
-          ],
-          categoryField: "key",
-          valueField: "value",
-          point: {
-            visible: false,
-          },
-          area: {
-            visible: true,
-            style: {
-              fill: "rgba(17, 94, 89, 0.25)",
-            },
-            state: {
-              hover: {
-                fillOpacity: 0.5,
-              },
-            },
-          },
-          line: {
-            style: {
-              lineWidth: 4,
-              stroke: "rgba(17, 94, 89, 1)",
-            },
-          },
-          axes: [
-            {
-              orient: "radius",
-              zIndex: 100,
-              min: 0,
-              max: 5,
-              domainLine: {
-                visible: false,
-              },
-              label: {
-                visible: true,
-                space: 0,
-                style: {
-                  textAlign: "center",
-                  stroke: "#fff",
-                  lineWidth: 4,
-                },
-              },
-              grid: {
-                smooth: false,
-                style: {
-                  lineDash: [0],
-                },
-              },
-            },
-            {
-              orient: "angle",
-              zIndex: 50,
-              tick: {
-                visible: false,
-              },
-              domainLine: {
-                visible: false,
-              },
-              label: {
-                space: 20,
-              },
-              grid: {
-                style: {
-                  lineDash: [0],
-                },
-              },
-            },
-          ],
-        };
-
-        const exitScoreValue = {{ exit_score | default(0) | round(0) }};
-        const exitScoreGrade =
-          exitScoreValue > 83
-            ? "A"
-            : exitScoreValue > 67
-              ? "B"
-              : exitScoreValue > 50
-                ? "C"
-                : exitScoreValue > 33
-                  ? "D"
-                  : exitScoreValue > 17
-                    ? "E"
-                    : "F";
-
-        const gaugeSpec = {
-          width: 300,
-          height: 350,
-          padding: { top: 0, bottom: 0, left: 0, right: 0 },
-          type: "common",
-          tooltip: { visible: false },
-          data: [
-            {
-              id: "pointer",
-              values: [{ type: "Score", value: exitScoreValue }],
-            },
-            {
-              id: "segment",
-              values: [
-                { type: "F", value: 17 },
-                { type: "E", value: 33 },
-                { type: "D", value: 50 },
-                { type: "C", value: 67 },
-                { type: "B", value: 83 },
-                { type: "A", value: 100 },
-              ],
-            },
-          ],
-          series: [
-            {
-              type: "gauge",
-              dataIndex: 1,
-              radiusField: "type",
-              angleField: "value",
-              seriesField: "type",
-              outerRadius: 0.9,
-              innerRadius: 0.65,
-              roundCap: true,
-              segment: {
-                style: {
-                  cornerRadius: 500,
-                  innerPadding: 5,
-                  outerPadding: 5,
-                  fill: {
-                    type: "threshold",
-                    field: "value",
-                    domain: [17, 33, 50, 67, 83, 100],
-                    range: [
-                      "#ba1c1d",
-                      "#ba1c1d",
-                      "#d44000",
-                      "#ff9533",
-                      "#f1ca00",
-                      "#76c31d",
-                      "#065f43",
-                    ],
-                  },
-                },
-              },
-              track: {
-                visible: true,
-                style: {
-                  cornerRadius: 500,
-                  roundCap: true,
-                  fill: "rgba(0, 0, 0, 0.1)",
-                },
-              },
-            },
-            {
-              type: "gaugePointer",
-              dataIndex: 0,
-              categoryField: "type",
-              valueField: "value",
-              innerRadius: 0.45,
-              pin: {
-                visible: true,
-                width: 0.04,
-                height: 0.04,
-                isOnCenter: false,
-                style: {
-                  fill: {
-                    type: "threshold",
-                    field: "value",
-                    domain: [17, 33, 50, 67, 83],
-                    range: ["#012e53"],
-                  },
-                },
-              },
-              pinBackground: { visible: false },
-              pointer: {
-                width: 0.2,
-                height: 0.1,
-                isOnCenter: false,
-                style: {
-                  fill: {
-                    type: "threshold",
-                    field: "value",
-                    domain: [17, 33, 50, 67, 83],
-                    range: ["#012e53"],
-                  },
-                },
-              },
-              animation: false,
-            },
-          ],
-          startAngle: -200,
-          endAngle: 20,
-          axes: [
-            {
-              type: "linear",
-              orient: "angle",
-              inside: true,
-              outerRadius: 0.9,
-              innerRadius: 0.6,
-              min: 0,
-              max: 100,
-              grid: { visible: false },
-              tick: {
-                visible: false,
-                tickSize: 0,
-                style: { lineWidth: 4, lineCap: "round" },
-              },
-              subTick: {
-                visible: false,
-                tickSize: 0,
-                style: { lineWidth: 4, lineCap: "round" },
-              },
-              label: { visible: false },
-            },
-            {
-              type: "linear",
-              orient: "radius",
-              outerRadius: 0.6,
-              grid: { visible: false },
-              label: { visible: false },
-            },
-          ],
-          indicator: [
-            {
-              visible: true,
-              offsetY: "-10%",
-              title: {
-                style: {
-                  text: exitScoreGrade,
-                  fontSize: 52,
-                  fontWeight: 600,
-                  fontColor: "#012e53",
-                },
-              },
-              content: [
-                {
-                  style: {
-                    dy: 10,
-                    text: "Grade",
-                    fontSize: 20,
-                  },
-                },
-              ],
-            },
-          ],
-        };
-
-        const radarContainer = document.getElementById("vendorLockInScoreChart");
-        const gaugeContainer = document.getElementById("exitScoreChart");
-
-        if (radarContainer) {
-          const vendorLockInScoreChart = new VChart.default(radarSpec, {
-            dom: radarContainer,
-          });
-          vendorLockInScoreChart.renderSync();
-        }
-
-        if (gaugeContainer) {
-          const exitScoreChart = new VChart.default(gaugeSpec, {
-            dom: gaugeContainer,
-          });
-          exitScoreChart.renderSync();
-        }
-      </script>
+      {% if summary %}
+      <div class="px-3 px-md-4 pb-4">
+        <div class="bg-white shadow-s rounded-4 p-4 mt-3">
+          <h2 class="h4 mb-3">{{ summary.severity.heading }}</h2>
+          {% for paragraph in summary.severity.lead %}
+          <p>{{ paragraph }}</p>
+          {% endfor %}
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                {% for header in summary.severity.headers %}
+                <th scope="col">{{ header }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for level, meaning in summary.severity.rows %}
+              <tr>
+                <th scope="row">{{ level }}</th>
+                <td>{{ meaning }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="bg-white shadow-s rounded-4 p-4 mt-3">
+          <h2 class="h4 mb-3">{{ summary.glossary.heading }}</h2>
+          <p>{{ summary.glossary.lead }}</p>
+          <dl class="row mb-0">
+            {% for term, definition in summary.glossary.entries %}
+            <dt class="col-sm-3">{{ term }}</dt>
+            <dd class="col-sm-9">{{ definition }}</dd>
+            {% endfor %}
+          </dl>
+        </div>
+        <div class="bg-white shadow-s rounded-4 p-4 mt-3">
+          <h2 class="h4 mb-3">{{ summary.closing.heading }}</h2>
+          <p>{{ summary.closing.lead }}</p>
+          {% if summary.closing.uploaded %}
+          {% if summary.closing.url %}
+          <p>
+            <a
+              href="{{ summary.closing.url }}"
+              target="_blank"
+              rel="noopener noreferrer"
+              >{{ summary.closing.url }}</a
+            >
+          </p>
+          {% elif summary.closing.assessment_id %}
+          <p>Assessment ID: {{ summary.closing.assessment_id }}</p>
+          {% endif %}
+          {% else %}
+          <ul>
+            {% for term, text in summary.closing.points %}
+            <li><strong>{{ term }}</strong> {{ text }}</li>
+            {% endfor %}
+          </ul>
+          <h3 class="h6">{{ summary.closing.how_heading }}</h3>
+          <p>{{ summary.closing.how }}</p>
+          <p><code>{{ summary.closing.command }}</code></p>
+          <p class="mb-0">
+            {% for name, url in summary.closing.sites %}
+            <a href="{{ url }}" target="_blank" rel="noopener noreferrer"
+              >{{ url }}</a
+            >{% if not loop.last %} · {% endif %}
+            {% endfor %}
+          </p>
+          {% endif %}
+        </div>
+      </div>
       {% endif %}
     </main>
   </body>

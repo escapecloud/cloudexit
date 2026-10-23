@@ -28,6 +28,7 @@ dev = [
     "ruff",
     "jsonschema",
     "PyYAML",
+    "pypdf",
 ]
 
 [project.scripts]
