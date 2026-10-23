@@ -1,0 +1,146 @@
+{
+  "name": "first sync assessment key",
+  "description": "The first sync of an assessment key's assessment records the scope key. The catalogue claim equals the host's, so there are no warnings.",
+  "fixtures": {
+    "catalogue": "standard",
+    "assessments": [
+      {
+        "name": "main",
+        "provider": "aws",
+        "exit_strategy": "repatriation",
+        "assessment_type": 2,
+        "scope_key": null
+      }
+    ],
+    "keys": [
+      {
+        "name": "assessment_key",
+        "kind": "assessment",
+        "assessment": "main"
+      }
+    ]
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v2/syncs",
+    "headers": {
+      "Authorization": "Bearer {{assessment_key}}",
+      "Idempotency-Key": "01933b9e-7c2a-7d41-9a51-3c8f0a6e0001",
+      "Content-Type": "application/json",
+      "X-Request-ID": "ci-run-20261103-01",
+      "Prefer": "wait=20"
+    },
+    "body": {
+      "schema_version": "2.0",
+      "sync": {
+        "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e0001",
+        "started_at": "{{now-300}}",
+        "completed_at": "{{now-60}}",
+        "collector": {
+          "name": "cloudexit",
+          "version": "2.0.0",
+          "mode": "api",
+          "catalogue": {
+            "version": "2026-11-02",
+            "sequence": 41,
+            "sha256": "9f1c5b7a3e2d4c6b8a0f1e2d3c4b5a69788796a5b4c3d2e1f0a9b8c7d6e5f4a3",
+            "resource_type_ids": [
+              12,
+              40,
+              41,
+              55
+            ]
+          }
+        }
+      },
+      "assessment_type": 2,
+      "scope": {
+        "provider": "aws",
+        "aws": {
+          "account_id": "123456789012",
+          "regions": [
+            "eu-central-1"
+          ]
+        }
+      },
+      "inventory": {
+        "resources": [
+          {
+            "type_id": 12,
+            "type_code": "AWS::S3::Bucket",
+            "location": "eu-central-1",
+            "count": 36
+          },
+          {
+            "type_id": 40,
+            "type_code": "AWS::EC2::Instance",
+            "location": "eu-central-1",
+            "count": 8
+          }
+        ],
+        "costs": [
+          {
+            "month": "2026-10",
+            "amount": "1234.56",
+            "currency": "USD",
+            "final": true
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "status": 201,
+    "headers": {
+      "X-Request-ID": "ci-run-20261103-01"
+    },
+    "headers_present": [
+      "Location"
+    ],
+    "body_subset": {
+      "object": "sync",
+      "api_version": "2",
+      "status": "completed",
+      "client_sync_id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e0001",
+      "request_id": "ci-run-20261103-01",
+      "assessment": {
+        "id": "{{main_id}}",
+        "created": false,
+        "scope_key": "aws:123456789012:eu-central-1"
+      },
+      "ordering": {
+        "latest": true,
+        "late": false
+      },
+      "content": {
+        "unchanged_from": null
+      },
+      "assessment_type": {
+        "requested": 2,
+        "granted": 2
+      },
+      "catalogue": {
+        "host": {
+          "version": "2026-11-02"
+        },
+        "unknown_resource_types": [],
+        "inactive_resource_types": []
+      }
+    },
+    "exists": [
+      "/id",
+      "/request_id",
+      "/timestamps/received_at",
+      "/content/payload_sha256",
+      "/content/content_sha256",
+      "/results/scoring_version",
+      "/links/self",
+      "/links/assessment",
+      "/results/scores/exit",
+      "/results/risks"
+    ],
+    "lengths": {
+      "/warnings": 0
+    }
+  }
+}

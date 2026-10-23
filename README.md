@@ -105,7 +105,7 @@ The CLI supports multiple input modes for both AWS and Azure.
 
 See the [configuration reference](https://cloudexit.escapecloud.io/config/config-schema.html) for required permissions and config file format.
 
-Want to see how a regulatory-aligned report looks (DORA / FINMA / UK PRA)? Run with `--dry-run` and send the output `payload.json` to request_report@escapecloud.io — we'll generate a sample you can share with your risk or compliance team.
+Want to see how a regulatory-aligned report looks (DORA / FINMA / UK PRA)? Run with `--dry-run` and send the output `raw_data/sync.json` to request_report@escapecloud.io — we'll generate a sample you can share with your risk or compliance team.
 
 ## Platform settings
 
@@ -135,6 +135,17 @@ cloudexit aws --tfstate infra.tfstate --catalogue FILE.db.gz   # use a file for 
 ```
 
 Set `CLOUDEXIT_CATALOGUE_URL` to download from a mirror instead of the default location. A `./datasets/data.db` from an earlier version is copied to the data directory once.
+
+## Sync document
+
+Every run writes `raw_data/sync.json` next to the report: the run's result in the shape defined by the API v2 definition in [`docs/api-v2/`](./docs/api-v2/) (a vendored copy; do not edit it here). It holds the scope (an AWS account and region, an Azure subscription, or a Terraform state), the resource inventory, the monthly costs and, when `--egress` ran, the egress estimate. It never contains credentials and is built without a network connection.
+
+```bash
+cloudexit aws --config config.json --emit-payload out/        # also write out/<sync id>.json
+cloudexit aws --config config.json --egress --egress-names hashed   # send egress names as salted hashes
+```
+
+With `--egress-names hashed` each egress resource name is replaced by an HMAC-SHA256 with a random per-scope salt that stays on your machine (`~/.local/share/cloudexit/salts/`), so the same name hashes the same way in later runs of the same scope.
 
 ## Data Landscape & Egress Estimation (alpha)
 

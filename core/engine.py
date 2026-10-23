@@ -147,6 +147,9 @@ def test_permissions(
             )
             identity = sts_client.get_caller_identity()
             caller_arn = identity.get("Arn", "")
+            # The account id is the scope of the sync document
+            if identity.get("Account"):
+                provider_details["accountId"] = str(identity["Account"])
 
             # IAM users keep existing policy-name validation for backwards compatibility.
             if ":user/" in caller_arn:

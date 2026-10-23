@@ -1,0 +1,114 @@
+{
+  "name": "unsupported schema version",
+  "description": "A schema version the host does not list in /meta is refused.",
+  "fixtures": {
+    "catalogue": "standard",
+    "assessments": [
+      {
+        "name": "main",
+        "provider": "aws",
+        "exit_strategy": "repatriation",
+        "assessment_type": 2,
+        "scope_key": null
+      }
+    ],
+    "keys": [
+      {
+        "name": "assessment_key",
+        "kind": "assessment",
+        "assessment": "main"
+      }
+    ]
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v2/syncs",
+    "headers": {
+      "Authorization": "Bearer {{assessment_key}}",
+      "Idempotency-Key": "01933b9e-7c2a-7d41-9a51-3c8f0a6e0022",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "schema_version": "2.7",
+      "sync": {
+        "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e0022",
+        "started_at": "{{now-300}}",
+        "completed_at": "{{now-60}}",
+        "collector": {
+          "name": "cloudexit",
+          "version": "2.0.0",
+          "mode": "api",
+          "catalogue": {
+            "version": "2026-11-02",
+            "sequence": 41,
+            "sha256": "9f1c5b7a3e2d4c6b8a0f1e2d3c4b5a69788796a5b4c3d2e1f0a9b8c7d6e5f4a3",
+            "resource_type_ids": [
+              12,
+              40,
+              41,
+              55
+            ]
+          }
+        }
+      },
+      "assessment_type": 2,
+      "scope": {
+        "provider": "aws",
+        "aws": {
+          "account_id": "123456789012",
+          "regions": [
+            "eu-central-1"
+          ]
+        }
+      },
+      "inventory": {
+        "resources": [
+          {
+            "type_id": 12,
+            "type_code": "AWS::S3::Bucket",
+            "location": "eu-central-1",
+            "count": 36
+          },
+          {
+            "type_id": 40,
+            "type_code": "AWS::EC2::Instance",
+            "location": "eu-central-1",
+            "count": 8
+          }
+        ],
+        "costs": [
+          {
+            "month": "2026-10",
+            "amount": "1234.56",
+            "currency": "USD",
+            "final": true
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "status": 400,
+    "headers_present": [
+      "X-Request-ID"
+    ],
+    "body_subset": {
+      "object": "error",
+      "api_version": "2",
+      "error": {
+        "code": "unsupported_schema_version",
+        "details": [
+          {
+            "supported": [
+              "2.0"
+            ]
+          }
+        ]
+      }
+    },
+    "exists": [
+      "/error/message",
+      "/error/request_id"
+    ]
+  }
+}

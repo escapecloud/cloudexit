@@ -1,0 +1,103 @@
+{
+  "name": "catalogue versions compared as numbers",
+  "description": "Versions are compared as (date, N), not as text: 2026-11-02.9 is older than 2026-11-02.10.",
+  "fixtures": {
+    "catalogue": {
+      "use": "standard",
+      "version": "2026-11-02.10"
+    },
+    "assessments": [
+      {
+        "name": "main",
+        "provider": "aws",
+        "exit_strategy": "repatriation",
+        "assessment_type": 2,
+        "scope_key": null
+      }
+    ],
+    "keys": [
+      {
+        "name": "assessment_key",
+        "kind": "assessment",
+        "assessment": "main"
+      }
+    ]
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v2/syncs",
+    "headers": {
+      "Authorization": "Bearer {{assessment_key}}",
+      "Idempotency-Key": "01933b9e-7c2a-7d41-9a51-3c8f0a6e0014",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "schema_version": "2.0",
+      "sync": {
+        "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e0014",
+        "started_at": "{{now-300}}",
+        "completed_at": "{{now-60}}",
+        "collector": {
+          "name": "cloudexit",
+          "version": "2.0.0",
+          "mode": "api",
+          "catalogue": {
+            "version": "2026-11-02.9",
+            "sequence": 40,
+            "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "resource_type_ids": [
+              12,
+              40,
+              41,
+              55
+            ]
+          }
+        }
+      },
+      "assessment_type": 2,
+      "scope": {
+        "provider": "aws",
+        "aws": {
+          "account_id": "123456789012",
+          "regions": [
+            "eu-central-1"
+          ]
+        }
+      },
+      "inventory": {
+        "resources": [
+          {
+            "type_id": 12,
+            "type_code": "AWS::S3::Bucket",
+            "location": "eu-central-1",
+            "count": 36
+          },
+          {
+            "type_id": 40,
+            "type_code": "AWS::EC2::Instance",
+            "location": "eu-central-1",
+            "count": 8
+          }
+        ],
+        "costs": [
+          {
+            "month": "2026-10",
+            "amount": "1234.56",
+            "currency": "USD",
+            "final": true
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "status": 201,
+    "body_subset": {
+      "warnings": [
+        {
+          "code": "collector_catalogue_outdated"
+        }
+      ]
+    }
+  }
+}

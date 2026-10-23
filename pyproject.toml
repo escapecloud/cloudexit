@@ -26,6 +26,8 @@ dependencies = [
 dev = [
     "black",
     "ruff",
+    "jsonschema",
+    "PyYAML",
 ]
 
 [project.scripts]

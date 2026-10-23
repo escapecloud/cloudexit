@@ -1,7 +1,6 @@
 # core/utils_sync.py
 from __future__ import annotations
 
-import json
 import logging
 import os
 import time
@@ -77,33 +76,12 @@ def _build_payload(
         },
     }
 
-    logger.debug("Outgoing payload:\n%s", json.dumps(payload, indent=2))
-    return payload
-
-
-def write_assessment_payload(
-    raw_data_path: str,
-    *,
-    report_path: str,
-    name: str,
-    started_at: int,
-    exit_strategy: int,
-    cloud_service_provider: int,
-    assessment_type: int,
-) -> str:
-    payload = _build_payload(
-        report_path=report_path,
-        name=name,
-        started_at=started_at,
-        exit_strategy=exit_strategy,
-        cloud_service_provider=cloud_service_provider,
-        assessment_type=assessment_type,
+    logger.debug(
+        "Outgoing payload: %d resource row(s), %d cost month(s).",
+        len(res_payload),
+        len(cost_payload),
     )
-    payload_path = os.path.join(raw_data_path, "payload.json")
-    with open(payload_path, "w", encoding="utf-8") as payload_file:
-        json.dump(payload, payload_file, indent=2)
-        payload_file.write("\n")
-    return payload_path
+    return payload
 
 
 def post_assessment(
