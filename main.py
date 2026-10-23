@@ -7,6 +7,7 @@ import sys
 import os
 import getpass
 import traceback
+from dataclasses import replace
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.markup import escape
@@ -22,13 +23,19 @@ from core.engine import (
     create_resource_inventory,
     create_cost_inventory,
     perform_risk_assessment,
-    sync_assessment,
     generate_report,
 )
 from core.utils_egress import estimate_egress
 from core.utils_report_egress import (
     generate_egress_html_report,
     generate_egress_pdf_report,
+)
+from core.upload import (
+    REASON_UNAVAILABLE,
+    failure,
+    report_info,
+    upload,
+    write_upload_record,
 )
 from core.sync_document import (
     RunContext,
@@ -83,6 +90,9 @@ logger = logging.getLogger(__name__)
 
 # Initialize the console object
 console = Console()
+
+# The local report is always the Basic report, whatever depth was requested
+LOCAL_REPORT_ASSESSMENT_TYPE = 1
 
 # Third-party loggers kept quiet unless the user opts into deep verbosity (-vv)
 _THIRD_PARTY_NOISY = ("botocore", "boto3", "azure")
@@ -565,13 +575,28 @@ def run_assessment(
 
         # Detect ExitCloud Integration
         mode, jwt = resolve_mode(settings)
+        configured = mode == "online" or bool(
+            settings and settings.host.value and settings.api_key.value
+        )
+        signin_failure = None
         if dry_run:
             print_step("Dry run mode – no remote sync.", status="ok")
         elif mode == "online":
             print_step("ExitCloud integration configured.", status="ok")
+        elif configured:
+            # A configured platform that refuses the sign-in is a failed upload,
+            # not a reason to drop to Basic: the document keeps the requested depth.
+            signin_failure = failure(
+                REASON_UNAVAILABLE, "could not sign in to the platform"
+            )
+            print_step(
+                "ExitCloud integration configured, but sign-in failed.",
+                status="warning",
+                logs="The report is still written locally; the upload counts as failed.",
+            )
         else:
             print_step("ExitCloud integration not configured.", status="warning")
-            # Overwrite assessment type to basic
+            # Without a platform only the Basic assessment is possible
             if config["assessmentType"] != 1:
                 print_step(
                     "Forcing Basic Assessment due to offline mode.", status="warning"
@@ -747,73 +772,7 @@ def run_assessment(
             or f"Exit Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}"
         )
 
-        # Stage 5 – Online / Offline Risk Assessment
-        if dry_run or mode == "offline":
-            console.print("Stage #5 – Offline Risk Assessment", style="bold")
-
-            with console.status("Performing risk assessment...", spinner="dots"):
-                risk_result = perform_risk_assessment(
-                    exit_strategy=config["exitStrategy"],
-                    report_path=report_path,
-                    mode="offline",
-                )
-
-            status = "ok" if risk_result["success"] else "error"
-            print_step(
-                "Performing risk assessment...", status=status, logs=risk_result["logs"]
-            )
-            if not risk_result["success"]:
-                sys.exit(codes.RISK_ASSESSMENT)
-
-        elif mode == "online":
-            console.print("Stage #5 – Online Risk Assessment", style="bold")
-
-            sync_result = sync_assessment(
-                name=name,
-                started_at=started_at,
-                report_path=report_path,
-                metadata={
-                    "cloud_service_provider": config["cloudServiceProvider"],
-                    "exit_strategy": config["exitStrategy"],
-                    "assessment_type": config["assessmentType"],
-                },
-                mode=mode,
-                token=jwt,
-                settings=settings,
-            )
-
-            status = "ok" if sync_result["success"] else "error"
-            print_step("Sync assessment...", status=status, logs=sync_result["logs"])
-            if not sync_result["success"]:
-                sys.exit(codes.RISK_ASSESSMENT)
-
-        console.print("-------------------------------------------")
-
-        # Stage 6: Generate Report
-        console.print("Stage #6 - Generate Report", style="bold")
-
-        # Use a spinner to indicate progress
-        with console.status("Generating report...", spinner="dots"):
-            report_status = generate_report(
-                config["cloudServiceProvider"],
-                config["providerDetails"],
-                config["exitStrategy"],
-                config["assessmentType"],
-                name,
-                report_path,
-                raw_data_path,
-            )
-
-        # Handle the result
-        if report_status["success"]:
-            print_step("Generating report...", status="ok")
-        else:
-            print_step(
-                "Generating report...", status="error", logs=report_status["logs"]
-            )
-            sys.exit(codes.REPORT)
-
-        # Stage 7: Egress Estimation (opt-in via --egress).
+        # Stage 5: Egress Estimation (opt-in via --egress).
         # A failure here must not discard the completed assessment.
         egress_failed = False
         egress_collected = False
@@ -821,8 +780,7 @@ def run_assessment(
         egress_html_path = None
         egress_pdf_path = None
         if egress:
-            console.print("-------------------------------------------")
-            console.print("Stage #7 – Egress Estimation", style="bold")
+            console.print("Stage #5 – Egress Estimation", style="bold")
 
             with console.status("Estimating egress data...", spinner="dots"):
                 egress_result = estimate_egress(
@@ -878,11 +836,33 @@ def run_assessment(
                     logs=egress_result["logs"],
                 )
                 egress_failed = True
+        if egress:
+            console.print("-------------------------------------------")
+
+        # Stage 6: Local risk assessment. Every run computes the Basic results
+        # locally, connected or not; platform results are never used here.
+        console.print("Stage #6 – Risk Assessment", style="bold")
+
+        with console.status("Performing risk assessment...", spinner="dots"):
+            risk_result = perform_risk_assessment(
+                exit_strategy=config["exitStrategy"],
+                report_path=report_path,
+            )
+
+        status = "ok" if risk_result["success"] else "error"
+        print_step(
+            "Performing risk assessment...", status=status, logs=risk_result["logs"]
+        )
+        if not risk_result["success"]:
+            sys.exit(codes.RISK_ASSESSMENT)
+
+        console.print("-------------------------------------------")
 
         # Sync document: the run's result in the API v2 shape. Without
         # --dry-run or --emit-payload a problem here does not discard the
         # finished report.
         sync_output = None
+        sync_failed = False
         try:
             sync_output = prepare_sync_document(
                 report_path,
@@ -907,8 +887,65 @@ def run_assessment(
             )
             for problem in getattr(e, "problems", [])[:10]:
                 console.print(f"   ↳ {problem}", style="dim")
-            if wanted:
-                sys.exit(codes.REPORT)
+            sync_failed = wanted
+
+        # Stage 7: Upload, only when a platform is configured. A failure never
+        # discards the local report: it is written next, with a banner.
+        upload_result = signin_failure
+        if signin_failure or (mode == "online" and not dry_run):
+            console.print("Stage #7 – Upload", style="bold")
+            if upload_result is None:
+                with console.status("Uploading to the platform...", spinner="dots"):
+                    upload_result = upload(
+                        sync_output.document if sync_output else None,
+                        settings,
+                        token=jwt,
+                        name=name,
+                        report_path=report_path,
+                        started_at=started_at,
+                        meta={
+                            "cloud_service_provider": config["cloudServiceProvider"],
+                            "exit_strategy": config["exitStrategy"],
+                            "assessment_type": config["assessmentType"],
+                        },
+                    )
+            if upload_result.sync_id is None:
+                upload_result = replace(upload_result, sync_id=sync_id)
+            if upload_result.success:
+                print_step("Uploading to the platform...", status="ok")
+            else:
+                print_step(
+                    "Uploading to the platform...",
+                    status="error",
+                    logs=f"{upload_result.reason}: {upload_result.message}",
+                )
+            write_upload_record(raw_data_path, upload_result)
+            console.print("-------------------------------------------")
+
+        # Stage 8: Generate the local report (always Basic, connected or not)
+        console.print("Stage #8 - Generate Report", style="bold")
+
+        # Use a spinner to indicate progress
+        with console.status("Generating report...", spinner="dots"):
+            report_status = generate_report(
+                config["cloudServiceProvider"],
+                config["providerDetails"],
+                config["exitStrategy"],
+                LOCAL_REPORT_ASSESSMENT_TYPE,
+                name,
+                report_path,
+                raw_data_path,
+                upload=report_info(upload_result),
+            )
+
+        # Handle the result
+        if report_status["success"]:
+            print_step("Generating report...", status="ok")
+        else:
+            print_step(
+                "Generating report...", status="error", logs=report_status["logs"]
+            )
+            sys.exit(codes.REPORT)
 
         # Output the report path after the separator
         if not (dry_run or non_interactive):
@@ -925,6 +962,15 @@ def run_assessment(
             console.print("Contact: request_report@escapecloud.io")
         console.print("-------------------------------------------")
         console.print("Outputs:", style="bold")
+        if upload_result and upload_result.success:
+            console.print(
+                (
+                    f"Platform: {upload_result.url}"
+                    if upload_result.url
+                    else "Uploaded to the platform."
+                ),
+                style="cyan",
+            )
         if sync_output:
             console.print(f"Sync document: {sync_output.path}", style="cyan")
             if sync_output.emitted:
@@ -944,8 +990,13 @@ def run_assessment(
             console.print(f"Egress PDF: {egress_pdf_path}", style="cyan")
         console.print("-------------------------------------------")
 
+        # Collection problems win over upload codes
+        if sync_failed:
+            sys.exit(codes.REPORT)
         if egress_failed:
             sys.exit(codes.EGRESS)
+        if upload_result and upload_result.failed:
+            sys.exit(upload_result.exit_code)
 
     except Exception as e:
         console.print(f"[red]Unexpected error: {e}[/red]")

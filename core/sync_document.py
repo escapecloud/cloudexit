@@ -99,6 +99,7 @@ class SyncOutput:
     sha256: str
     emitted: Path | None
     summary: str
+    document: dict[str, Any]
 
 
 def new_uuid7(now_ms: int | None = None) -> str:
@@ -779,7 +780,7 @@ def write_sync_document(
 
     summary = summary_line(document, len(data), digest)
     logger.info(summary)
-    return SyncOutput(path, len(data), digest, emitted, summary)
+    return SyncOutput(path, len(data), digest, emitted, summary, document)
 
 
 def prepare_sync_document(

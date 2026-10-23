@@ -1,6 +1,7 @@
 # core/utils_report.py
 import os
 import json
+from xml.sax.saxutils import escape
 import logging
 from typing import Any
 from jinja2 import Environment
@@ -276,6 +277,17 @@ def _build_summary_section(metadata, styles, content_style):
     summary_table.setStyle(_default_table_style())
     content.append(summary_table)
     content.append(Spacer(1, 12))
+
+    upload = metadata.get("upload")
+    if upload:
+        if upload.get("status") == "uploaded":
+            note = "Uploaded to the platform."
+            if upload.get("url"):
+                url = escape(upload["url"])
+                note += f' <a href="{url}" color="blue">{url}</a>'
+        else:
+            note = f"<b>Not uploaded:</b> {escape(upload.get('reason', 'unknown'))}"
+        content.append(Paragraph(note, content_style))
     return content
 
 
