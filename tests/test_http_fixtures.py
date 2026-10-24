@@ -3,7 +3,6 @@ import unittest
 import requests
 
 from tests.http_fixtures import fake_http, make_response
-from utils.connection import get_jwt_token
 
 
 class FakeHTTPTests(unittest.TestCase):
@@ -46,20 +45,23 @@ class FakeHTTPTests(unittest.TestCase):
 
 
 class FakeHTTPExampleTests(unittest.TestCase):
-    def test_get_jwt_token_reads_the_token_from_the_response(self):
-        with fake_http(make_response(json_body={"access_token": "jwt-1"})) as fake:
-            token = get_jwt_token(host="api.test", key="test-key")
+    def test_a_request_through_a_session_is_recorded_with_its_headers(self):
+        with fake_http(make_response(json_body={"object": "meta"})) as fake:
+            with requests.Session() as session:
+                response = session.get(
+                    "https://api.test/api/v2/meta", headers={"Accept": "text/plain"}
+                )
 
-        self.assertEqual(token, "jwt-1")
+        self.assertEqual(response.json(), {"object": "meta"})
         (request,) = fake.requests
-        self.assertEqual(request.url, "https://api.test/api/v1/auth/token/")
-        self.assertEqual(
-            request.kwargs["headers"], {"Authorization": "Bearer test-key"}
-        )
+        self.assertEqual(request.url, "https://api.test/api/v2/meta")
+        self.assertEqual(request.kwargs["headers"], {"Accept": "text/plain"})
 
-    def test_get_jwt_token_returns_none_when_the_host_is_unreachable(self):
+    def test_a_connection_error_reply_is_raised_from_a_session(self):
         with fake_http(requests.ConnectionError("refused")):
-            self.assertIsNone(get_jwt_token(host="api.test", key="test-key"))
+            with requests.Session() as session:
+                with self.assertRaises(requests.ConnectionError):
+                    session.get("https://api.test/")
 
 
 if __name__ == "__main__":

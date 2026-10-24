@@ -30,9 +30,9 @@ from core.utils_report_egress import (
     generate_egress_html_report,
     generate_egress_pdf_report,
 )
+from core.api_v2 import ApiError, check_key
 from core.upload import (
-    REASON_UNAVAILABLE,
-    failure,
+    error_failure,
     report_info,
     upload,
     write_upload_record,
@@ -51,7 +51,6 @@ from utils.azure import (
     is_azure_cli_token_expired,
 )
 from utils.aws import is_aws_cli_installed, is_aws_profile_valid
-from utils.connection import resolve_mode
 from utils.data import (
     CatalogueError,
     CatalogueUnavailable,
@@ -574,26 +573,24 @@ def run_assessment(
             sys.exit(codes.CONFIG)
 
         # Detect ExitCloud Integration
-        mode, jwt = resolve_mode(settings)
-        configured = mode == "online" or bool(
-            settings and settings.host.value and settings.api_key.value
-        )
+        configured = bool(settings and settings.host.value and settings.api_key.value)
         signin_failure = None
         if dry_run:
             print_step("Dry run mode – no remote sync.", status="ok")
-        elif mode == "online":
-            print_step("ExitCloud integration configured.", status="ok")
         elif configured:
-            # A configured platform that refuses the sign-in is a failed upload,
-            # not a reason to drop to Basic: the document keeps the requested depth.
-            signin_failure = failure(
-                REASON_UNAVAILABLE, "could not sign in to the platform"
-            )
-            print_step(
-                "ExitCloud integration configured, but sign-in failed.",
-                status="warning",
-                logs="The report is still written locally; the upload counts as failed.",
-            )
+            # A key that cannot be right is a failed upload, found before the
+            # collection starts. It does not drop the run to Basic or discard
+            # the local report.
+            try:
+                check_key(settings.api_key.value, settings.host.value)
+                print_step("ExitCloud integration configured.", status="ok")
+            except ApiError as error:
+                signin_failure = error_failure(error)
+                print_step(
+                    "ExitCloud integration configured, but the API key is not usable.",
+                    status="warning",
+                    logs=f"{error.message}. The report is still written locally; the upload counts as failed.",
+                )
         else:
             print_step("ExitCloud integration not configured.", status="warning")
             # Without a platform only the Basic assessment is possible
@@ -892,17 +889,14 @@ def run_assessment(
         # Stage 7: Upload, only when a platform is configured. A failure never
         # discards the local report: it is written next, with a banner.
         upload_result = signin_failure
-        if signin_failure or (mode == "online" and not dry_run):
+        if signin_failure or (configured and not dry_run):
             console.print("Stage #7 – Upload", style="bold")
             if upload_result is None:
                 with console.status("Uploading to the platform...", spinner="dots"):
                     upload_result = upload(
                         sync_output.document if sync_output else None,
                         settings,
-                        token=jwt,
                         name=name,
-                        report_path=report_path,
-                        started_at=started_at,
                         meta={
                             "cloud_service_provider": config["cloudServiceProvider"],
                             "exit_strategy": config["exitStrategy"],
@@ -911,14 +905,26 @@ def run_assessment(
                     )
             if upload_result.sync_id is None:
                 upload_result = replace(upload_result, sync_id=sync_id)
-            if upload_result.success:
+            if upload_result.success and not upload_result.pending:
                 print_step("Uploading to the platform...", status="ok")
+            elif upload_result.success:
+                print_step(
+                    "Uploading to the platform...",
+                    status="warning",
+                    logs="Accepted by the platform, still processing.",
+                )
             else:
                 print_step(
                     "Uploading to the platform...",
                     status="error",
-                    logs=f"{upload_result.reason}: {upload_result.message}",
+                    logs=f"{upload_result.error_code or upload_result.reason}: {upload_result.message}",
                 )
+                if upload_result.request_id:
+                    console.print(
+                        f"   ↳ request id: {upload_result.request_id}", style="dim"
+                    )
+            for warning in upload_result.warnings:
+                print_step("Platform warning", status="warning", logs=warning)
             write_upload_record(raw_data_path, upload_result)
             console.print("-------------------------------------------")
 

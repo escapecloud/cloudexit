@@ -2,11 +2,15 @@ import copy
 import inspect
 import json
 import os
+import shutil
 import sqlite3
 import tempfile
 import unittest
+from contextlib import nullcontext
 from pathlib import Path
 from unittest.mock import patch
+
+import requests
 
 import main
 from core.engine import generate_report, perform_risk_assessment
@@ -20,14 +24,27 @@ from core.upload import (
     upload,
     write_upload_record,
 )
+from tests.api_fixtures import (
+    ASSESSMENT_ID,
+    KEY,
+    URL,
+    corrupt,
+    error_body,
+    meta_reply,
+    minimal_document,
+    reply,
+    success_replies,
+    sync_body,
+    whoami_reply,
+)
 from tests.flow_fixtures import LOCAL_RISKS, SERVER_SCORES, build_flow_run
+from tests.http_fixtures import fake_http, make_response
 from tests.sync_fixtures import SYNC_ID, egress_row
 from utils import codes
 from utils.settings import Setting, Settings
 
 AWS_RESOURCES = [(1, "eu-central-1", 8), (4, "eu-central-1", 2)]
 COSTS = [("2026-09-01", 12.5, "USD")]
-URL = "https://platform.test/assessments/a-1"
 CONFIG = {
     "name": "Flow Test",
     "cloudServiceProvider": 2,
@@ -42,29 +59,15 @@ CONFIG = {
 }
 CONFIGURED = Settings(
     host=Setting("https://platform.test", "env CLOUDEXIT_HOST"),
-    api_key=Setting("k" * 24, "env CLOUDEXIT_API_KEY"),
+    api_key=Setting(KEY, "env CLOUDEXIT_API_KEY"),
 )
-SERVER_PAYLOAD = {
-    "data": {
-        "assessment_id": "a-1",
-        "url": URL,
-        "risk_inventory": [{"id": 8, "impacted_resources": [1]}],
-        "scoring_data": {
-            "exit_score": SERVER_SCORES[0],
-            "human_score": SERVER_SCORES[1],
-            "technology_score": SERVER_SCORES[2],
-            "operational_score": SERVER_SCORES[3],
-        },
-    }
-}
 
 
-def post_ok(payload=None):
-    return {"success": True, "payload": payload or SERVER_PAYLOAD, "status": 201}
-
-
-def post_failed(status=None, logs="failed"):
-    return {"success": False, "payload": None, "status": status, "logs": logs}
+def failed_replies(status, code="service_unavailable", retryable=True):
+    if status is None:
+        return [meta_reply(), whoami_reply(), requests.ConnectionError("refused")]
+    body = error_body(code, "server said no", retryable)
+    return [meta_reply(), whoami_reply(), reply(status, body)]
 
 
 class FlowTestCase(unittest.TestCase):
@@ -72,10 +75,19 @@ class FlowTestCase(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.tmp = Path(tmp.name)
-        patcher = patch.dict(os.environ, {"XDG_DATA_HOME": str(self.tmp / "data")})
+        patcher = patch.dict(
+            os.environ,
+            {
+                "XDG_DATA_HOME": str(self.tmp / "data"),
+                "XDG_CACHE_HOME": str(self.tmp / "cache"),
+            },
+        )
         patcher.start()
         self.addCleanup(patcher.stop)
         self.counter = 0
+
+    def forget_meta(self):
+        shutil.rmtree(self.tmp / "cache", ignore_errors=True)
 
     def report(self, **kwargs):
         self.counter += 1
@@ -206,7 +218,7 @@ class LocalResultsTests(FlowTestCase):
         info = {
             "status": "uploaded",
             "sync_id": SYNC_ID,
-            "assessment_id": "a-1",
+            "assessment_id": ASSESSMENT_ID,
             "url": URL,
         }
 
@@ -229,74 +241,91 @@ class LocalResultsTests(FlowTestCase):
 
 
 class UploadInterfaceTests(FlowTestCase):
-    def call(self, post, document=None, settings=CONFIGURED):
-        with patch("core.upload.post_assessment", return_value=post) as mock_post:
+    def call(self, replies, document=None, settings=CONFIGURED):
+        self.forget_meta()
+        with fake_http(*replies) as fake:
             result = upload(
-                document if document is not None else {"sync": {"id": SYNC_ID}},
+                document if document is not None else minimal_document(SYNC_ID),
                 settings,
-                token="jwt",
                 name="Flow",
-                report_path="/tmp/report",
-                started_at=1,
-                meta={"assessment_type": 1},
+                meta={"assessment_type": 1, "exit_strategy": 1},
             )
-        return result, mock_post
+        return result, fake
 
     def test_success_carries_the_link_and_nothing_else(self):
-        result, mock_post = self.call(post_ok())
+        result, fake = self.call(success_replies())
 
         self.assertTrue(result.success)
         self.assertFalse(result.failed)
         self.assertEqual(
-            (result.sync_id, result.assessment_id, result.url), (SYNC_ID, "a-1", URL)
+            (result.sync_id, result.assessment_id, result.url),
+            (SYNC_ID, ASSESSMENT_ID, URL),
         )
-        self.assertEqual(mock_post.call_args.kwargs["host"], "https://platform.test")
-        self.assertEqual(mock_post.call_args.kwargs["timeout"], 10.0)
+        self.assertEqual(
+            [(r.method, r.url) for r in fake.requests],
+            [
+                ("GET", "https://platform.test/api/v2/meta"),
+                ("GET", "https://platform.test/api/v2/whoami"),
+                ("POST", "https://platform.test/api/v2/syncs"),
+            ],
+        )
         self.assertFalse(hasattr(result, "risks"))
         self.assertFalse(hasattr(result, "scores"))
 
+    def test_the_result_carries_the_platform_ids_and_warnings(self):
+        warning = {"code": "tier_downgraded", "message": "Granted\nBasic."}
+        result, _ = self.call(success_replies(warnings=[warning]))
+
+        self.assertEqual(result.warnings, ("Granted Basic. (tier_downgraded)",))
+        self.assertEqual(result.platform_sync_id, sync_body()["id"])
+        self.assertEqual(result.request_id, "req-fake-0001")
+        self.assertEqual(result.message, "uploaded")
+
     def test_an_unsafe_link_is_dropped(self):
-        payload = {"data": {"assessment_id": "a-1", "url": "javascript:alert(1)"}}
-        result, _ = self.call(post_ok(payload))
+        result, _ = self.call(
+            success_replies(assessment={"url": "javascript:alert(1)"})
+        )
         self.assertIsNone(result.url)
 
     def test_failures_map_to_the_upload_codes(self):
-        cases = {
-            503: (REASON_UNAVAILABLE, codes.UPLOAD_UNAVAILABLE),
-            500: (REASON_UNAVAILABLE, codes.UPLOAD_UNAVAILABLE),
-            429: (REASON_UNAVAILABLE, codes.UPLOAD_UNAVAILABLE),
-            None: (REASON_UNAVAILABLE, codes.UPLOAD_UNAVAILABLE),
-            400: (REASON_REJECTED, codes.UPLOAD_REJECTED),
-            401: (REASON_REJECTED, codes.UPLOAD_REJECTED),
-            422: (REASON_REJECTED, codes.UPLOAD_REJECTED),
-        }
-        for status, (reason, exit_code) in cases.items():
-            with self.subTest(status=status):
-                result, _ = self.call(post_failed(status, "server said no"))
+        cases = (
+            (503, "service_unavailable", True, REASON_UNAVAILABLE, 12),
+            (500, "internal_error", True, REASON_UNAVAILABLE, 12),
+            (429, "rate_limited", True, REASON_UNAVAILABLE, 12),
+            (None, None, True, REASON_UNAVAILABLE, 12),
+            (400, "invalid_json", False, REASON_REJECTED, 10),
+            (422, "validation_failed", False, REASON_REJECTED, 10),
+            (401, "invalid_api_key", False, "upload_auth", 11),
+            (402, "insufficient_credits", False, "upload_quota", 13),
+            (404, "assessment_not_found", False, "upload_target", 14),
+            (400, "unsupported_schema_version", False, "upload_unsupported", 15),
+        )
+        for status, code, retryable, reason, exit_code in cases:
+            with self.subTest(status=status, code=code):
+                result, _ = self.call(failed_replies(status, code, retryable))
                 self.assertTrue(result.failed)
                 self.assertEqual((result.reason, result.exit_code), (reason, exit_code))
-                self.assertEqual(result.message, "server said no")
                 self.assertEqual(result.sync_id, SYNC_ID)
+                if code:
+                    self.assertEqual(result.message, "server said no")
+                    self.assertEqual(result.error_code, code)
+                    self.assertEqual(result.request_id, "req-fake-0001")
+
+    def test_no_document_is_a_rejected_upload_without_a_request(self):
+        with fake_http():
+            result = upload(None, CONFIGURED, name="Flow", meta={})
+        self.assertEqual((result.reason, result.exit_code), (REASON_REJECTED, 10))
 
     def test_an_unexpected_error_is_a_failed_upload_not_a_crash(self):
-        with patch("core.upload.post_assessment", side_effect=ValueError("bad json")):
-            result = upload(
-                None,
-                CONFIGURED,
-                token="jwt",
-                name="Flow",
-                report_path="/tmp/report",
-                started_at=1,
-                meta={},
-            )
+        with patch("core.upload.ApiClient.from_settings", side_effect=ValueError("x")):
+            result = upload(minimal_document(SYNC_ID), CONFIGURED, name="Flow", meta={})
         self.assertTrue(result.failed)
         self.assertEqual(result.reason, REASON_UNAVAILABLE)
         self.assertIn("ValueError", result.message)
-        self.assertNotIn("bad json", result.message)
 
     def test_report_info_and_the_record_file(self):
         success = UploadResult(
-            True, True, sync_id=SYNC_ID, assessment_id="a-1", url=URL
+            True, True, sync_id=SYNC_ID, assessment_id=ASSESSMENT_ID, url=URL
         )
         failed = failure(REASON_REJECTED, "nope", SYNC_ID)
 
@@ -305,7 +334,7 @@ class UploadInterfaceTests(FlowTestCase):
             {
                 "status": "uploaded",
                 "sync_id": SYNC_ID,
-                "assessment_id": "a-1",
+                "assessment_id": ASSESSMENT_ID,
                 "url": URL,
             },
         )
@@ -315,6 +344,27 @@ class UploadInterfaceTests(FlowTestCase):
         )
         self.assertIsNone(report_info(None))
         self.assertIsNone(report_info(UploadResult(False, False)))
+
+        detailed = UploadResult(
+            True,
+            True,
+            sync_id=SYNC_ID,
+            assessment_id=ASSESSMENT_ID,
+            url=URL,
+            platform_sync_id="p-1",
+            request_id="req-1",
+            warnings=("Granted Basic.",),
+            pending=True,
+        )
+        self.assertEqual(report_info(detailed), report_info(success))
+        record = json.loads(
+            write_upload_record(str(self.tmp), detailed).read_text(encoding="utf-8")
+        )
+        self.assertEqual(record["warnings"], ["Granted Basic."])
+        self.assertEqual(
+            (record["platform_sync_id"], record["request_id"], record["pending"]),
+            ("p-1", "req-1", True),
+        )
 
         path = write_upload_record(str(self.tmp), success)
         record = json.loads(path.read_text())
@@ -331,18 +381,17 @@ class RunFlowTests(FlowTestCase):
         self,
         report,
         *,
-        mode=("offline", None),
         settings=None,
-        post=None,
+        replies=None,
         egress_ok=None,
         assessment_type=2,
         **kwargs,
     ):
         self.steps = []
         raw_data = os.path.join(report, "raw_data")
+        console_patch = patch("main.console.print")
         patches = [
             patch("main.validate_config"),
-            patch("main.resolve_mode", return_value=mode),
             patch("main.create_directory", return_value=(report, raw_data)),
             patch("main.verify_credentials", return_value=(True, "ok")),
             patch("main.test_permissions", return_value=(True, True, True, "ok")),
@@ -358,10 +407,8 @@ class RunFlowTests(FlowTestCase):
                 "main.print_step",
                 side_effect=lambda *a, **k: self.steps.append((a, k)),
             ),
-            patch("main.console.print"),
+            console_patch,
         ]
-        if post is not None:
-            patches.append(patch("core.upload.post_assessment", return_value=post))
         if egress_ok is not None:
             patches += [
                 patch(
@@ -378,12 +425,16 @@ class RunFlowTests(FlowTestCase):
                 ),
             ]
         for item in patches:
-            item.start()
+            started = item.start()
             self.addCleanup(item.stop)
+            if item is console_patch:
+                self.printed = started
 
         config = copy.deepcopy(CONFIG)
         config["assessmentType"] = assessment_type
-        return main.run_assessment(config, "aws", settings=settings, **kwargs)
+        self.forget_meta()
+        with fake_http(*replies) if replies is not None else nullcontext():
+            return main.run_assessment(config, "aws", settings=settings, **kwargs)
 
     def sync(self, report):
         return json.loads(self.raw(report, "sync.json").read_text())
@@ -420,9 +471,7 @@ class RunFlowTests(FlowTestCase):
 
     def test_the_local_results_are_computed_when_connected_too(self):
         report = self.report()
-        self.run_assessment(
-            report, mode=("online", "jwt"), settings=CONFIGURED, post=post_ok()
-        )
+        self.run_assessment(report, settings=CONFIGURED, replies=success_replies())
         self.assertEqual(
             [(row[1], row[2]) for row in self.rows(report, "risk_inventory")],
             LOCAL_RISKS,
@@ -431,9 +480,7 @@ class RunFlowTests(FlowTestCase):
     def test_a_successful_upload_stores_the_link_and_no_platform_results(self):
         report = self.report()
 
-        self.run_assessment(
-            report, mode=("online", "jwt"), settings=CONFIGURED, post=post_ok()
-        )
+        self.run_assessment(report, settings=CONFIGURED, replies=success_replies())
 
         self.assert_local_report(report)
         record = json.loads(self.raw(report, "upload.json").read_text())
@@ -442,7 +489,7 @@ class RunFlowTests(FlowTestCase):
             {
                 "status": "uploaded",
                 "sync_id": self.sync(report)["sync"]["id"],
-                "assessment_id": "a-1",
+                "assessment_id": ASSESSMENT_ID,
                 "url": URL,
             },
         )
@@ -461,9 +508,7 @@ class RunFlowTests(FlowTestCase):
     def test_connected_runs_keep_the_requested_depth_in_the_document(self):
         report = self.report()
 
-        self.run_assessment(
-            report, mode=("online", "jwt"), settings=CONFIGURED, post=post_ok()
-        )
+        self.run_assessment(report, settings=CONFIGURED, replies=success_replies())
 
         self.assertEqual(self.sync(report)["assessment_type"], 2)
         # The local report is always the Basic report
@@ -474,19 +519,19 @@ class RunFlowTests(FlowTestCase):
     def test_a_failed_upload_still_writes_the_report_and_exits_with_an_upload_code(
         self,
     ):
-        for status, exit_code, reason in (
-            (503, codes.UPLOAD_UNAVAILABLE, REASON_UNAVAILABLE),
-            (None, codes.UPLOAD_UNAVAILABLE, REASON_UNAVAILABLE),
-            (422, codes.UPLOAD_REJECTED, REASON_REJECTED),
+        for status, code, exit_code, reason in (
+            (503, "service_unavailable", codes.UPLOAD_UNAVAILABLE, REASON_UNAVAILABLE),
+            (None, None, codes.UPLOAD_UNAVAILABLE, REASON_UNAVAILABLE),
+            (422, "validation_failed", codes.UPLOAD_REJECTED, REASON_REJECTED),
+            (401, "api_key_revoked", codes.UPLOAD_AUTH, "upload_auth"),
         ):
             with self.subTest(status=status):
                 report = self.report()
                 with self.assertRaises(SystemExit) as ctx:
                     self.run_assessment(
                         report,
-                        mode=("online", "jwt"),
                         settings=CONFIGURED,
-                        post=post_failed(status, "server responded"),
+                        replies=failed_replies(status, code, status in (503, None)),
                     )
 
                 self.assertEqual(ctx.exception.code, exit_code)
@@ -501,29 +546,100 @@ class RunFlowTests(FlowTestCase):
                 )
                 self.assertEqual(self.rows(report, "scoring_data"), [])
 
+    def test_the_failure_is_printed_with_its_code_and_request_id(self):
+        report = self.report()
+        with self.assertRaises(SystemExit):
+            self.run_assessment(
+                report,
+                settings=CONFIGURED,
+                replies=failed_replies(422, "validation_failed", False),
+            )
+
+        (logs,) = [
+            kwargs["logs"]
+            for args, kwargs in self.steps
+            if args[0] == "Uploading to the platform..." and kwargs.get("logs")
+        ]
+        self.assertEqual(logs, "validation_failed: server said no")
+        self.assertIn("req-fake-0001", str(self.printed.call_args_list))
+
+    def test_warnings_from_the_platform_are_printed_one_per_line(self):
+        report = self.report()
+        warnings = [
+            {"code": "unknown_resource_types", "message": "Two types are unknown."},
+            {"code": "tier_downgraded", "message": "Granted Basic."},
+        ]
+        self.run_assessment(
+            report,
+            settings=CONFIGURED,
+            replies=success_replies(warnings=warnings),
+        )
+
+        printed = [
+            kwargs["logs"]
+            for args, kwargs in self.steps
+            if args[0] == "Platform warning"
+        ]
+        self.assertEqual(
+            printed,
+            [
+                "Two types are unknown. (unknown_resource_types)",
+                "Granted Basic. (tier_downgraded)",
+            ],
+        )
+
+    def test_a_run_still_processing_is_recorded_and_exits_zero(self):
+        report = self.report()
+        pending = UploadResult(
+            True,
+            True,
+            message="accepted, still processing",
+            sync_id=SYNC_ID,
+            assessment_id=ASSESSMENT_ID,
+            url=URL,
+            pending=True,
+        )
+        with patch("main.upload", return_value=pending):
+            self.run_assessment(report, settings=CONFIGURED)
+
+        self.assert_local_report(report)
+        record = json.loads(self.raw(report, "upload.json").read_text())
+        self.assertEqual((record["status"], record["pending"]), ("uploaded", True))
+        self.assertIn(URL, self.html(report))
+        logs = [kwargs.get("logs") for _, kwargs in self.steps]
+        self.assertIn("Accepted by the platform, still processing.", logs)
+
     def test_an_unreadable_platform_answer_does_not_cost_the_report(self):
         report = self.report()
-        with (
-            patch("core.upload.post_assessment", side_effect=ValueError("not json")),
-            self.assertRaises(SystemExit) as ctx,
-        ):
-            self.run_assessment(report, mode=("online", "jwt"), settings=CONFIGURED)
+        with self.assertRaises(SystemExit) as ctx:
+            self.run_assessment(
+                report,
+                settings=CONFIGURED,
+                replies=[
+                    meta_reply(),
+                    whoami_reply(),
+                    make_response(201, text="not json"),
+                ],
+            )
 
         self.assertEqual(ctx.exception.code, codes.UPLOAD_UNAVAILABLE)
         self.assert_local_report(report)
 
-    def test_a_failed_sign_in_is_a_failed_upload_not_an_offline_run(self):
+    def test_a_key_that_cannot_be_right_is_a_failed_upload_not_an_offline_run(self):
         report = self.report()
+        settings = Settings(
+            host=CONFIGURED.host, api_key=Setting(corrupt(KEY), "env CLOUDEXIT_API_KEY")
+        )
         with (
             patch("main.upload") as mock_upload,
             self.assertRaises(SystemExit) as ctx,
         ):
-            self.run_assessment(report, mode=("offline", None), settings=CONFIGURED)
+            self.run_assessment(report, settings=settings, replies=[])
 
         mock_upload.assert_not_called()
-        self.assertEqual(ctx.exception.code, codes.UPLOAD_UNAVAILABLE)
+        self.assertEqual(ctx.exception.code, codes.UPLOAD_AUTH)
         self.assert_local_report(report)
-        self.assertIn("Not uploaded: upload_unavailable", self.html(report))
+        self.assertIn("Not uploaded: upload_auth", self.html(report))
         # A configured platform keeps the requested depth: nothing forces Basic
         self.assertEqual(self.sync(report)["assessment_type"], 2)
         messages = [args[0] for args, _ in self.steps]
@@ -534,7 +650,7 @@ class RunFlowTests(FlowTestCase):
         for settings in (None, Settings(), half):
             with self.subTest(settings=settings):
                 report = self.report()
-                self.run_assessment(report, mode=("offline", None), settings=settings)
+                self.run_assessment(report, settings=settings)
                 self.assertEqual(self.sync(report)["assessment_type"], 1)
 
     def test_a_dry_run_never_uploads_and_never_forces_basic(self):
@@ -542,8 +658,8 @@ class RunFlowTests(FlowTestCase):
         with patch("main.upload") as mock_upload:
             self.run_assessment(
                 report,
-                mode=("online", "jwt"),
                 settings=CONFIGURED,
+                replies=[],
                 dry_run=True,
             )
 
@@ -557,9 +673,8 @@ class RunFlowTests(FlowTestCase):
         with self.assertRaises(SystemExit) as ctx:
             self.run_assessment(
                 report,
-                mode=("online", "jwt"),
                 settings=CONFIGURED,
-                post=post_failed(503),
+                replies=failed_replies(503, "service_unavailable"),
                 egress=True,
                 egress_ok=False,
             )
@@ -576,9 +691,8 @@ class RunFlowTests(FlowTestCase):
         ):
             self.run_assessment(
                 report,
-                mode=("online", "jwt"),
                 settings=CONFIGURED,
-                post=post_failed(503),
+                replies=[],
                 emit_payload=str(self.tmp / "out"),
             )
 
@@ -616,9 +730,8 @@ class RunFlowTests(FlowTestCase):
         ):
             self.run_assessment(
                 report,
-                mode=("online", "jwt"),
                 settings=CONFIGURED,
-                post=post_ok(),
+                replies=success_replies(),
                 egress=True,
             )
 

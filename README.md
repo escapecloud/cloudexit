@@ -153,7 +153,20 @@ Every run writes the same three files: `report.pdf`, `index.html` and `raw_data/
 
 ## Reports and uploads
 
-The local report is always the Basic report, computed on your machine, whether or not a platform is configured. Anything the platform computes stays on the platform: after an upload the local report only records the link (also stored in `raw_data/upload.json`). If an upload fails, the report is still written, with a short "Not uploaded: <reason>" banner, and the run exits with an upload code (10 or 12 for now) after everything else has finished. Problems in the collection stages take precedence over upload codes.
+The local report is always the Basic report, computed on your machine, whether or not a platform is configured. Anything the platform computes stays on the platform: after an upload the local report only records the link (also stored in `raw_data/upload.json`). If an upload fails, the report is still written, with a short "Not uploaded: <reason>" banner, and the run exits with an upload code after everything else has finished. Problems in the collection stages take precedence over upload codes.
+
+| Exit code | Meaning |
+| --- | --- |
+| 10 | The platform rejected the data, or it is beyond a limit the platform announces. Retrying the same data will not help. |
+| 11 | The API key is missing, mistyped, expired, revoked, not allowed to do this, or belongs to another region. |
+| 12 | The platform is unreachable, busy or in maintenance. Running again is safe: the run keeps the same sync ID. |
+| 13 | Credits or a quota ran out. |
+| 14 | The assessment named by `--assessment-id` is missing, deleted, archived, or does not match the data. |
+| 15 | The platform does not accept this cloudexit version or the sync document version. |
+
+Before anything is sent the key is checked on your machine (prefix, length and checksum), and a regional ExitCloud key is only ever sent to its own region. The key never appears in output or logs. On failure the run prints the platform's error code, its message and a request ID to quote when asking for help.
+
+Connections always verify the platform's certificate. For a private certificate authority use `--ca-bundle` or `CLOUDEXIT_CA_BUNDLE`; otherwise `REQUESTS_CA_BUNDLE` and `SSL_CERT_FILE` are honoured. There is no option to turn verification off. `HTTPS_PROXY` and `NO_PROXY` are honoured. Requests give up after 10 seconds to connect and 60 seconds to read (`--timeout` sets both). The platform's capabilities are cached for five minutes in `~/.cache/cloudexit/` (`$XDG_CACHE_HOME/cloudexit/`, or `%LOCALAPPDATA%\cloudexit\cache\` on Windows).
 
 ## Data Landscape & Egress Estimation (alpha)
 
