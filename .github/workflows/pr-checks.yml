@@ -102,6 +102,92 @@ jobs:
 
           "$cloudexit" --version
           "$cloudexit" config path
+          "$RUNNER_TEMP/venv/bin/python" - <<'PY'
+          from core.utils_azure import (
+              create_cost_client,
+              create_resource_client,
+              create_subscription_client,
+          )
+
+
+          class Credential:
+              def get_token(self, *scopes, **kwargs):
+                  raise RuntimeError("no network in this check")
+
+
+          create_resource_client(Credential(), "00000000-0000-0000-0000-000000000000")
+          create_subscription_client(Credential())
+          create_cost_client(Credential())
+          print("the Azure clients import and build")
+          PY
+          "$cloudexit" aws \
+            --tfstate "$GITHUB_WORKSPACE/tests/fixtures/smoke/aws.tfstate" \
+            --catalogue "$RUNNER_TEMP/smoke.db" \
+            --non-interactive
+
+          report="$(ls -d reports/*/ | head -n 1)"
+          test -f "${report}index.html"
+          test -f "${report}report.pdf"
+          test -d "${report}assets/css"
+          test -d "${report}assets/img"
+          test -n "$(find "${report}assets/icons/aws" -name '*.png' | head -n 1)"
+          test "$(wc -c < "${report}report.pdf")" -gt 10000
+
+  upgrade-smoke:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install the 1.1.7 environment
+        run: |
+          python -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/python" -m pip install --upgrade pip
+          git show v1.1.7:requirements.txt > "$RUNNER_TEMP/req-1.1.7.txt"
+          "$RUNNER_TEMP/venv/bin/python" -m pip install -r "$RUNNER_TEMP/req-1.1.7.txt"
+
+      - name: Upgrade it to this branch
+        run: '"$RUNNER_TEMP/venv/bin/python" -m pip install .'
+
+      - name: Build the smoke dataset
+        run: '"$RUNNER_TEMP/venv/bin/python" -m tests.make_smoke_dataset "$RUNNER_TEMP/smoke.db"'
+
+      - name: Run from an unrelated directory
+        env:
+          ESC_EXIT_STRATEGY: "1"
+          ESC_ASSESSMENT_TYPE: "1"
+        run: |
+          cloudexit="$RUNNER_TEMP/venv/bin/cloudexit"
+          workdir="$(mktemp -d)"
+          cd "$workdir"
+
+          "$cloudexit" --version
+          "$cloudexit" config path
+          "$RUNNER_TEMP/venv/bin/python" - <<'PY'
+          from core.utils_azure import (
+              create_cost_client,
+              create_resource_client,
+              create_subscription_client,
+          )
+
+
+          class Credential:
+              def get_token(self, *scopes, **kwargs):
+                  raise RuntimeError("no network in this check")
+
+
+          create_resource_client(Credential(), "00000000-0000-0000-0000-000000000000")
+          create_subscription_client(Credential())
+          create_cost_client(Credential())
+          print("the Azure clients import and build")
+          PY
           "$cloudexit" aws \
             --tfstate "$GITHUB_WORKSPACE/tests/fixtures/smoke/aws.tfstate" \
             --catalogue "$RUNNER_TEMP/smoke.db" \

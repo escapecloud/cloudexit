@@ -367,7 +367,7 @@ class VaultDetectionTests(unittest.TestCase):
 
 class CollectAzureEgressTests(unittest.TestCase):
     @patch("core.utils_egress_azure.fetch_monitor_metrics")
-    @patch("core.utils_azure.ResourceManagementClient")
+    @patch("azure.mgmt.resource.resources.ResourceManagementClient")
     def test_returns_rows_and_archive_tiers(self, mock_rmc_cls, mock_fetch):
         mock_fetch.side_effect = [
             {"UsedCapacity": [{"dimension": None, "value": float(10 * GIB)}]},

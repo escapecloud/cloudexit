@@ -504,7 +504,9 @@ class NonInteractiveAzureTests(unittest.TestCase):
         mock_credential = MagicMock()
         with (
             patch.dict(os.environ, self._BASE_ENV, clear=False),
-            patch("main.ClientSecretCredential", return_value=mock_credential),
+            patch(
+                "azure.identity.ClientSecretCredential", return_value=mock_credential
+            ),
             patch("main.run_assessment") as mock_run,
             patch("main.console.print"),
         ):
@@ -522,8 +524,10 @@ class NonInteractiveAzureTests(unittest.TestCase):
         mock_credential = MagicMock()
         with (
             patch.dict(os.environ, env, clear=False),
-            patch("main.DefaultAzureCredential", return_value=mock_credential),
-            patch("main.ClientSecretCredential") as mock_client_secret_cred,
+            patch(
+                "azure.identity.DefaultAzureCredential", return_value=mock_credential
+            ),
+            patch("azure.identity.ClientSecretCredential") as mock_client_secret_cred,
             patch("main.run_assessment") as mock_run,
             patch("main.console.print"),
         ):
@@ -783,7 +787,9 @@ class EgressStageTests(unittest.TestCase):
         mock_credential = MagicMock()
         with (
             patch.dict(os.environ, NonInteractiveAzureTests._BASE_ENV, clear=False),
-            patch("main.ClientSecretCredential", return_value=mock_credential),
+            patch(
+                "azure.identity.ClientSecretCredential", return_value=mock_credential
+            ),
             patch("main.run_assessment") as mock_run,
             patch("main.console.print"),
         ):

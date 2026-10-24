@@ -5,9 +5,6 @@ import os
 import boto3
 from datetime import datetime, timezone, timedelta
 from typing import Any
-from azure.identity import ClientSecretCredential
-from azure.core.exceptions import ClientAuthenticationError
-from azure.mgmt.authorization import AuthorizationManagementClient
 from botocore.exceptions import NoCredentialsError
 
 from .utils import copy_assets
@@ -15,8 +12,10 @@ from .utils_aws import build_aws_resource_inventory, build_aws_cost_inventory
 from .utils_azure import (
     build_azure_cost_inventory,
     build_azure_resource_inventory,
+    create_credential,
     create_resource_client,
 )
+from utils.azure import azure_import
 from .utils_db import connect, load_data
 from .utils_tfstate import build_tfstate_resource_inventory
 from .report.context import build_context, collect_provenance
@@ -39,13 +38,11 @@ def verify_credentials(
     logs = ""
 
     if cloud_service_provider == 1:  # Azure
+        ClientAuthenticationError = azure_import(
+            "azure.core.exceptions", "ClientAuthenticationError"
+        )
         try:
-            # Use DefaultAzureCredential if provided, else use client secrets
-            credential = provider_details.get("credential") or ClientSecretCredential(
-                tenant_id=provider_details["tenantId"],
-                client_id=provider_details["clientId"],
-                client_secret=provider_details["clientSecret"],
-            )
+            credential = create_credential(provider_details)
             resource_client = create_resource_client(
                 credential, provider_details["subscriptionId"]
             )
@@ -93,13 +90,14 @@ def test_permissions(
     logs = ""
 
     if cloud_service_provider == 1:  # Azure
+        ClientAuthenticationError = azure_import(
+            "azure.core.exceptions", "ClientAuthenticationError"
+        )
+        AuthorizationManagementClient = azure_import(
+            "azure.mgmt.authorization", "AuthorizationManagementClient"
+        )
         try:
-            # Use DefaultAzureCredential if provided, else use client secrets
-            credential = provider_details.get("credential") or ClientSecretCredential(
-                tenant_id=provider_details["tenantId"],
-                client_id=provider_details["clientId"],
-                client_secret=provider_details["clientSecret"],
-            )
+            credential = create_credential(provider_details)
             resource_group_scope = f"/subscriptions/{provider_details['subscriptionId']}/resourceGroups/{provider_details['resourceGroupName']}"
 
             # Check role assignments

@@ -44,6 +44,8 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+Upgrading from 1.x? Install into a new virtual environment, not over the old one.
+
 Run your first assessment:
 
 ```bash

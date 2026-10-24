@@ -1,6 +1,6 @@
 azure-identity==1.26.0
 azure-mgmt-resource==26.0.0
-azure-mgmt-resource-subscriptions==1.0.0
+azure-mgmt-subscription==3.1.1
 azure-mgmt-authorization==4.0.0
 azure-mgmt-costmanagement==5.0.0
 boto3==1.43.118
