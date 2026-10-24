@@ -8,7 +8,7 @@ from argparse import Namespace
 from pathlib import Path
 from unittest.mock import patch
 
-import main
+from cloudexit.cli import app
 from tests.support.isolation import isolated_environ
 from cloudexit import codes
 from cloudexit.settings import (
@@ -495,12 +495,12 @@ class ConfigCommandTests(SettingsTestCase):
         with (
             patch("sys.argv", ["cloudexit", *argv]),
             patch.dict(os.environ, environ, clear=True),
-            patch("main.prepare_catalogue") as mock_dataset,
-            patch("main.console.print") as mock_print,
+            patch("cloudexit.cli.app.prepare_catalogue") as mock_dataset,
+            patch("cloudexit.cli.app.console.print") as mock_print,
             contextlib.redirect_stdout(out),
         ):
             try:
-                main.main()
+                app.main()
                 code = None
             except SystemExit as exc:
                 code = exc.code
@@ -541,13 +541,13 @@ class ConfigCommandTests(SettingsTestCase):
             contextlib.redirect_stderr(io.StringIO()),
             self.assertRaises(SystemExit),
         ):
-            main.parse_arguments()
+            app.parse_arguments()
 
 
 class ArgumentTests(unittest.TestCase):
     def parse(self, *argv):
         with patch("sys.argv", ["cloudexit", *argv]):
-            return main.parse_arguments()
+            return app.parse_arguments()
 
     def test_platform_flags_on_aws_and_azure(self):
         for provider in ("aws", "azure"):
@@ -581,13 +581,15 @@ class ArgumentTests(unittest.TestCase):
     def test_main_resolves_settings_before_the_dataset_download(self):
         args = Namespace(cloud_provider="aws")
         with (
-            patch("main.parse_arguments", return_value=args),
-            patch("main.load_settings", return_value=Settings()) as mock_load,
-            patch("main.prepare_catalogue") as mock_dataset,
-            patch("main.handle_aws") as mock_handle,
-            patch("main.console.print"),
+            patch("cloudexit.cli.app.parse_arguments", return_value=args),
+            patch(
+                "cloudexit.cli.app.load_settings", return_value=Settings()
+            ) as mock_load,
+            patch("cloudexit.cli.app.prepare_catalogue") as mock_dataset,
+            patch("cloudexit.cli.app.handle_aws") as mock_handle,
+            patch("cloudexit.cli.app.console.print"),
         ):
-            main.main()
+            app.main()
 
         mock_load.assert_called_once()
         self.assertIsInstance(args.settings, Settings)
@@ -596,14 +598,19 @@ class ArgumentTests(unittest.TestCase):
 
     def test_a_bad_setting_fails_before_the_dataset_download(self):
         with (
-            patch("main.parse_arguments", return_value=Namespace(cloud_provider="aws")),
-            patch("main.load_settings", side_effect=SettingsError("bad host")),
-            patch("main.prepare_catalogue") as mock_dataset,
-            patch("main.handle_aws") as mock_handle,
-            patch("main.console.print"),
+            patch(
+                "cloudexit.cli.app.parse_arguments",
+                return_value=Namespace(cloud_provider="aws"),
+            ),
+            patch(
+                "cloudexit.cli.app.load_settings", side_effect=SettingsError("bad host")
+            ),
+            patch("cloudexit.cli.app.prepare_catalogue") as mock_dataset,
+            patch("cloudexit.cli.app.handle_aws") as mock_handle,
+            patch("cloudexit.cli.app.console.print"),
             self.assertRaises(SystemExit) as ctx,
         ):
-            main.main()
+            app.main()
 
         self.assertEqual(ctx.exception.code, codes.CONFIG)
         mock_dataset.assert_not_called()

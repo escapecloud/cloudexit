@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 import requests
 
-import main
+from cloudexit.cli import app
 from cloudexit.catalogue import db as catalogue_db
 from tests.support.isolation import isolated_environ
 from tests.support.catalogue import (
@@ -572,14 +572,16 @@ class RunIntegrationTests(CatalogueTestCase):
             path=Path("/x/data.db"), status="current", version=V2, date="2026-11-03"
         )
         defaults.update(kwargs)
-        return patch("main.ensure_catalogue", return_value=EnsureResult(**defaults))
+        return patch(
+            "cloudexit.cli.app.ensure_catalogue", return_value=EnsureResult(**defaults)
+        )
 
     def test_a_failed_update_is_a_visible_step_result(self):
         with (
             self.ensure(status="failed", version=V1, reason="cannot reach server"),
-            patch("main.print_step") as mock_step,
+            patch("cloudexit.cli.app.print_step") as mock_step,
         ):
-            main.prepare_catalogue(self.args())
+            app.prepare_catalogue(self.args())
 
         mock_step.assert_called_once_with(
             f"Catalogue update failed, using {V1} from 2026-11-03.",
@@ -590,9 +592,9 @@ class RunIntegrationTests(CatalogueTestCase):
     def test_a_failed_update_with_an_unknown_version_says_so(self):
         with (
             self.ensure(status="failed", version=None, reason="offline"),
-            patch("main.print_step") as mock_step,
+            patch("cloudexit.cli.app.print_step") as mock_step,
         ):
-            main.prepare_catalogue(self.args())
+            app.prepare_catalogue(self.args())
         self.assertIn("using unknown from 2026-11-03", mock_step.call_args.args[0])
 
     def test_up_to_date_and_updated_steps(self):
@@ -601,19 +603,23 @@ class RunIntegrationTests(CatalogueTestCase):
             ("updated", f"Catalogue updated to {V2}."),
         ):
             with self.subTest(status):
-                with self.ensure(status=status), patch("main.print_step") as step:
-                    main.prepare_catalogue(self.args())
+                with (
+                    self.ensure(status=status),
+                    patch("cloudexit.cli.app.print_step") as step,
+                ):
+                    app.prepare_catalogue(self.args())
                 step.assert_called_once_with(text, status="ok")
 
     def test_without_any_dataset_the_run_stops_with_the_config_code(self):
         with (
             patch(
-                "main.ensure_catalogue", side_effect=CatalogueUnavailable("no dataset")
+                "cloudexit.cli.app.ensure_catalogue",
+                side_effect=CatalogueUnavailable("no dataset"),
             ),
-            patch("main.console.print") as mock_print,
+            patch("cloudexit.cli.app.console.print") as mock_print,
         ):
             with self.assertRaises(SystemExit) as ctx:
-                main.prepare_catalogue(self.args())
+                app.prepare_catalogue(self.args())
 
         self.assertEqual(ctx.exception.code, codes.CONFIG)
         self.assertIn("no dataset", mock_print.call_args.args[0])
@@ -626,10 +632,10 @@ class RunIntegrationTests(CatalogueTestCase):
         args = Namespace(settings=Settings(), catalogue=str(path))
 
         with (
-            patch("main.ensure_catalogue") as mock_ensure,
-            patch("main.print_step") as mock_step,
+            patch("cloudexit.cli.app.ensure_catalogue") as mock_ensure,
+            patch("cloudexit.cli.app.print_step") as mock_step,
         ):
-            main.prepare_catalogue(args)
+            app.prepare_catalogue(args)
 
         mock_ensure.assert_not_called()
         self.assertIn(V3, mock_step.call_args.args[0])
@@ -639,8 +645,11 @@ class RunIntegrationTests(CatalogueTestCase):
 
     def test_a_bad_catalogue_flag_stops_the_run(self):
         args = Namespace(settings=Settings(), catalogue=str(self.tmp / "missing.db"))
-        with patch("main.console.print"), self.assertRaises(SystemExit) as ctx:
-            main.prepare_catalogue(args)
+        with (
+            patch("cloudexit.cli.app.console.print"),
+            self.assertRaises(SystemExit) as ctx,
+        ):
+            app.prepare_catalogue(args)
         self.assertEqual(ctx.exception.code, codes.CONFIG)
 
     def test_the_report_copy_uses_the_dataset_the_run_used(self):
@@ -667,18 +676,18 @@ class CatalogueCommandTests(CatalogueTestCase):
             patch("sys.argv", ["cloudexit", "catalogue", *argv]),
             patch.dict(os.environ, environ, clear=True),
             patch(
-                "main.load_settings",
+                "cloudexit.cli.app.load_settings",
                 return_value=Settings(
                     catalogue_url=Setting(BASE, "env CLOUDEXIT_CATALOGUE_URL")
                 ),
             ),
-            patch("main.prepare_catalogue") as mock_prepare,
-            patch("main.console.print") as mock_print,
+            patch("cloudexit.cli.app.prepare_catalogue") as mock_prepare,
+            patch("cloudexit.cli.app.console.print") as mock_print,
             fake_http(*replies) as fake,
             contextlib.redirect_stdout(out),
         ):
             try:
-                main.main()
+                app.main()
                 code = None
             except SystemExit as exc:
                 code = exc.code
@@ -756,12 +765,12 @@ class CatalogueCommandTests(CatalogueTestCase):
             contextlib.redirect_stderr(io.StringIO()),
             self.assertRaises(SystemExit),
         ):
-            main.parse_arguments()
+            app.parse_arguments()
 
     def test_the_run_flag_is_accepted_on_aws_and_azure(self):
         for provider in ("aws", "azure"):
             with patch("sys.argv", ["cloudexit", provider, "--catalogue", "f.db.gz"]):
-                self.assertEqual(main.parse_arguments().catalogue, "f.db.gz")
+                self.assertEqual(app.parse_arguments().catalogue, "f.db.gz")
 
 
 class DatabaseContractTests(CatalogueTestCase):

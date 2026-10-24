@@ -11,7 +11,7 @@ from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
 
-import main
+from cloudexit.cli import app
 from cloudexit.platform import document as platform_document
 from cloudexit.platform.document import (
     SCHEMA_VERSION,
@@ -824,47 +824,54 @@ class RunAssessmentTests(SyncDocumentTestCase):
     def run_assessment(self, report, *, egress_ok=None, **kwargs):
         raw_data = os.path.join(report, "raw_data")
         patches = [
-            patch("main.validate_config"),
-            patch("main.create_directory", return_value=(report, raw_data)),
-            patch("main.verify_credentials", return_value=(True, "ok")),
-            patch("main.test_permissions", return_value=(True, True, True, "ok")),
+            patch("cloudexit.cli.app.validate_config"),
             patch(
-                "main.create_resource_inventory",
+                "cloudexit.cli.app.create_directory", return_value=(report, raw_data)
+            ),
+            patch("cloudexit.cli.app.verify_credentials", return_value=(True, "ok")),
+            patch(
+                "cloudexit.cli.app.test_permissions",
+                return_value=(True, True, True, "ok"),
+            ),
+            patch(
+                "cloudexit.cli.app.create_resource_inventory",
                 return_value={"success": True, "logs": ""},
             ),
             patch(
-                "main.create_cost_inventory", return_value={"success": True, "logs": ""}
-            ),
-            patch(
-                "main.perform_risk_assessment",
+                "cloudexit.cli.app.create_cost_inventory",
                 return_value={"success": True, "logs": ""},
             ),
             patch(
-                "main.generate_report", return_value={"success": True, "reports": {}}
+                "cloudexit.cli.app.perform_risk_assessment",
+                return_value={"success": True, "logs": ""},
             ),
-            patch("main.add_run_log_handler"),
-            patch("main.print_step"),
-            patch("main.console.print"),
+            patch(
+                "cloudexit.cli.app.generate_report",
+                return_value={"success": True, "reports": {}},
+            ),
+            patch("cloudexit.cli.app.add_run_log_handler"),
+            patch("cloudexit.cli.app.print_step"),
+            patch("cloudexit.cli.app.console.print"),
         ]
         if egress_ok is not None:
             patches += [
                 patch(
-                    "main.estimate_egress",
+                    "cloudexit.cli.app.estimate_egress",
                     return_value={"success": egress_ok, "logs": "x", "json_path": "p"},
                 ),
                 patch(
-                    "main.generate_egress_html_report",
+                    "cloudexit.cli.app.generate_egress_html_report",
                     return_value={"success": True, "html_path": "h"},
                 ),
                 patch(
-                    "main.generate_egress_pdf_report",
+                    "cloudexit.cli.app.generate_egress_pdf_report",
                     return_value={"success": True, "pdf_path": "p"},
                 ),
             ]
         for item in patches:
             item.start()
             self.addCleanup(item.stop)
-        return main.run_assessment(copy.deepcopy(self.CONFIG), "aws", **kwargs)
+        return app.run_assessment(copy.deepcopy(self.CONFIG), "aws", **kwargs)
 
     def test_every_run_writes_a_sync_document(self):
         report = self.report(resources=AWS_RESOURCES, costs=AWS_COSTS)
@@ -881,7 +888,7 @@ class RunAssessmentTests(SyncDocumentTestCase):
 
     def test_the_sync_id_is_created_at_collection_start(self):
         report = self.report(resources=AWS_RESOURCES)
-        with patch("main.new_uuid7", return_value=SYNC_ID) as mock_id:
+        with patch("cloudexit.cli.app.new_uuid7", return_value=SYNC_ID) as mock_id:
             self.run_assessment(report)
 
         mock_id.assert_called_once_with()
@@ -931,7 +938,7 @@ class RunAssessmentTests(SyncDocumentTestCase):
         self.run_assessment(report)
 
         self.assertFalse((Path(report) / "raw_data" / "sync.json").exists())
-        statuses = [call.kwargs.get("status") for call in main.print_step.mock_calls]
+        statuses = [call.kwargs.get("status") for call in app.print_step.mock_calls]
         self.assertIn("warning", statuses)
 
     def test_a_problem_fails_a_dry_run_and_an_emit_request(self):
@@ -947,7 +954,7 @@ class RunAssessmentTests(SyncDocumentTestCase):
 class ArgumentTests(unittest.TestCase):
     def parse(self, *argv):
         with patch("sys.argv", ["cloudexit", *argv]):
-            return main.parse_arguments()
+            return app.parse_arguments()
 
     def test_defaults(self):
         for provider in ("aws", "azure"):
@@ -989,10 +996,10 @@ class ArgumentTests(unittest.TestCase):
         )
         with (
             patch.dict(os.environ, env),
-            patch("main.run_assessment") as mock_run,
-            patch("main.console.print"),
+            patch("cloudexit.cli.app.run_assessment") as mock_run,
+            patch("cloudexit.cli.app.console.print"),
         ):
-            main.handle_aws(args)
+            app.handle_aws(args)
 
         self.assertEqual(mock_run.call_args.kwargs["emit_payload"], "out")
         self.assertEqual(mock_run.call_args.kwargs["egress_names"], "hashed")

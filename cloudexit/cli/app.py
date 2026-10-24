@@ -1,4 +1,4 @@
-# main.py
+# cloudexit/cli/app.py
 import logging
 import argparse
 import contextlib
@@ -90,10 +90,9 @@ from cloudexit.catalogue.store import (
     update_catalogue,
     use_catalogue_file,
 )
-from utils.utils import (
+from cloudexit.cli.prompts import (
     ask,
     ascii_art,
-    create_directory,
     prompt_required_inputs,
     print_help_message,
     print_step,
@@ -607,6 +606,21 @@ def handle_azure(args):
         flush_spool=not getattr(args, "no_flush", False),
         strict=getattr(args, "strict", False),
     )
+
+
+def create_directory(base_path="reports"):
+    # Generate the main directory with a timestamp
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    directory_path = os.path.join(base_path, timestamp)
+
+    # Create the main directory
+    os.makedirs(directory_path, exist_ok=True)
+
+    # Create the raw_data subdirectory within the main directory
+    raw_data_path = os.path.join(directory_path, "raw_data")
+    os.makedirs(raw_data_path, exist_ok=True)
+
+    return directory_path, raw_data_path
 
 
 RUN = {}
@@ -2008,7 +2022,9 @@ def main():
         _dispatch(args)
 
 
-if __name__ == "__main__":
+def run():
+    # `python -m cloudexit` and `python3 main.py` end here; the console script
+    # calls main() directly and does not get this last-resort message.
     try:
         main()
     except Exception as e:

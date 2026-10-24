@@ -402,9 +402,9 @@ class WarningContractTests(modes.ModeTestCase):
 
 
 def main_run():
-    import main
+    from cloudexit.cli import app
 
-    return main.RUN
+    return app.RUN
 
 
 class ReplayContractTests(base.ClientTestCase):
@@ -661,9 +661,7 @@ class DefinitionGuardTests(unittest.TestCase):
                 self.assertIn(name, (ROOT / test).read_text(encoding="utf-8"))
 
     def test_the_cli_does_not_compute_the_content_hash(self):
-        for path in sorted((ROOT / "cloudexit").rglob("*.py")) + sorted(
-            (ROOT / "core").glob("*.py")
-        ):
+        for path in sorted((ROOT / "cloudexit").rglob("*.py")):
             text = path.read_text(encoding="utf-8")
             self.assertNotIn("content_sha256", text, path.name)
 

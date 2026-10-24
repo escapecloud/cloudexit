@@ -11,7 +11,7 @@ from importlib.metadata import PackageNotFoundError
 from pathlib import Path
 from unittest import mock
 
-import main
+from cloudexit.cli import app
 from tests.support.isolation import isolated_environ
 from tests.make_smoke_dataset import main as make_smoke_dataset
 from tests.support.paths import ROOT
@@ -30,7 +30,7 @@ if mode == "broken":
 sys.argv = ["cloudexit", *argv]
 code = 0
 try:
-    runpy.run_module("main", run_name="__main__")
+    runpy.run_module("cloudexit", run_name="__main__")
 except SystemExit as exc:
     code = exc.code or 0
 loaded = sorted(
@@ -243,18 +243,19 @@ class GuardPlacementTests(unittest.TestCase):
         calls = []
         with (
             mock.patch(
-                "main._require_azure_sdk", side_effect=lambda: calls.append("sdk")
+                "cloudexit.cli.app._require_azure_sdk",
+                side_effect=lambda: calls.append("sdk"),
             ),
-            mock.patch("main.load_config", return_value={"name": "n"}),
-            mock.patch("main.require_env_int", return_value=1),
+            mock.patch("cloudexit.cli.app.load_config", return_value={"name": "n"}),
+            mock.patch("cloudexit.cli.app.require_env_int", return_value=1),
             mock.patch(
-                "main._azure_provider_noninteractive",
+                "cloudexit.cli.app._azure_provider_noninteractive",
                 side_effect=lambda a: calls.append("provider") or {},
             ),
-            mock.patch("main.build_config", return_value={}),
-            mock.patch("main.run_assessment"),
+            mock.patch("cloudexit.cli.app.build_config", return_value={}),
+            mock.patch("cloudexit.cli.app.run_assessment"),
         ):
-            main.handle_azure(args)
+            app.handle_azure(args)
         return calls
 
     def test_a_live_run_checks_the_sdk_before_it_asks_for_anything(self):
@@ -284,16 +285,18 @@ class RunAssessmentGuardTests(unittest.TestCase):
 
     def run_with(self, config, error=None):
         with (
-            mock.patch("main.validate_config"),
-            mock.patch("main.require_azure_sdk", side_effect=error) as guard,
-            mock.patch("main.console.print") as printed,
-            mock.patch("main.print_step"),
+            mock.patch("cloudexit.cli.app.validate_config"),
             mock.patch(
-                "main.create_directory", side_effect=RuntimeError("stop")
+                "cloudexit.cli.app.require_azure_sdk", side_effect=error
+            ) as guard,
+            mock.patch("cloudexit.cli.app.console.print") as printed,
+            mock.patch("cloudexit.cli.app.print_step"),
+            mock.patch(
+                "cloudexit.cli.app.create_directory", side_effect=RuntimeError("stop")
             ) as made,
         ):
             with self.assertRaises(SystemExit) as ctx:
-                main.run_assessment(config, "azure")
+                app.run_assessment(config, "azure")
         return ctx.exception.code, guard, printed, made
 
     def test_an_incomplete_sdk_ends_the_run_with_the_configuration_code(self):

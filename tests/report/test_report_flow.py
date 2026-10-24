@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 import requests
 
-import main
+from cloudexit.cli import app
 from cloudexit.engine import generate_report, perform_risk_assessment
 from cloudexit.platform.document import SyncDocumentError
 from cloudexit.platform.upload import (
@@ -390,22 +390,28 @@ class RunFlowTests(FlowTestCase):
     ):
         self.steps = []
         raw_data = os.path.join(report, "raw_data")
-        console_patch = patch("main.console.print")
+        console_patch = patch("cloudexit.cli.app.console.print")
         patches = [
-            patch("main.validate_config"),
-            patch("main.create_directory", return_value=(report, raw_data)),
-            patch("main.verify_credentials", return_value=(True, "ok")),
-            patch("main.test_permissions", return_value=(True, True, True, "ok")),
+            patch("cloudexit.cli.app.validate_config"),
             patch(
-                "main.create_resource_inventory",
+                "cloudexit.cli.app.create_directory", return_value=(report, raw_data)
+            ),
+            patch("cloudexit.cli.app.verify_credentials", return_value=(True, "ok")),
+            patch(
+                "cloudexit.cli.app.test_permissions",
+                return_value=(True, True, True, "ok"),
+            ),
+            patch(
+                "cloudexit.cli.app.create_resource_inventory",
                 return_value={"success": True, "logs": ""},
             ),
             patch(
-                "main.create_cost_inventory", return_value={"success": True, "logs": ""}
+                "cloudexit.cli.app.create_cost_inventory",
+                return_value={"success": True, "logs": ""},
             ),
-            patch("main.add_run_log_handler"),
+            patch("cloudexit.cli.app.add_run_log_handler"),
             patch(
-                "main.print_step",
+                "cloudexit.cli.app.print_step",
                 side_effect=lambda *a, **k: self.steps.append((a, k)),
             ),
             console_patch,
@@ -413,15 +419,15 @@ class RunFlowTests(FlowTestCase):
         if egress_ok is not None:
             patches += [
                 patch(
-                    "main.estimate_egress",
+                    "cloudexit.cli.app.estimate_egress",
                     return_value={"success": egress_ok, "logs": "x", "json_path": "p"},
                 ),
                 patch(
-                    "main.generate_egress_html_report",
+                    "cloudexit.cli.app.generate_egress_html_report",
                     return_value={"success": True, "html_path": "h"},
                 ),
                 patch(
-                    "main.generate_egress_pdf_report",
+                    "cloudexit.cli.app.generate_egress_pdf_report",
                     return_value={"success": True, "pdf_path": "p"},
                 ),
             ]
@@ -437,7 +443,7 @@ class RunFlowTests(FlowTestCase):
         # The spool has tests of its own; here an earlier run must not answer for this one
         kwargs.setdefault("flush_spool", False)
         with fake_http(*replies) if replies is not None else nullcontext():
-            return main.run_assessment(config, "aws", settings=settings, **kwargs)
+            return app.run_assessment(config, "aws", settings=settings, **kwargs)
 
     def sync(self, report):
         return json.loads(self.raw(report, "sync.json").read_text())
@@ -456,7 +462,7 @@ class RunFlowTests(FlowTestCase):
 
     def test_an_offline_run_forces_basic_and_never_uploads(self):
         report = self.report()
-        with patch("main.upload") as mock_upload:
+        with patch("cloudexit.cli.app.upload") as mock_upload:
             self.run_assessment(report)
 
         mock_upload.assert_not_called()
@@ -602,7 +608,7 @@ class RunFlowTests(FlowTestCase):
             url=URL,
             pending=True,
         )
-        with patch("main.upload", return_value=pending):
+        with patch("cloudexit.cli.app.upload", return_value=pending):
             self.run_assessment(report, settings=CONFIGURED)
 
         self.assert_local_report(report)
@@ -634,7 +640,7 @@ class RunFlowTests(FlowTestCase):
             host=CONFIGURED.host, api_key=Setting(corrupt(KEY), "env CLOUDEXIT_API_KEY")
         )
         with (
-            patch("main.upload") as mock_upload,
+            patch("cloudexit.cli.app.upload") as mock_upload,
             self.assertRaises(SystemExit) as ctx,
         ):
             self.run_assessment(report, settings=settings, replies=[])
@@ -657,7 +663,7 @@ class RunFlowTests(FlowTestCase):
 
     def test_a_dry_run_never_uploads_and_never_forces_basic(self):
         report = self.report()
-        with patch("main.upload") as mock_upload:
+        with patch("cloudexit.cli.app.upload") as mock_upload:
             self.run_assessment(
                 report,
                 settings=CONFIGURED,
@@ -688,7 +694,10 @@ class RunFlowTests(FlowTestCase):
     def test_a_sync_document_problem_wins_over_an_upload_code(self):
         report = self.report()
         with (
-            patch("main.prepare_sync_document", side_effect=SyncDocumentError("bad")),
+            patch(
+                "cloudexit.cli.app.prepare_sync_document",
+                side_effect=SyncDocumentError("bad"),
+            ),
             self.assertRaises(SystemExit) as ctx,
         ):
             self.run_assessment(
@@ -704,7 +713,7 @@ class RunFlowTests(FlowTestCase):
     def test_the_upload_runs_after_the_collection_and_before_the_report(self):
         report = self.report(egress=[egress_row(1, "web-1", 10)])
         order = []
-        original_upload = main.upload
+        original_upload = app.upload
 
         def traced_upload(*args, **kwargs):
             order.append("upload")
@@ -719,16 +728,22 @@ class RunFlowTests(FlowTestCase):
             return perform_risk_assessment(*args, **kwargs)
 
         with (
-            patch("main.upload", side_effect=traced_upload),
-            patch("main.generate_report", side_effect=traced_report),
-            patch("main.perform_risk_assessment", side_effect=traced_risk),
+            patch("cloudexit.cli.app.upload", side_effect=traced_upload),
+            patch("cloudexit.cli.app.generate_report", side_effect=traced_report),
+            patch("cloudexit.cli.app.perform_risk_assessment", side_effect=traced_risk),
             patch(
-                "main.estimate_egress",
+                "cloudexit.cli.app.estimate_egress",
                 side_effect=lambda *a, **k: order.append("egress")
                 or {"success": True, "json_path": "p"},
             ),
-            patch("main.generate_egress_html_report", return_value={"success": True}),
-            patch("main.generate_egress_pdf_report", return_value={"success": True}),
+            patch(
+                "cloudexit.cli.app.generate_egress_html_report",
+                return_value={"success": True},
+            ),
+            patch(
+                "cloudexit.cli.app.generate_egress_pdf_report",
+                return_value={"success": True},
+            ),
         ):
             self.run_assessment(
                 report,

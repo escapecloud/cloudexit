@@ -1,12 +1,10 @@
-# utils/utils.py
+# cloudexit/cli/prompts.py
 import getpass
-import os
 import sys
 import logging
 from rich.console import Console
 from rich.style import Style
 from time import sleep
-from datetime import datetime
 
 from cloudexit import codes
 
@@ -110,21 +108,6 @@ ascii_art = r"""
 
 
 """
-
-
-def create_directory(base_path="reports"):
-    # Generate the main directory with a timestamp
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    directory_path = os.path.join(base_path, timestamp)
-
-    # Create the main directory
-    os.makedirs(directory_path, exist_ok=True)
-
-    # Create the raw_data subdirectory within the main directory
-    raw_data_path = os.path.join(directory_path, "raw_data")
-    os.makedirs(raw_data_path, exist_ok=True)
-
-    return directory_path, raw_data_path
 
 
 def print_help_message():

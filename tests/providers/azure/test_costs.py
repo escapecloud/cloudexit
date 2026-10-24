@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 from azure.core.exceptions import ClientAuthenticationError, HttpResponseError
 
-import main
+from cloudexit.cli import app
 from cloudexit.engine import create_cost_inventory
 from cloudexit.providers.azure.costs import (
     COST_RATE_LIMITED,
@@ -269,14 +269,19 @@ class RunExitTests(unittest.TestCase):
             os.makedirs(os.path.join(report, "data"))
             os.makedirs(raw)
             with (
-                patch("main.validate_config"),
-                patch("main.require_azure_sdk"),
-                patch("main.create_directory", return_value=(report, raw)),
-                patch("main.add_run_log_handler"),
-                patch("main.verify_credentials", return_value=(True, "ok")),
-                patch("main.test_permissions", return_value=(True, True, True, "ok")),
+                patch("cloudexit.cli.app.validate_config"),
+                patch("cloudexit.cli.app.require_azure_sdk"),
+                patch("cloudexit.cli.app.create_directory", return_value=(report, raw)),
+                patch("cloudexit.cli.app.add_run_log_handler"),
                 patch(
-                    "main.create_resource_inventory",
+                    "cloudexit.cli.app.verify_credentials", return_value=(True, "ok")
+                ),
+                patch(
+                    "cloudexit.cli.app.test_permissions",
+                    return_value=(True, True, True, "ok"),
+                ),
+                patch(
+                    "cloudexit.cli.app.create_resource_inventory",
                     return_value={"success": True, "logs": ""},
                 ),
                 patch(
@@ -286,14 +291,14 @@ class RunExitTests(unittest.TestCase):
                 patch("cloudexit.providers.azure.costs.time.sleep"),
                 patch("cloudexit.providers.azure.costs.print_step"),
                 patch(
-                    "main.print_step",
+                    "cloudexit.cli.app.print_step",
                     side_effect=lambda *a, **k: steps.append((a, k)),
                 ),
-                patch("main.console.print"),
+                patch("cloudexit.cli.app.console.print"),
                 self.assertNoLogs(level=logging.ERROR),
                 self.assertRaises(SystemExit) as ctx,
             ):
-                main.run_assessment(dict(self.CONFIG), "azure")
+                app.run_assessment(dict(self.CONFIG), "azure")
 
         self.assertEqual(ctx.exception.code, codes.COST_INVENTORY)
         failed = [k for a, k in steps if k.get("status") == "error"]

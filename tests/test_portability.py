@@ -10,7 +10,7 @@ import unittest
 import unittest.mock
 from pathlib import Path
 
-import main
+from cloudexit.cli import app
 import tests
 from cloudexit.catalogue import db as catalogue_db
 from tests.support.isolation import isolated_environ
@@ -20,8 +20,6 @@ from tests.support.paths import ROOT
 SOURCES = [
     ROOT / "main.py",
     *(ROOT / "cloudexit").rglob("*.py"),
-    *(ROOT / "core").rglob("*.py"),
-    *(ROOT / "utils").rglob("*.py"),
 ]
 
 
@@ -121,13 +119,13 @@ class OutputEncodingTests(unittest.TestCase):
         raw = io.BytesIO()
         stream = io.TextIOWrapper(raw, encoding="cp1252", write_through=True)
         with unittest.mock.patch.object(sys, "stdout", stream):
-            main._use_utf8_output()
+            app._use_utf8_output()
             sys.stdout.write("\u21b3 done")
         self.assertEqual(raw.getvalue().decode("utf-8"), "\u21b3 done")
 
     def test_a_stream_without_an_encoding_is_left_alone(self):
         with unittest.mock.patch.object(sys, "stdout", io.StringIO()):
-            main._use_utf8_output()
+            app._use_utf8_output()
 
     def test_a_run_into_a_cp1252_pipe_still_completes(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -167,13 +165,13 @@ class OutputEncodingTests(unittest.TestCase):
 class RunLogTests(unittest.TestCase):
     def test_the_run_log_is_closed_when_the_run_ends(self):
         with tempfile.TemporaryDirectory() as tmp:
-            main.add_run_log_handler(tmp)
-            handler = main._run_log_handler
+            app.add_run_log_handler(tmp)
+            handler = app._run_log_handler
             self.assertIn(handler, logging.getLogger().handlers)
-            main.close_run_log_handler()
+            app.close_run_log_handler()
             self.assertNotIn(handler, logging.getLogger().handlers)
             self.assertIsNone(handler.stream)
-            self.assertIsNone(main._run_log_handler)
+            self.assertIsNone(app._run_log_handler)
             (Path(tmp) / "run.log").unlink()
 
     def test_a_second_run_log_replaces_the_first(self):
@@ -181,12 +179,12 @@ class RunLogTests(unittest.TestCase):
             tempfile.TemporaryDirectory() as first,
             tempfile.TemporaryDirectory() as second,
         ):
-            main.add_run_log_handler(first)
-            opened = main._run_log_handler
-            main.add_run_log_handler(second)
+            app.add_run_log_handler(first)
+            opened = app._run_log_handler
+            app.add_run_log_handler(second)
             self.assertIsNone(opened.stream)
             self.assertNotIn(opened, logging.getLogger().handlers)
-            main.close_run_log_handler()
+            app.close_run_log_handler()
 
 
 class LineEndingTests(unittest.TestCase):

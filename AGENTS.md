@@ -16,11 +16,11 @@ cloudexit is an offline-first CLI. It collects cloud inventory and cost data wit
 CI runs exactly these, with the tool versions pinned in `requirements-dev.txt`:
 
 ```bash
-ruff check main.py cloudexit core utils tests
-black --check main.py cloudexit core utils tests
+ruff check main.py cloudexit tests
+black --check main.py cloudexit tests
 ```
 
-Fix with `ruff check --fix main.py cloudexit core utils tests` and `black main.py cloudexit core utils tests`. Don't add a `# noqa` or an ignore without a code comment saying why.
+Fix with `ruff check --fix main.py cloudexit tests` and `black main.py cloudexit tests`. Don't add a `# noqa` or an ignore without a code comment saying why.
 
 ## Tests
 
@@ -63,6 +63,7 @@ One line, lowercase, no trailing period, plain words about what changed, for exa
 ## Compatibility rules
 
 - The CLI must keep working fully offline, without an account.
+- The public contract is the `cloudexit` command, `python -m cloudexit` and `cloudexit.cli:main`. Everything else under `cloudexit.*` is internal and may move in any 2.x release. `python3 main.py` works from a checkout through a small root script that is not installed.
 - `docs/api-v2/` is a vendored copy of the API v2 definition. Never edit it here; the version check test enforces this.
 - The dataset is read only by column name. The CLI must tolerate extra tables and columns.
 

@@ -299,6 +299,8 @@ Contributions are welcome — bug reports, documentation improvements, new servi
 
 See the [contribution guidelines](https://cloudexit.escapecloud.io/contributing/how-to-contribute.html) for details. Working rules for contributors and AI agents (setup, checks, branches, commits, pull requests) are in [AGENTS.md](./AGENTS.md).
 
+The public contract is the `cloudexit` command, `python -m cloudexit` and `cloudexit.cli:main`. Everything else under `cloudexit.*` is internal and may move in any 2.x release.
+
 ## License
 
 cloudexit is licensed under the **GNU Affero General Public License v3 (AGPL-3.0)**.  

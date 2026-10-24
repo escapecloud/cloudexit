@@ -5,7 +5,7 @@ import subprocess
 from typing import Any
 from rich.console import Console
 
-from utils.utils import ask
+from cloudexit.cli.prompts import ask
 from cloudexit.providers.azure.sdk import azure_import
 
 logger = logging.getLogger("main.utils.azure")
