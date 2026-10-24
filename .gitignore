@@ -106,6 +106,7 @@ config/*
 
 # Terraform state and downloaded datasets
 *.tfstate
+!tests/fixtures/smoke/aws.tfstate
 datasets/
 
 # TypeScript cache

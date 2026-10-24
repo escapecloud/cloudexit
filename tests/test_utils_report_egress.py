@@ -1,7 +1,6 @@
 # tests/test_utils_report_egress.py
 import json
 import os
-import pathlib
 import sqlite3
 import tempfile
 import unittest
@@ -12,6 +11,7 @@ from reportlab.platypus import PageBreak, Paragraph, Table
 
 from tests.report_fixtures import stage_report_assets
 
+from core.resources import asset_path
 from core.utils_egress import GIB, write_egress_inventory
 from utils.data import active_catalogue_path
 from core.utils_report_egress import (
@@ -211,7 +211,7 @@ class CategoryCoverageTests(unittest.TestCase):
                 self.assertIsNotNone(info["label"], key)
 
     def test_template_styles_every_category_badge(self):
-        css = pathlib.Path("assets/template/egress.html").read_text(encoding="utf-8")
+        css = asset_path("template", "egress.html").read_text(encoding="utf-8")
 
         for key in CATEGORIES:
             self.assertIn(f".category-{key} {{", css, f"no badge rule for {key!r}")

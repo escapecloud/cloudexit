@@ -17,6 +17,7 @@ from reportlab.graphics.charts.legends import Legend
 from reportlab.graphics.charts.piecharts import Pie
 from reportlab.graphics.charts.barcharts import VerticalBarChart
 
+from core.resources import find_asset
 from core.utils_report_common import (
     enrich_resource_inventory,
     summarize_alternative_technologies,
@@ -165,8 +166,8 @@ def draw_header_footer(
     table.drawOn(canvas, doc.leftMargin, height - doc.topMargin)
 
     # Add the logo
-    logo_path = f"{report_path}/assets/img/logo/report_logo.png"
-    logo = Image(logo_path, width=150, height=30)
+    logo_path = find_asset(report_path, "img/logo/report_logo.png")
+    logo = Image(str(logo_path), width=150, height=30)
 
     # Aligning logo vertically with the text
     logo_y = height - doc.topMargin + 5

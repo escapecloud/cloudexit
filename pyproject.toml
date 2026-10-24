@@ -48,3 +48,6 @@ py-modules = ["main"]
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["core", "core.*", "utils", "utils.*"]
+
+[tool.setuptools.package-data]
+core = ["assets/**/*"]

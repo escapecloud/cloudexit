@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
+from core.resources import find_asset
 from core.utils_report_common import summarize_alternative_technologies
 from utils.data import CatalogueError, catalogue_info
 from utils.version import __version__
@@ -165,11 +166,9 @@ class ReportContext:
 
 
 def _icon_path(report_path, icon):
-    relative = str(icon or "").lstrip("/")
-    for base in (report_path, "."):
-        candidate = os.path.join(base, "assets", relative)
-        if relative and os.path.isfile(candidate):
-            return candidate
+    found = find_asset(report_path, str(icon or ""))
+    if found is not None:
+        return str(found)
     return os.path.join(report_path, "assets", MISSING_ICON)
 
 

@@ -18,6 +18,7 @@ from reportlab.platypus import (
 )
 
 # Utils
+from core.resources import asset_path
 from core.utils_report_html import (
     transform_cost_inventory_for_html,
     transform_risk_inventory_for_html,
@@ -120,9 +121,7 @@ def generate_html_report(
     }
 
     # Render the HTML template
-    template_path = os.path.join("assets", "template", "index.html")
-    with open(template_path, "r") as file:
-        template_content = file.read()
+    template_content = asset_path("template", "index.html").read_text(encoding="utf-8")
 
     env = Environment(autoescape=True)
     template = env.from_string(template_content)

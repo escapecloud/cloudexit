@@ -22,6 +22,7 @@ from reportlab.platypus import (
     TableStyle,
 )
 
+from core.resources import asset_path, find_asset
 from core.utils_db import load_data
 from core.utils_egress import (
     GIB,
@@ -418,9 +419,9 @@ def generate_egress_html_report(report_path: str, json_path: str) -> dict[str, A
         fee_labels = [group["label"] for group in fee_groups]
         fee_values = [round(group["fee"], 2) for group in fee_groups]
 
-        template_path = os.path.join("assets", "template", "egress.html")
-        with open(template_path, "r") as file:
-            template_content = file.read()
+        template_content = asset_path("template", "egress.html").read_text(
+            encoding="utf-8"
+        )
 
         env = Environment(autoescape=True)
         template = env.from_string(template_content)
@@ -461,12 +462,10 @@ def generate_egress_html_report(report_path: str, json_path: str) -> dict[str, A
 
 
 def _icon_flowable(report_path: str, icon: str) -> Any:
-    icon_path = os.path.join(report_path, "assets") + icon
-    if not os.path.exists(icon_path):
-        icon_path = os.path.join(report_path, "assets") + DEFAULT_ICON
-    if not os.path.exists(icon_path):
+    icon_path = find_asset(report_path, icon) or find_asset(report_path, DEFAULT_ICON)
+    if icon_path is None:
         return ""
-    return Image(icon_path, width=20, height=20)
+    return Image(str(icon_path), width=20, height=20)
 
 
 def _fee_breakdown_display(group: dict[str, Any]) -> str:

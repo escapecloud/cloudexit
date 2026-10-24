@@ -6,10 +6,11 @@ from contextlib import contextmanager
 from pathlib import Path
 from unittest import mock
 
+from core.resources import asset_path
 from core.utils import copy_assets
 from utils.data import active_catalogue_path
 
-SOURCE_ICONS = Path("assets/icons")
+SOURCE_ICONS = asset_path("icons")
 
 
 @contextmanager

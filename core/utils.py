@@ -5,6 +5,8 @@ import logging
 
 from utils.data import active_catalogue_path
 
+from .resources import asset_path
+
 logger = logging.getLogger("core.engine.utils")
 
 # Icon folder per cloud service provider id
@@ -45,7 +47,7 @@ def copy_assets(report_path: str, cloud_service_provider: int) -> None:
     os.makedirs(assets_path, exist_ok=True)
 
     for folder in ("css", "img"):
-        src_path = os.path.join("assets", folder)
+        src_path = asset_path(folder)
         dest_path = os.path.join(assets_path, folder)
 
         # Only copy if the destination doesn't already exist
@@ -54,7 +56,7 @@ def copy_assets(report_path: str, cloud_service_provider: int) -> None:
 
     # Only the assessed provider's icons travel with the report
     for folder in _icon_dirs(cloud_service_provider):
-        src_path = os.path.join("assets", "icons", folder)
+        src_path = asset_path("icons", folder)
         dest_path = os.path.join(assets_path, "icons", folder)
 
         # Only copy if the destination doesn't already exist

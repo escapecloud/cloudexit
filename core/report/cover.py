@@ -10,6 +10,8 @@ from reportlab.lib.units import cm
 from reportlab.lib.utils import ImageReader
 from reportlab.platypus import Paragraph
 
+from core.resources import find_asset
+
 from .fonts import FONT, FONT_BOLD, FONT_MONO
 from .helpers import strategy_name
 from .palette import INK, MUTED, RULE, SUBTITLE
@@ -75,12 +77,10 @@ def fit_logo(width, height, max_width=LOGO_MAX_WIDTH, max_height=LOGO_MAX_HEIGHT
 
 
 def logo_reader(report_path):
-    # The report folder carries its own copy of the assets.
-    for base in (os.path.join(report_path, "assets"), "assets"):
-        path = os.path.join(base, LOGO_FILE)
-        if os.path.isfile(path):
-            return ImageReader(path)
-    raise FileNotFoundError(f"report logo not found under {report_path}/assets")
+    path = find_asset(report_path, LOGO_FILE)
+    if path is None:
+        raise FileNotFoundError(f"report logo not found under {report_path}/assets")
+    return ImageReader(str(path))
 
 
 def _paragraph(value, style):
