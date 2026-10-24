@@ -21,7 +21,7 @@ from cloudexit.providers.azure.costs import (
 from cloudexit.providers.azure.inventory import build_azure_resource_inventory
 from cloudexit.providers.azure.sdk import azure_import
 from cloudexit.catalogue.db import connect, load_data
-from .utils_tfstate import build_tfstate_resource_inventory
+from cloudexit.tfstate import build_tfstate_resource_inventory
 from .report.context import build_context, collect_provenance
 from .report.executive_summary import generate_executive_summary
 from .report.html_sections import html_sections

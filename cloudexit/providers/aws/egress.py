@@ -10,7 +10,7 @@ from cloudexit.providers.aws.client import (
     extract_result_path,
     paginate_or_call,
 )
-from core.utils_egress import GIB, format_bytes, load_egress_registry, new_row
+from cloudexit.egress.model import GIB, format_bytes, load_egress_registry, new_row
 
 logger = logging.getLogger("core.engine.egress.aws")
 

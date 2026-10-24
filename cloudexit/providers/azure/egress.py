@@ -5,7 +5,7 @@ from typing import Any
 from datetime import datetime, timedelta, timezone
 
 from cloudexit.providers.azure.clients import create_credential, create_resource_client
-from core.utils_egress import GIB, format_bytes, load_egress_registry, new_row
+from cloudexit.egress.model import GIB, format_bytes, load_egress_registry, new_row
 
 logger = logging.getLogger("core.engine.egress.azure")
 

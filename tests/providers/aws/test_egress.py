@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 from botocore.exceptions import ClientError
 
-from core.utils_egress import GIB
+from cloudexit.egress.model import GIB
 from cloudexit.providers.aws.egress import (
     _collect_dynamodb_tables,
     _collect_list_item_size,

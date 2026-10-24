@@ -7,10 +7,10 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from core.utils_egress import (
+from cloudexit.egress.estimate import estimate_egress
+from cloudexit.egress.model import (
     GIB,
     compute_totals,
-    estimate_egress,
     format_bytes,
     new_row,
     read_egress_inventory,
@@ -186,7 +186,7 @@ class EstimateEgressDispatchTests(unittest.TestCase):
             conn.close()
 
             with patch(
-                "core.utils_egress.load_egress_registry",
+                "cloudexit.egress.estimate.load_egress_registry",
                 return_value=_SAMPLE_REGISTRY,
             ):
                 result = estimate_egress(

@@ -6,7 +6,8 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from cloudexit.catalogue.db import load_data
-from core.utils_egress import estimate_egress, load_egress_registry
+from cloudexit.egress.estimate import estimate_egress
+from cloudexit.egress.model import load_egress_registry
 from cloudexit.providers.azure.egress import filter_data_bearing_resources
 
 # (id, csp, code, name, icon, status)
@@ -94,7 +95,7 @@ class _FixtureDbTests(unittest.TestCase):
             data_rows=self.DATA_ROWS,
         )
         patcher = patch(
-            "core.utils_egress.load_data",
+            "cloudexit.egress.model.load_data",
             side_effect=lambda table: load_data(table, db_path=self.db_path),
         )
         self.addCleanup(patcher.stop)

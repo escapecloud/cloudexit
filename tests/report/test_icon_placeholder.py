@@ -18,7 +18,7 @@ from core.report.helpers import initials
 from core.report.palette import contrast_failures
 from core.report.placeholder import IconPlaceholder, LabelWithPlaceholder
 from core.report.sections import ALT_BODY
-from core.utils_egress import GIB
+from cloudexit.egress.model import GIB
 from core.utils_report import generate_html_report
 from core.utils_report_egress import (
     _icon_flowable,

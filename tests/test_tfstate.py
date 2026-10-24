@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from core.utils_tfstate import (
+from cloudexit.tfstate import (
     build_tfstate_resource_inventory,
     extract_managed_resources,
     extract_state_scope,
