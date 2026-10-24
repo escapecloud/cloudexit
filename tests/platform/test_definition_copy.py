@@ -3,8 +3,8 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from tests.support.paths import DEFINITION
 
-DEFINITION = Path(__file__).resolve().parent.parent / "docs" / "api-v2"
 MANIFEST = "MANIFEST.sha256"
 
 

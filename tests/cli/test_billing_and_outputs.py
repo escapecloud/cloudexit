@@ -14,8 +14,8 @@ from core.upload import (
     upload,
     write_upload_record,
 )
-from tests.isolation import isolated_environ
-from tests.api_fixtures import (
+from tests.support.isolation import isolated_environ
+from tests.support.api import (
     HOST,
     KEY,
     created_reply,
@@ -25,7 +25,7 @@ from tests.api_fixtures import (
     sync_body,
     whoami_reply,
 )
-from tests.http_fixtures import fake_http
+from tests.support.http import fake_http
 from utils.settings import Setting, Settings
 
 SYNC_ID = "01933b9e-7c2a-7d41-9a51-3c8f0a6e0001"

@@ -1,4 +1,4 @@
-# tests/test_utils_report_egress.py
+# tests/report/test_egress.py
 import json
 import os
 import sqlite3
@@ -9,7 +9,7 @@ from unittest.mock import patch
 from reportlab.graphics.shapes import Drawing
 from reportlab.platypus import PageBreak, Paragraph, Table
 
-from tests.report_fixtures import stage_report_assets
+from tests.support.report import stage_report_assets
 
 from core.resources import asset_path
 from core.utils_egress import GIB, write_egress_inventory

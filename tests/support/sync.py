@@ -6,9 +6,8 @@ from pathlib import Path
 import yaml
 from jsonschema import Draft202012Validator
 
-from tests.catalogue_fixtures import build_catalogue
-
-DEFINITION = Path(__file__).resolve().parent.parent / "docs" / "api-v2"
+from tests.support.catalogue import build_catalogue
+from tests.support.paths import DEFINITION
 
 STARTED_AT = int(datetime(2026, 10, 23, 12, 0, tzinfo=timezone.utc).timestamp())
 COMPLETED_AT = STARTED_AT + 90

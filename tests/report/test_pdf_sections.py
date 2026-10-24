@@ -10,7 +10,7 @@ from core.utils_report import (
     _build_summary_section,
     _build_scope_section,
 )
-from tests.report_fixtures import (
+from tests.support.report import (
     build_report_fixture,
 )
 

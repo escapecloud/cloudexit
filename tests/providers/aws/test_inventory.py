@@ -1,4 +1,4 @@
-# tests/test_utils_aws.py
+# tests/providers/aws/test_inventory.py
 import logging
 import os
 import tempfile

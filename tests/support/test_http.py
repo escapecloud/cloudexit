@@ -2,7 +2,7 @@ import unittest
 
 import requests
 
-from tests.http_fixtures import fake_http, make_response
+from tests.support.http import fake_http, make_response
 
 
 class FakeHTTPTests(unittest.TestCase):

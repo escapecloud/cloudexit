@@ -22,20 +22,20 @@ from core.report.palette import (
     contrast_ratio,
 )
 from core.report.wording import BLOCKS, TITLE_CASE_KEYS
-from tests.flow_fixtures import build_flow_run
-from tests.report_fixtures import (
+from tests.support.flow import build_flow_run
+from tests.support.report import (
     build_empty_report_fixture,
     build_fixture_context,
     build_report_fixture,
     stage_minimal_assets,
 )
-from tests.report_terms import (
+from tests.support.report_terms import (
     american_hits,
     find_terms,
     is_title_case,
     retired_term_hits,
 )
-from tests.sync_fixtures import SYNC_ID
+from tests.support.sync import SYNC_ID
 from utils.version import __version__
 
 URL = "https://platform.test/assessments/a-1"

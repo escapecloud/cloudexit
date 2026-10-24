@@ -12,13 +12,13 @@ from pathlib import Path
 from unittest import mock
 
 import main
-from tests.isolation import isolated_environ
+from tests.support.isolation import isolated_environ
 from tests.make_smoke_dataset import main as make_smoke_dataset
+from tests.support.paths import ROOT
 from utils import codes
 from utils import azure as azure_utils
 from utils.azure import AzureSdkError, azure_import, require_azure_sdk
 
-ROOT = Path(__file__).resolve().parent.parent
 SMOKE_STATE = ROOT / "tests" / "fixtures" / "smoke" / "aws.tfstate"
 
 DRIVER = """

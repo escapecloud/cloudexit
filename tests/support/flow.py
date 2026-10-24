@@ -1,8 +1,8 @@
 import sqlite3
 from pathlib import Path
 
-from tests.report_fixtures import stage_minimal_assets
-from tests.sync_fixtures import build_run
+from tests.support.report import stage_minimal_assets
+from tests.support.sync import build_run
 
 FLOW_TABLES = """
 DROP TABLE risk;

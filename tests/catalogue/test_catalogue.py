@@ -14,8 +14,8 @@ import requests
 
 import main
 from core import utils_db
-from tests.isolation import isolated_environ
-from tests.catalogue_fixtures import (
+from tests.support.isolation import isolated_environ
+from tests.support.catalogue import (
     build_catalogue,
     catalogue_bytes,
     catalogue_gz,
@@ -23,7 +23,7 @@ from tests.catalogue_fixtures import (
     manifest_entry,
     sha256,
 )
-from tests.http_fixtures import fake_http, make_response
+from tests.support.http import fake_http, make_response
 from utils import codes
 from utils.data import (
     CATALOGUE_BASE_URL,

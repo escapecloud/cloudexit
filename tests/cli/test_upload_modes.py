@@ -9,7 +9,7 @@ from unittest.mock import patch
 import main
 from core.run_output import build_run_json, catalogue_outdated, upload_status
 from core.upload import UploadResult
-from tests.api_fixtures import (
+from tests.support.api import (
     ASSESSMENT_ID,
     KEY,
     URL,
@@ -18,7 +18,7 @@ from tests.api_fixtures import (
     whoami_reply,
     created_reply,
 )
-from tests import test_report_flow as flow
+from tests.report import test_report_flow as flow
 from utils import codes
 from utils.settings import Setting, Settings
 

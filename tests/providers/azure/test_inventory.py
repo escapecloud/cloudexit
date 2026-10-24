@@ -1,4 +1,4 @@
-# tests/test_utils_azure.py
+# tests/providers/azure/test_inventory.py
 import unittest
 from datetime import date
 from unittest.mock import MagicMock, patch

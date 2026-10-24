@@ -11,7 +11,7 @@ from core.api_v2 import (
     ApiError,
     parse_retry_after,
 )
-from tests.api_fixtures import (
+from tests.support.api import (
     HOST,
     KEY,
     created_reply,
@@ -20,8 +20,8 @@ from tests.api_fixtures import (
     reply,
     whoami_reply,
 )
-from tests.http_fixtures import fake_http, make_response
-from tests.test_api_v2_client import ClientTestCase
+from tests.support.http import fake_http, make_response
+from tests.platform.test_client import ClientTestCase
 from utils import codes
 
 

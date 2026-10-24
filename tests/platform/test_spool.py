@@ -26,8 +26,8 @@ from core.spool import (
     state_dir,
 )
 from core.upload import UploadResult, read_sync_files, upload
-from tests.isolation import isolated_environ
-from tests.api_fixtures import (
+from tests.support.isolation import isolated_environ
+from tests.support.api import (
     HOST,
     KEY,
     created_reply,
@@ -38,11 +38,11 @@ from tests.api_fixtures import (
     reply,
     whoami_reply,
 )
-from tests.http_fixtures import fake_http
+from tests.support.http import fake_http
 from utils import codes
 from utils.settings import Setting, Settings
+from tests.support.paths import ROOT
 
-ROOT = Path(__file__).resolve().parent.parent
 NOW = 1_800_000_000.0
 OLD, MIDDLE, NEW = (f"01933b9e-7c2a-7d41-9a51-3c8f0a6e000{n}" for n in (1, 2, 3))
 DAY = 86400
@@ -445,7 +445,7 @@ class UploadSpoolTests(SpoolCase):
         self.assertEqual(entry.meta["last_error"], "validation_failed")
 
     def test_a_bad_key_is_not_spooled_unless_asked(self):
-        from tests.api_fixtures import corrupt
+        from tests.support.api import corrupt
 
         settings = self.settings(api_key=Setting(corrupt(KEY), "test"))
         result, fake = self.run_upload([], settings=settings)
@@ -1087,7 +1087,7 @@ class UploadCommandTests(CommandTestCase):
         self.assertIn("No platform is configured", out)
 
     def test_a_mistyped_key_is_refused_before_any_request(self):
-        from tests.api_fixtures import corrupt
+        from tests.support.api import corrupt
 
         with patch.dict(os.environ, {"CLOUDEXIT_API_KEY": corrupt(KEY)}):
             code, out, fake = self.run_command(

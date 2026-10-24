@@ -21,7 +21,7 @@ from core.api_v2 import (
     exit_code_for,
     resolve_ca_bundle,
 )
-from tests.api_fixtures import (
+from tests.support.api import (
     ASSESSMENT_ID,
     EU_KEY,
     HOST,
@@ -44,8 +44,8 @@ from tests.api_fixtures import (
     whoami_body,
     whoami_reply,
 )
-from tests.http_fixtures import fake_http, make_response
-from tests.sync_fixtures import DEFINITION, schema_errors
+from tests.support.http import fake_http, make_response
+from tests.support.sync import DEFINITION, schema_errors
 from utils import codes
 from utils.settings import Setting
 

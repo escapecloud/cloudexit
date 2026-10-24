@@ -1,7 +1,6 @@
 import json
 import re
 import unittest
-from pathlib import Path
 from urllib.parse import urlsplit
 
 import yaml
@@ -11,9 +10,9 @@ from core.api_v2 import ERROR_EXIT_CODES, EXIT_STRATEGIES, PENDING_STATUSES
 from core.spool import Spool, flush
 from core.sync_document import PROVIDERS, SCHEMA_VERSION
 from core.upload import upload
-from tests import test_api_v2_client as base
-from tests import test_upload_modes as modes
-from tests.api_fixtures import (
+from tests.platform import test_client as base
+from tests.cli import test_upload_modes as modes
+from tests.support.api import (
     HOST,
     KEY,
     PLATFORM_SYNC_ID,
@@ -26,14 +25,14 @@ from tests.api_fixtures import (
     whoami_body,
     whoami_reply,
 )
-from tests.http_fixtures import fake_http
-from tests.sync_fixtures import DEFINITION, schema_errors
+from tests.support.http import fake_http
+from tests.support.sync import DEFINITION, schema_errors
 from utils import codes
 from utils.settings import Setting, Settings
+from tests.support.paths import ROOT
 
 SPEC = yaml.safe_load((DEFINITION / "openapi.yaml").read_text(encoding="utf-8"))
 ERRORS = yaml.safe_load((DEFINITION / "errors.yaml").read_text(encoding="utf-8"))
-ROOT = Path(__file__).resolve().parent.parent
 SERVER_PATH = urlsplit(SPEC["servers"][0]["url"].replace("{host}", "h")).path
 
 # The definition version these tests were last reviewed against. A new version
@@ -82,7 +81,7 @@ SUCCESS_STATUSES = ("completed", "completed_with_warnings")
 FAILED_STATUS = "failed"
 # Vectors the CLI has tests for, and the one it has no use for
 VECTORS = {
-    "scope_key.json": "tests/test_sync_document.py",
+    "scope_key.json": "tests/platform/test_document.py",
     "content_sha256.json": None,
 }
 

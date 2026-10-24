@@ -23,8 +23,8 @@ from core.upload import (
     upload,
     write_upload_record,
 )
-from tests.isolation import forget_cache, isolated_environ
-from tests.api_fixtures import (
+from tests.support.isolation import forget_cache, isolated_environ
+from tests.support.api import (
     ASSESSMENT_ID,
     KEY,
     URL,
@@ -37,9 +37,9 @@ from tests.api_fixtures import (
     sync_body,
     whoami_reply,
 )
-from tests.flow_fixtures import LOCAL_RISKS, SERVER_SCORES, build_flow_run
-from tests.http_fixtures import fake_http, make_response
-from tests.sync_fixtures import SYNC_ID, egress_row
+from tests.support.flow import LOCAL_RISKS, SERVER_SCORES, build_flow_run
+from tests.support.http import fake_http, make_response
+from tests.support.sync import SYNC_ID, egress_row
 from utils import codes
 from utils.settings import Setting, Settings
 

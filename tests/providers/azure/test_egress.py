@@ -1,4 +1,4 @@
-# tests/test_utils_egress_azure.py
+# tests/providers/azure/test_egress.py
 import unittest
 from unittest.mock import MagicMock, patch
 

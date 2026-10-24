@@ -1,7 +1,7 @@
 import sqlite3
 import sys
 
-from tests.catalogue_fixtures import build_catalogue
+from tests.support.catalogue import build_catalogue
 
 RESOURCE_TYPES = [
     (

@@ -26,13 +26,13 @@ from core.utils_report_egress import (
     generate_egress_pdf_report,
 )
 from core.utils_report_common import enrich_resource_inventory
-from tests.report_fixtures import (
+from tests.support.report import (
     build_fixture_context,
     build_report_fixture,
     stage_minimal_assets,
     stage_report_assets,
 )
-from tests.test_utils_report_egress import (
+from tests.report.test_egress import (
     _archive_tiers,
     _fake_load_data,
     _payload,

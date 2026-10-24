@@ -9,7 +9,7 @@ from core.utils_report import (
     generate_json_report,
 )
 from core.utils_report_json import transform_cost_inventory_for_json
-from tests.report_fixtures import (
+from tests.support.report import (
     build_empty_report_fixture,
     build_fixture_context,
     build_report_fixture,

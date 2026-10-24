@@ -15,11 +15,11 @@ from core.engine import generate_report, perform_risk_assessment
 from core.report import fonts
 from core.resources import asset_path, find_asset
 from core.utils import copy_assets
-from tests.isolation import isolated_environ
-from tests.flow_fixtures import build_flow_run
-from tests.test_report_flow import AWS_RESOURCES, CONFIG, COSTS
+from tests.support.isolation import isolated_environ
+from tests.support.flow import build_flow_run
+from tests.report.test_report_flow import AWS_RESOURCES, CONFIG, COSTS
+from tests.support.paths import ROOT
 
-ROOT = Path(__file__).resolve().parent.parent
 SOURCE_FILES = ("pyproject.toml", "README.md", "main.py")
 SOURCE_DIRS = ("core", "utils")
 

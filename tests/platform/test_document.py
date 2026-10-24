@@ -26,8 +26,8 @@ from core.sync_document import (
     scope_key,
     validate_document,
 )
-from tests.isolation import isolated_environ
-from tests.sync_fixtures import (
+from tests.support.isolation import isolated_environ
+from tests.support.sync import (
     ACCESS_KEY,
     CLIENT_SECRET,
     COMPLETED_AT,

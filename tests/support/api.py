@@ -5,9 +5,9 @@ import zlib
 import yaml
 from jsonschema import Draft202012Validator
 
-from tests.flow_fixtures import SERVER_SCORES
-from tests.http_fixtures import make_response
-from tests.sync_fixtures import DEFINITION
+from tests.support.flow import SERVER_SCORES
+from tests.support.http import make_response
+from tests.support.sync import DEFINITION
 
 ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 

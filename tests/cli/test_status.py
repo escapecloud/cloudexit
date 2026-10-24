@@ -1,6 +1,7 @@
 import contextlib
 import io
 import json
+import os
 import ssl
 import tempfile
 import unittest
@@ -22,7 +23,7 @@ from core.status import (
     status_budget,
     STATUS_BUDGET,
 )
-from tests.api_fixtures import (
+from tests.support.api import (
     EU_KEY,
     KEY,
     error_body,
@@ -31,9 +32,9 @@ from tests.api_fixtures import (
     reply,
     whoami_reply,
 )
-from tests.http_fixtures import fake_http
-from tests.isolation import isolated_environ
-from tests.sync_fixtures import SYNC_ID
+from tests.support.http import fake_http
+from tests.support.isolation import isolated_environ
+from tests.support.sync import SYNC_ID
 from utils import codes
 from utils.data import compare_catalogue_versions, parse_catalogue_version
 from utils.settings import Setting, Settings
@@ -296,6 +297,15 @@ class TlsFailureTests(StatusTestCase):
 
 
 class CheckTlsTests(unittest.TestCase):
+    def setUp(self):
+        # A proxy in the developer's environment would change what is checked
+        names = [n for n in os.environ if n.lower().endswith("_proxy")]
+        patcher = patch.dict(os.environ)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        for name in names:
+            del os.environ[name]
+
     class Socket:
         def __enter__(self):
             return self

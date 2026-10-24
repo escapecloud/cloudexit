@@ -9,18 +9,18 @@ import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from tests.api_fixtures import (
+from tests.support.api import (
     KEY,
     error_body,
     meta_body,
     sync_body,
     whoami_body,
 )
-from tests.isolation import isolated_environ
+from tests.support.isolation import isolated_environ
 from tests.make_smoke_dataset import main as make_smoke_dataset
 from utils import codes
+from tests.support.paths import ROOT
 
-ROOT = Path(__file__).resolve().parent.parent
 SMOKE_STATE = ROOT / "tests" / "fixtures" / "smoke" / "aws.tfstate"
 WARNING = {
     "code": "collector_catalogue_outdated",

@@ -23,7 +23,7 @@ from core.utils_azure import (
 )
 from core.utils_egress import GIB
 from core.utils_egress_azure import build_egress_inventory
-from tests.http_fixtures import fake_http, make_response
+from tests.support.http import fake_http, make_response
 from utils.azure import select_resource_group, select_subscription
 
 SUBSCRIPTION = "00000000-0000-0000-0000-000000000000"

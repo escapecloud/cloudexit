@@ -1,4 +1,4 @@
-# tests/test_utils_egress_registry.py
+# tests/egress/test_model.py
 import os
 import sqlite3
 import tempfile

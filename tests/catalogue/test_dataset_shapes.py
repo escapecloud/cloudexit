@@ -12,12 +12,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest.mock import patch
 
-from tests import test_catalogue as cat
-from tests.catalogue_fixtures import catalogue_gz, manifest, manifest_entry, sha256
-from tests.dataset_shapes import VERSION, build_shape
-from tests.http_fixtures import fake_http, make_response
-from tests.isolation import isolated_environ
-from tests.sync_fixtures import schema_errors
+from tests.catalogue import test_catalogue as cat
+from tests.support.catalogue import catalogue_gz, manifest, manifest_entry, sha256
+from tests.support.dataset_shapes import VERSION, build_shape
+from tests.support.http import fake_http, make_response
+from tests.support.isolation import isolated_environ
+from tests.support.sync import schema_errors
 from utils import codes
 from utils.data import (
     UNPACK_FLOOR,
@@ -27,8 +27,8 @@ from utils.data import (
     unpack_limit,
     update_catalogue,
 )
+from tests.support.paths import ROOT
 
-ROOT = Path(__file__).resolve().parent.parent
 SMOKE_STATE = ROOT / "tests" / "fixtures" / "smoke" / "aws.tfstate"
 
 
