@@ -20,9 +20,15 @@ from cloudexit.catalogue.store import (
 )
 from cloudexit.settings import describe
 
-from .api_v2 import ApiClient, ApiError, check_key, client_policy, resolve_ca_bundle
-from .spool import DEFAULT_MAX_AGE_DAYS, Spool, format_age, host_id
-from .sync_document import SCHEMA_VERSION
+from cloudexit.platform.client import (
+    ApiClient,
+    ApiError,
+    check_key,
+    client_policy,
+    resolve_ca_bundle,
+)
+from cloudexit.platform.spool import DEFAULT_MAX_AGE_DAYS, Spool, format_age, host_id
+from cloudexit.platform.document import SCHEMA_VERSION
 
 STATUS_BUDGET = 15.0
 KEY_EXPIRY_WARNING_DAYS = 14

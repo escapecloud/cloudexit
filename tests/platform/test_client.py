@@ -11,8 +11,8 @@ from unittest.mock import patch
 import requests
 import yaml
 
-from core import api_v2
-from core.api_v2 import (
+from cloudexit.platform import client as platform_client
+from cloudexit.platform.client import (
     ERROR_EXIT_CODES,
     EXIT_STRATEGIES,
     ApiClient,
@@ -138,9 +138,9 @@ class KeyTests(ClientTestCase):
                 self.assertNotIn(KEY[8:], ctx.exception.message)
 
     def test_the_checksum_is_the_crc32_of_everything_before_it_in_base62(self):
-        self.assertEqual(api_v2.checksum("esc_sk_" + "A" * 48), KEY[-6:])
-        self.assertEqual(len(api_v2.checksum("x")), 6)
-        self.assertEqual(api_v2.checksum(""), "000000")
+        self.assertEqual(platform_client.checksum("esc_sk_" + "A" * 48), KEY[-6:])
+        self.assertEqual(len(platform_client.checksum("x")), 6)
+        self.assertEqual(platform_client.checksum(""), "000000")
 
     def test_a_typo_never_reaches_the_network(self):
         with fake_http() as fake:
@@ -420,7 +420,7 @@ class TransportTests(ClientTestCase):
                     continue
                 self.assertIsNot(client.verify, False)
                 self.assertTrue(client.verify is True or isinstance(client.verify, str))
-        source = Path(api_v2.__file__).read_text(encoding="utf-8")
+        source = Path(platform_client.__file__).read_text(encoding="utf-8")
         self.assertNotRegex(source, r"verify\s*=\s*False")
 
     def test_a_ca_bundle_that_does_not_exist_is_a_clear_failure(self):
@@ -447,10 +447,12 @@ class TransportTests(ClientTestCase):
         self.assertNotIn("https", direct)
 
     def test_timeouts_default_to_10_and_60_and_the_setting_overrides_both(self):
-        self.assertEqual(api_v2.request_timeout(Setting(10.0, "default")), (10.0, 60.0))
-        self.assertEqual(api_v2.request_timeout(None), (10.0, 60.0))
         self.assertEqual(
-            api_v2.request_timeout(Setting(5.0, "flag --timeout")), (5.0, 5.0)
+            platform_client.request_timeout(Setting(10.0, "default")), (10.0, 60.0)
+        )
+        self.assertEqual(platform_client.request_timeout(None), (10.0, 60.0))
+        self.assertEqual(
+            platform_client.request_timeout(Setting(5.0, "flag --timeout")), (5.0, 5.0)
         )
 
         client = self.client(timeout=(2.0, 3.0))
@@ -556,15 +558,15 @@ class MetaTests(ClientTestCase):
     @unittest.skipIf(os.name == "nt", "absolute /xdg paths are POSIX paths")
     def test_the_cache_directory_follows_the_platform_conventions(self):
         self.assertEqual(
-            api_v2.cache_dir({"XDG_CACHE_HOME": "/xdg"}, platform="linux"),
+            platform_client.cache_dir({"XDG_CACHE_HOME": "/xdg"}, platform="linux"),
             Path("/xdg/cloudexit"),
         )
         self.assertEqual(
-            api_v2.cache_dir({"XDG_CACHE_HOME": "relative"}, platform="linux"),
+            platform_client.cache_dir({"XDG_CACHE_HOME": "relative"}, platform="linux"),
             Path.home() / ".cache" / "cloudexit",
         )
         self.assertEqual(
-            api_v2.cache_dir({"LOCALAPPDATA": "C:/L"}, platform="win32"),
+            platform_client.cache_dir({"LOCALAPPDATA": "C:/L"}, platform="win32"),
             Path("C:/L") / "cloudexit" / "cache",
         )
 
@@ -580,7 +582,7 @@ class PolicyTests(ClientTestCase):
         super().setUp()
         # The policies below are written against this client version, not the
         # one in cloudexit/version.py, which changes with every release
-        self.enterContext(patch.object(api_v2, "__version__", "1.1.7"))
+        self.enterContext(patch.object(platform_client, "__version__", "1.1.7"))
 
     def test_a_blocked_or_too_old_client_is_refused_before_the_push(self):
         for label, clients in (
@@ -616,11 +618,11 @@ class PolicyTests(ClientTestCase):
         self.assertEqual(result.warnings, ())
 
     def test_version_parsing(self):
-        self.assertEqual(api_v2._version("v2.0.0rc1"), (2, 0, 0))
-        self.assertEqual(api_v2._version("2.1"), (2, 1, 0))
-        self.assertEqual(api_v2._version("1.1.7-dev+abc"), (1, 1, 7))
-        self.assertIsNone(api_v2._version(None))
-        self.assertIsNone(api_v2._version("latest"))
+        self.assertEqual(platform_client._version("v2.0.0rc1"), (2, 0, 0))
+        self.assertEqual(platform_client._version("2.1"), (2, 1, 0))
+        self.assertEqual(platform_client._version("1.1.7-dev+abc"), (1, 1, 7))
+        self.assertIsNone(platform_client._version(None))
+        self.assertIsNone(platform_client._version("latest"))
 
     def test_a_schema_version_the_host_does_not_list_is_exit_15_without_a_push(self):
         with fake_http(meta_reply()) as fake:

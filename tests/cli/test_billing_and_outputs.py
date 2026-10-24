@@ -6,8 +6,8 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import main
-from core.api_v2 import ApiClient
-from core.upload import (
+from cloudexit.platform.client import ApiClient
+from cloudexit.platform.upload import (
     UploadResult,
     billing_line,
     report_info,

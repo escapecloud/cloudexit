@@ -29,7 +29,7 @@ from cloudexit.settings import (
 )
 from cloudexit.version import __version__
 
-from .sync_document import (
+from cloudexit.platform.document import (
     MAX_BODY_BYTES,
     MAX_CATALOGUE_TYPE_IDS,
     MAX_COST_ITEMS,

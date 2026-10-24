@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 from cloudexit import codes
 from cloudexit.settings import normalize_host
 
-from .api_v2 import ApiClient, ApiError
+from cloudexit.platform.client import ApiClient, ApiError
 
 logger = logging.getLogger("core.engine.spool")
 

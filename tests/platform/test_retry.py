@@ -4,7 +4,7 @@ from email.utils import formatdate
 
 import requests
 
-from core.api_v2 import (
+from cloudexit.platform.client import (
     BACKOFF_CAP,
     MAX_ATTEMPTS,
     ApiClient,
