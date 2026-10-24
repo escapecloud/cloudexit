@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 from cloudexit.resources import asset_path
-from core.utils_report_egress import FALLBACK_ICONS
+from cloudexit.report.egress import FALLBACK_ICONS
 from tests.make_smoke_dataset import main as make_smoke_dataset
 
 

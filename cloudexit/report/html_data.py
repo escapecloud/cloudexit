@@ -1,8 +1,8 @@
-# core/utils_report_html.py
+# cloudexit/report/html_data.py
 import logging
 from typing import Any
 
-from core.utils_report_common import (
+from cloudexit.report.aggregate import (
     summarize_alternative_technologies,
     summarize_costs,
     summarize_risks,

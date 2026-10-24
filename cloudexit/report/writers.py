@@ -1,31 +1,21 @@
-# core/utils_report.py
+# cloudexit/report/writers.py
 import os
 import json
-from xml.sax.saxutils import escape
 import logging
 from typing import Any
 from jinja2 import Environment
 
 # ReportLab
-from reportlab.lib.units import cm
-from reportlab.lib import colors
-from reportlab.lib.colors import HexColor
-from reportlab.platypus import (
-    Paragraph,
-    Spacer,
-    Table,
-    TableStyle,
-)
 
 # Utils
-from core.report.helpers import initials
+from cloudexit.report.helpers import initials
 from cloudexit.resources import asset_path
-from core.utils_report_html import (
+from cloudexit.report.html_data import (
     transform_cost_inventory_for_html,
     transform_risk_inventory_for_html,
     transform_alt_tech_for_html,
 )
-from core.utils_report_json import (
+from cloudexit.report.json_data import (
     transform_resource_inventory_for_json,
     transform_cost_inventory_for_json,
     transform_risk_inventory_for_json,
@@ -219,188 +209,3 @@ def generate_json_report(
         json.dump(report_json, json_file, indent=4)
 
     return json_path
-
-
-def _default_table_style() -> TableStyle:
-    """Shared header style used by summary and scope tables."""
-    return TableStyle(
-        [
-            ("BACKGROUND", (0, 0), (-1, 0), HexColor("#115e59")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("GRID", (0, 0), (-1, -1), 1, HexColor("#000000")),
-            ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, 0), 11),
-            ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
-            ("TOPPADDING", (0, 0), (-1, 0), 12),
-        ]
-    )
-
-
-def _build_summary_section(metadata, styles, content_style):
-    """Page 1: Summary table."""
-    content = []
-    content.append(Spacer(1, 12))
-    content.append(Paragraph("Summary", styles["Heading1"]))
-    content.append(Paragraph("Quick overview of the assessment:", content_style))
-
-    cloud_service_provider_map = {
-        "1": "Microsoft Azure",
-        "2": "Amazon Web Services",
-        "3": "Alibaba Cloud",
-        "4": "Google Cloud",
-    }
-    exit_strategy_map = {
-        "1": "Repatriation to On-Premises",
-        "2": "Hybrid Cloud Adoption",
-        "3": "Migration to Alternate Cloud",
-    }
-    type_map = {"1": "Basic", "2": "Standard"}
-
-    summary_data = [
-        ["Name", "Value"],
-        [
-            "Cloud Service Provider",
-            cloud_service_provider_map.get(
-                str(metadata["cloud_service_provider"]), "Unknown"
-            ),
-        ],
-        [
-            "Exit Strategy",
-            exit_strategy_map.get(str(metadata["exit_strategy"]), "Unknown"),
-        ],
-        ["Assessment Type", type_map.get(str(metadata["assessment_type"]), "Unknown")],
-        ["TimeStamp", metadata["timestamp"]],
-    ]
-
-    summary_table = Table(summary_data, colWidths=[4 * cm, 11.5 * cm])
-    summary_table.setStyle(_default_table_style())
-    content.append(summary_table)
-    content.append(Spacer(1, 12))
-
-    upload = metadata.get("upload")
-    if upload:
-        if upload.get("status") == "uploaded":
-            note = "Uploaded to the platform."
-            if upload.get("url"):
-                url = escape(upload["url"])
-                note += f' <a href="{url}" color="blue">{url}</a>'
-        else:
-            note = f"<b>Not uploaded:</b> {escape(upload.get('reason', 'unknown'))}"
-        content.append(Paragraph(note, content_style))
-    return content
-
-
-# Cap on how many subscriptions / resource groups / regions a scope row lists
-# before it summarises the remainder. The full list stays in the manifest.
-MAX_SCOPE_VALUES = 3
-
-
-def _shorten(value: str, head: int = 4, tail: int = 4) -> str:
-    if not isinstance(value, str):
-        return "N/A"
-    if len(value) <= head + tail + 1:
-        return value
-    return f"{value[:head]}…{value[-tail:]}"
-
-
-def _join_scope_values(values) -> str:
-    if not values:
-        return "Not determinable from state"
-    shown = list(values)[:MAX_SCOPE_VALUES]
-    remaining = len(values) - len(shown)
-    text = ", ".join(shown)
-    return f"{text}, +{remaining} more" if remaining > 0 else text
-
-
-def _build_tfstate_scope_rows(metadata, scope):
-    rows = []
-
-    file_name = scope.get("file") or "N/A"
-    sha256 = scope.get("sha256")
-    if sha256:
-        file_name = f"{file_name} (SHA-256 {_shorten(sha256)})"
-    rows.append(["File", file_name])
-
-    lineage = scope.get("lineage")
-    serial = scope.get("serial")
-    if lineage and serial is not None:
-        rows.append(["State", f"{lineage} (Serial: {serial})"])
-    elif lineage:
-        rows.append(["State", lineage])
-    elif serial is not None:
-        rows.append(["State", f"Serial: {serial}"])
-
-    if metadata["cloud_service_provider"] == 1:  # Azure
-        rows.append(["Subscription", _join_scope_values(scope.get("subscriptions"))])
-        rows.append(
-            ["Resource Group(s)", _join_scope_values(scope.get("resource_groups"))]
-        )
-    else:  # AWS
-        rows.append(["Region(s)", _join_scope_values(scope.get("locations"))])
-
-    return rows
-
-
-def _build_scope_section(
-    metadata, provider_details, styles, content_style, tfstate_scope=None
-):
-    """Page 1: Scope of Assessment table."""
-    content = []
-    content.append(Paragraph("Scope of Assessment", styles["Heading2"]))
-
-    tfstate_path = provider_details.get("tfstatePath")
-    if tfstate_path:
-        content.append(
-            Paragraph(
-                "Assessed from Terraform state. Resources not managed by "
-                "Terraform are not included.",
-                content_style,
-            )
-        )
-    else:
-        content.append(Paragraph("Defined scope of assessment:", content_style))
-
-    scope_data = [["Name", "Value"]]
-
-    if tfstate_path:
-        # Fall back to the little we know from the config when the manifest is
-        # unavailable, rather than rendering credential rows that are all N/A.
-        scope = tfstate_scope or {"file": os.path.basename(tfstate_path)}
-        scope_data.extend(_build_tfstate_scope_rows(metadata, scope))
-    elif metadata["cloud_service_provider"] == 1:  # Azure
-        scope_data.extend(
-            [
-                ["Tenant ID", provider_details.get("tenantId", "N/A")],
-                ["Client ID", provider_details.get("clientId", "N/A")],
-                [
-                    "Client Secret",
-                    anonymize_string(provider_details.get("clientSecret", "N/A")),
-                ],
-                ["Subscription ID", provider_details.get("subscriptionId", "N/A")],
-                [
-                    "Resource Group Name",
-                    provider_details.get("resourceGroupName", "N/A"),
-                ],
-            ]
-        )
-    elif metadata["cloud_service_provider"] == 2:  # AWS
-        scope_data.extend(
-            [
-                ["Access Key", provider_details.get("accessKey", "N/A")],
-                [
-                    "Secret Key",
-                    anonymize_string(provider_details.get("secretKey", "N/A")),
-                ],
-                ["Region", provider_details.get("region", "N/A")],
-            ]
-        )
-    else:
-        scope_data.append(["N/A", "N/A"])
-
-    scope_table = Table(scope_data, colWidths=[4 * cm, 11.5 * cm])
-    scope_table.setStyle(_default_table_style())
-    content.append(scope_table)
-    content.append(Spacer(1, 12))
-    return content

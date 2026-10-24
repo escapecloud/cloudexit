@@ -650,8 +650,8 @@ class RunIntegrationTests(CatalogueTestCase):
         report = self.tmp / "report"
         (report / "data").mkdir(parents=True)
 
-        with patch("core.utils.shutil.copytree"):
-            from core.utils import copy_assets
+        with patch("cloudexit.report.assets.shutil.copytree"):
+            from cloudexit.report.assets import copy_assets
 
             copy_assets(str(report), 2)
 

@@ -11,17 +11,17 @@ from pathlib import Path
 from pypdf import PdfReader
 
 from core.engine import generate_report, perform_risk_assessment
-from core.report import fonts
-from core.report.context import Provenance
-from core.report.executive_summary import generate_executive_summary
-from core.report.palette import (
+from cloudexit.report import fonts
+from cloudexit.report.context import Provenance
+from cloudexit.report.executive_summary import generate_executive_summary
+from cloudexit.report.palette import (
     DEFAULT_APPEARANCE,
     Appearance,
     contrast_failures,
     contrast_pairs,
     contrast_ratio,
 )
-from core.report.wording import BLOCKS, TITLE_CASE_KEYS
+from cloudexit.report.wording import BLOCKS, TITLE_CASE_KEYS
 from tests.support.flow import build_flow_run
 from tests.support.report import (
     build_empty_report_fixture,

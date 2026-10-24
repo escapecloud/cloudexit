@@ -1,11 +1,11 @@
 import unittest
 
-from core.utils_report_html import (
+from cloudexit.report.html_data import (
     transform_alt_tech_for_html,
     transform_cost_inventory_for_html,
     transform_risk_inventory_for_html,
 )
-from core.utils_report_json import (
+from cloudexit.report.json_data import (
     transform_alt_tech_for_json,
     transform_resource_inventory_for_json,
     transform_risk_inventory_for_json,
