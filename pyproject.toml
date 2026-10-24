@@ -42,17 +42,17 @@ cloudexit = "main:main"
 select = ["E4", "E7", "E9", "F"]
 
 [tool.coverage.run]
-source = ["main", "core", "utils"]
+source = ["main", "cloudexit", "core", "utils"]
 
 [tool.setuptools.dynamic]
-version = {attr = "utils.version.__version__"}
+version = {attr = "cloudexit.version.__version__"}
 
 [tool.setuptools]
 py-modules = ["main"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["core", "core.*", "utils", "utils.*"]
+include = ["cloudexit", "cloudexit.*", "core", "core.*", "utils", "utils.*"]
 
 [tool.setuptools.package-data]
-core = ["assets/**/*"]
+cloudexit = ["assets/**/*"]

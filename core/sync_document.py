@@ -23,7 +23,7 @@ from utils.data import (
     catalogue_dir,
     catalogue_info,
 )
-from utils.version import __version__
+from cloudexit.version import __version__
 
 from .utils_db import load_data
 

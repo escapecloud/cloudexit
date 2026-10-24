@@ -35,7 +35,7 @@ from tests.support.api import (
 from tests.support.http import fake_http
 from tests.support.isolation import isolated_environ
 from tests.support.sync import SYNC_ID
-from utils import codes
+from cloudexit import codes
 from utils.data import compare_catalogue_versions, parse_catalogue_version
 from utils.settings import Setting, Settings
 

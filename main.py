@@ -102,8 +102,8 @@ from utils.settings import (
     load_settings,
 )
 from utils.validate import validate_region, validate_config
-from utils import codes
-from utils.version import __version__
+from cloudexit import codes
+from cloudexit.version import __version__
 
 # Configure the logger (level is left to the handlers, see configure_logging)
 logger = logging.getLogger(__name__)

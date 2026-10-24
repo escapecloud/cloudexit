@@ -10,7 +10,7 @@ from reportlab.lib.units import cm
 from reportlab.lib.utils import ImageReader
 from reportlab.platypus import Paragraph
 
-from core.resources import find_asset
+from cloudexit.resources import find_asset
 
 from .fonts import FONT, FONT_BOLD, FONT_MONO
 from .helpers import strategy_name

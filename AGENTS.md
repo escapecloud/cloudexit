@@ -16,11 +16,11 @@ cloudexit is an offline-first CLI. It collects cloud inventory and cost data wit
 CI runs exactly these, with the tool versions pinned in `requirements-dev.txt`:
 
 ```bash
-ruff check main.py core utils tests
-black --check main.py core utils tests
+ruff check main.py cloudexit core utils tests
+black --check main.py cloudexit core utils tests
 ```
 
-Fix with `ruff check --fix main.py core utils tests` and `black main.py core utils tests`. Don't add a `# noqa` or an ignore without a code comment saying why.
+Fix with `ruff check --fix main.py cloudexit core utils tests` and `black main.py cloudexit core utils tests`. Don't add a `# noqa` or an ignore without a code comment saying why.
 
 ## Tests
 

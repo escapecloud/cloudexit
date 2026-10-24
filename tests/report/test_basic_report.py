@@ -36,7 +36,7 @@ from tests.support.report_terms import (
     retired_term_hits,
 )
 from tests.support.sync import SYNC_ID
-from utils.version import __version__
+from cloudexit.version import __version__
 
 URL = "https://platform.test/assessments/a-1"
 COLLECTED = datetime(2026, 5, 7, 12, 0, tzinfo=timezone.utc)

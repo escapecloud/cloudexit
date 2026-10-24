@@ -10,7 +10,7 @@ from rich.style import Style
 from time import sleep
 from datetime import datetime
 
-from utils import codes
+from cloudexit import codes
 
 logger = logging.getLogger("main.utils")
 console = Console()

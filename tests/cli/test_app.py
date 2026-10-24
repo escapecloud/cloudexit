@@ -8,7 +8,7 @@ from unittest.mock import ANY, MagicMock, patch
 
 import main
 from core.sync_document import SyncOutput
-from utils import codes
+from cloudexit import codes
 from utils.settings import Settings
 
 VALID_CONFIG = {

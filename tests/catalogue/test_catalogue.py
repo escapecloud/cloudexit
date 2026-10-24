@@ -24,7 +24,7 @@ from tests.support.catalogue import (
     sha256,
 )
 from tests.support.http import fake_http, make_response
-from utils import codes
+from cloudexit import codes
 from utils.data import (
     CATALOGUE_BASE_URL,
     CatalogueError,

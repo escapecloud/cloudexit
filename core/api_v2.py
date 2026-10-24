@@ -19,7 +19,7 @@ from urllib.parse import quote, urlsplit
 
 import requests
 
-from utils import codes
+from cloudexit import codes
 from utils.settings import (
     DEFAULT_UPLOAD_BUDGET,
     KEY_PREFIXES,
@@ -27,7 +27,7 @@ from utils.settings import (
     SettingsError,
     normalize_host,
 )
-from utils.version import __version__
+from cloudexit.version import __version__
 
 from .sync_document import (
     MAX_BODY_BYTES,

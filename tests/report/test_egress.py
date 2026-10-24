@@ -11,7 +11,7 @@ from reportlab.platypus import PageBreak, Paragraph, Table
 
 from tests.support.report import stage_report_assets
 
-from core.resources import asset_path
+from cloudexit.resources import asset_path
 from core.utils_egress import GIB, write_egress_inventory
 from utils.data import active_catalogue_path
 from core.utils_report_egress import (

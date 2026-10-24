@@ -1,4 +1,4 @@
-# utils/codes.py
+# cloudexit/codes.py
 
 SUCCESS = 0
 UNEXPECTED = 1

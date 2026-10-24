@@ -3,10 +3,10 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
-from core.resources import find_asset
+from cloudexit.resources import find_asset
 from core.utils_report_common import summarize_alternative_technologies
 from utils.data import CatalogueError, catalogue_info
-from utils.version import __version__
+from cloudexit.version import __version__
 
 from .palette import DEFAULT_APPEARANCE, SEVERITIES, Appearance
 

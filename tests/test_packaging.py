@@ -10,10 +10,10 @@ from contextlib import contextmanager
 from pathlib import Path
 from unittest import mock
 
-from core import resources
+from cloudexit import resources
 from core.engine import generate_report, perform_risk_assessment
 from core.report import fonts
-from core.resources import asset_path, find_asset
+from cloudexit.resources import asset_path, find_asset
 from core.utils import copy_assets
 from tests.support.isolation import isolated_environ
 from tests.support.flow import build_flow_run
@@ -21,7 +21,7 @@ from tests.report.test_report_flow import AWS_RESOURCES, CONFIG, COSTS
 from tests.support.paths import ROOT
 
 SOURCE_FILES = ("pyproject.toml", "README.md", "main.py")
-SOURCE_DIRS = ("core", "utils")
+SOURCE_DIRS = ("cloudexit", "core", "utils")
 
 
 @contextmanager
@@ -68,30 +68,30 @@ class WheelContentsTests(unittest.TestCase):
         cls.names = set(zipfile.ZipFile(wheel).namelist())
 
     def test_the_wheel_contains_every_asset_file(self):
-        expected = {f"core/assets/{name}" for name in asset_files(asset_path())}
-        packaged = {n for n in self.names if n.startswith("core/assets/")}
+        expected = {f"cloudexit/assets/{name}" for name in asset_files(asset_path())}
+        packaged = {n for n in self.names if n.startswith("cloudexit/assets/")}
         self.assertEqual(sorted(expected - packaged), [])
         self.assertEqual(sorted(packaged - expected), [])
         self.assertGreater(len(expected), 1000)
 
     def test_the_files_a_report_needs_are_in_the_wheel(self):
         for name in (
-            "core/assets/fonts/IBMPlexSans-Regular.ttf",
-            "core/assets/fonts/IBMPlexMono-SemiBold.ttf",
-            "core/assets/fonts/OFL.txt",
-            "core/assets/template/index.html",
-            "core/assets/template/egress.html",
-            "core/assets/css/style.css",
-            "core/assets/img/logo/report_logo.png",
-            "core/assets/icons/aws/Compute/EC2.png",
+            "cloudexit/assets/fonts/IBMPlexSans-Regular.ttf",
+            "cloudexit/assets/fonts/IBMPlexMono-SemiBold.ttf",
+            "cloudexit/assets/fonts/OFL.txt",
+            "cloudexit/assets/template/index.html",
+            "cloudexit/assets/template/egress.html",
+            "cloudexit/assets/css/style.css",
+            "cloudexit/assets/img/logo/report_logo.png",
+            "cloudexit/assets/icons/aws/Compute/EC2.png",
         ):
             with self.subTest(name):
                 self.assertIn(name, self.names)
 
     def test_the_wheel_ships_no_svg_icons_and_no_unused_assets(self):
         self.assertEqual([n for n in self.names if n.endswith(".svg")], [])
-        self.assertNotIn("core/assets/img/logo/favicon.ico", self.names)
-        self.assertNotIn("core/assets/fonts/IBMPlexSans-Medium.ttf", self.names)
+        self.assertNotIn("cloudexit/assets/img/logo/favicon.ico", self.names)
+        self.assertNotIn("cloudexit/assets/fonts/IBMPlexSans-Medium.ttf", self.names)
 
     def test_the_wheel_has_no_loose_assets_directory(self):
         self.assertFalse([n for n in self.names if n.startswith("assets/")])
@@ -109,7 +109,7 @@ class AssetLookupTests(unittest.TestCase):
                 self.assertTrue(asset_path(*parts).is_file())
 
     def test_the_assets_are_found_through_the_package_not_the_current_directory(self):
-        self.assertEqual(asset_path(), ROOT / "core" / "assets")
+        self.assertEqual(asset_path(), ROOT / "cloudexit" / "assets")
         with tempfile.TemporaryDirectory() as empty, working_directory(empty):
             self.assertTrue(asset_path("template", "index.html").is_file())
             self.assertTrue(asset_path("fonts", "IBMPlexSans-Regular.ttf").is_file())
@@ -245,6 +245,19 @@ class NoCurrentDirectoryLookupTests(unittest.TestCase):
         ):
             with self.subTest(line=line):
                 self.assertTrue(any(p.search(line) for p in self.PATTERNS))
+
+
+class VersionFileTests(unittest.TestCase):
+    def test_the_release_workflow_edits_the_file_the_build_reads(self):
+        workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(
+            encoding="utf-8"
+        )
+        pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        self.assertIn('attr = "cloudexit.version.__version__"', pyproject)
+        paths = set(re.findall(r"[\w/]+/version\.py", workflow))
+        self.assertEqual(paths, {"cloudexit/version.py"})
+        text = (ROOT / "cloudexit" / "version.py").read_text(encoding="utf-8")
+        self.assertRegex(text, r'(?m)^__version__ = ".+"$')
 
 
 if __name__ == "__main__":

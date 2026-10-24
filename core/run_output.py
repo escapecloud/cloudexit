@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from utils import codes
+from cloudexit import codes
 from utils.data import compare_catalogue_versions
 
 from .upload import UploadResult

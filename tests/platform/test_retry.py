@@ -22,7 +22,7 @@ from tests.support.api import (
 )
 from tests.support.http import fake_http, make_response
 from tests.platform.test_client import ClientTestCase
-from utils import codes
+from cloudexit import codes
 
 
 class Ceiling:

@@ -19,7 +19,7 @@ from tests.support.api import (
     created_reply,
 )
 from tests.report import test_report_flow as flow
-from utils import codes
+from cloudexit import codes
 from utils.settings import Setting, Settings
 
 OUTDATED = {

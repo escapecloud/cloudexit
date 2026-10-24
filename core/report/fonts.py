@@ -4,7 +4,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus.tables import CellStyle
 
-from ..resources import asset_path
+from cloudexit.resources import asset_path
 
 FONT_DIR = asset_path("fonts")
 

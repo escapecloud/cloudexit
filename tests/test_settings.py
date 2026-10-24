@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 import main
 from tests.support.isolation import isolated_environ
-from utils import codes
+from cloudexit import codes
 from utils.settings import (
     DEFAULT_TIMEOUT,
     Settings,

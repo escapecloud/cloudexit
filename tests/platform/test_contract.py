@@ -27,7 +27,7 @@ from tests.support.api import (
 )
 from tests.support.http import fake_http
 from tests.support.sync import DEFINITION, schema_errors
-from utils import codes
+from cloudexit import codes
 from utils.settings import Setting, Settings
 from tests.support.paths import ROOT
 

@@ -10,7 +10,7 @@ from unittest.mock import patch
 import main
 from tests.support.isolation import isolated_environ
 from tests.make_smoke_dataset import main as make_smoke_dataset
-from utils import codes
+from cloudexit import codes
 from utils.azure import select_resource_group, select_subscription
 from utils.utils import NO_TERMINAL_MESSAGE, ask, prompt_required_inputs
 from tests.support.paths import ROOT
