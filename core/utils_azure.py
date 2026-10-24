@@ -8,7 +8,8 @@ from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 from collections import defaultdict
 from azure.identity import ClientSecretCredential
-from azure.mgmt.resource import ResourceManagementClient
+from azure.mgmt.resource.resources import ResourceManagementClient
+from azure.mgmt.resource.subscriptions import SubscriptionClient
 from azure.mgmt.costmanagement import CostManagementClient
 from azure.mgmt.costmanagement.models import QueryDefinition, TimeframeType
 from azure.core.exceptions import AzureError, ClientAuthenticationError
@@ -18,12 +19,46 @@ from .utils_db import connect, load_data
 logger = logging.getLogger("core.engine.azure")
 logging.getLogger("azure").setLevel(logging.WARNING)
 
+MANAGEMENT_URL = "https://management.azure.com"
+
+
+def create_resource_client(credential: Any, subscription_id: str) -> Any:
+    return ResourceManagementClient(credential, subscription_id)
+
+
+def create_subscription_client(credential: Any) -> Any:
+    return SubscriptionClient(credential)
+
+
+def create_cost_client(credential: Any) -> Any:
+    return CostManagementClient(credential, base_url=MANAGEMENT_URL)
+
+
+def plain_json(value: Any) -> Any:
+    # SDK models are mappings (and datetimes appear in some of them); the raw
+    # data files hold plain JSON.
+    if hasattr(value, "keys"):
+        return {key: plain_json(value[key]) for key in value.keys()}
+    if isinstance(value, (list, tuple)):
+        return [plain_json(item) for item in value]
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    return value
+
+
+def cost_result_dict(result: Any) -> dict[str, Any]:
+    # The REST shape nests the columns and rows under "properties"; the raw
+    # file keeps them at the top level.
+    data = plain_json(result.as_dict())
+    properties = data.pop("properties", None) or {}
+    return {**data, **properties}
+
 
 def is_resource_inventory_empty(
     credential: Any, subscription_id: str, resource_group_name: str
 ) -> bool:
     try:
-        resource_client = ResourceManagementClient(credential, subscription_id)
+        resource_client = create_resource_client(credential, subscription_id)
         # logger.info("Checking Azure resource inventory...")
         resources = list(
             resource_client.resources.list_by_resource_group(resource_group_name)
@@ -70,13 +105,13 @@ def build_azure_resource_inventory(
             )
             return
 
-        resource_client = ResourceManagementClient(credential, subscription_id)
+        resource_client = create_resource_client(credential, subscription_id)
 
         # Fetch resources and serialize to raw JSON
         resources = list(
             resource_client.resources.list_by_resource_group(resource_group_name)
         )
-        raw_data = [resource.serialize(True) for resource in resources]
+        raw_data = [plain_json(resource) for resource in resources]
 
         # Save raw data to a JSON file
         raw_file_path = os.path.join(raw_data_path, "resource_inventory_raw_data.json")
@@ -99,7 +134,8 @@ def build_azure_resource_inventory(
         aggregated_resources = defaultdict(int)
         for resource in resources:
             resource_type_code = resource.type.strip().lower()
-            resource_location = resource.location.strip().lower()
+            # Non-regional resources have no location; Azure calls them "global"
+            resource_location = (resource.location or "").strip().lower() or "global"
             aggregated_resources[(resource_type_code, resource_location)] += 1
 
         # Insert data into SQLite
@@ -174,9 +210,7 @@ def build_azure_cost_inventory(
             client_id=provider_details["clientId"],
             client_secret=provider_details["clientSecret"],
         )
-        cost_management_client = CostManagementClient(
-            credential, base_url="https://management.azure.com"
-        )
+        cost_management_client = create_cost_client(credential)
 
         db_path = os.path.join(report_path, "data", "assessment.db")
 
@@ -206,7 +240,7 @@ def build_azure_cost_inventory(
             raw_data_path, "cost_inventory_raw_data.json"
         )
         with open(cost_inventory_raw_path, "w", encoding="utf-8") as raw_file:
-            json.dump(cost_data.as_dict(), raw_file, indent=4)
+            json.dump(cost_result_dict(cost_data), raw_file, indent=4)
 
         # Insert structured cost data into SQLite
         currency = "USD"

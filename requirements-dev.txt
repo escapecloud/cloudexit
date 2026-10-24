@@ -1,6 +1,6 @@
 -r requirements.txt
 black==26.10.1
-ruff==0.17.1
+ruff==0.17.2
 jsonschema==4.26.0
 PyYAML==6.0.3
 pypdf==6.21.2

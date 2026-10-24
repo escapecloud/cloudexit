@@ -4,8 +4,8 @@ import requests
 from typing import Any
 from datetime import datetime, timedelta, timezone
 from azure.identity import ClientSecretCredential
-from azure.mgmt.resource import ResourceManagementClient
 
+from .utils_azure import create_resource_client
 from .utils_egress import GIB, format_bytes, load_egress_registry, new_row
 
 logger = logging.getLogger("core.engine.egress.azure")
@@ -187,7 +187,7 @@ def _collect_allocated_size(
     row["flags"].append("allocated (upper bound)")
 
     full_resource = resource_client.resources.get_by_id(
-        resource.id, entry["api_version"]
+        resource.id, api_version=entry["api_version"]
     )
     size_gb = (full_resource.properties or {}).get(entry["size_property"])
     if size_gb:
@@ -289,7 +289,7 @@ def collect_azure_egress(
     subscription_id = provider_details["subscriptionId"]
     resource_group_name = provider_details["resourceGroupName"]
 
-    resource_client = ResourceManagementClient(credential, subscription_id)
+    resource_client = create_resource_client(credential, subscription_id)
     resources = list(
         resource_client.resources.list_by_resource_group(resource_group_name)
     )
