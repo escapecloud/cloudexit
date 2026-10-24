@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from core.engine import _load_tfstate_scope, test_permissions
+from cloudexit.engine import _load_tfstate_scope, test_permissions
 
 
 class TestPermissionsAwsHybridMode(unittest.TestCase):
@@ -16,7 +16,7 @@ class TestPermissionsAwsHybridMode(unittest.TestCase):
             "region": "eu-central-1",
         }
 
-    @patch("core.engine.boto3.client")
+    @patch("cloudexit.engine.boto3.client")
     def test_iam_user_keeps_policy_based_validation(self, mock_boto_client):
         sts_client = MagicMock()
         sts_client.get_caller_identity.return_value = {
@@ -48,7 +48,7 @@ class TestPermissionsAwsHybridMode(unittest.TestCase):
         self.assertTrue(permission_cost)
         self.assertIn("policies validated", logs)
 
-    @patch("core.engine.boto3.client")
+    @patch("cloudexit.engine.boto3.client")
     def test_assumed_role_uses_capability_checks(self, mock_boto_client):
         sts_client = MagicMock()
         sts_client.get_caller_identity.return_value = {
@@ -77,7 +77,7 @@ class TestPermissionsAwsHybridMode(unittest.TestCase):
         self.assertTrue(permission_cost)
         self.assertIn("capability checks validated", logs)
 
-    @patch("core.engine.boto3.client")
+    @patch("cloudexit.engine.boto3.client")
     def test_assumed_role_cost_capability_failure(self, mock_boto_client):
         sts_client = MagicMock()
         sts_client.get_caller_identity.return_value = {
