@@ -450,6 +450,12 @@ class MetaTests(ClientTestCase):
 
 
 class PolicyTests(ClientTestCase):
+    def setUp(self):
+        super().setUp()
+        # The policies below are written against this client version, not the
+        # one in utils/version.py, which changes with every release
+        self.enterContext(patch.object(api_v2, "__version__", "1.1.7"))
+
     def test_a_blocked_or_too_old_client_is_refused_before_the_push(self):
         for label, clients in (
             ("blocked", {"blocked": ["1.1.7"]}),
