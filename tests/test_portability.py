@@ -13,10 +13,10 @@ from pathlib import Path
 import main
 import tests
 from core import utils_db
-from tests.isolation import isolated_environ
+from tests.support.isolation import isolated_environ
 from tests.make_smoke_dataset import main as make_smoke_dataset
+from tests.support.paths import ROOT
 
-ROOT = Path(__file__).resolve().parent.parent
 SOURCES = [
     ROOT / "main.py",
     *(ROOT / "core").rglob("*.py"),

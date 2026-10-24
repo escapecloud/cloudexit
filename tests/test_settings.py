@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import main
-from tests.isolation import isolated_environ
+from tests.support.isolation import isolated_environ
 from utils import codes
 from utils.settings import (
     DEFAULT_TIMEOUT,

@@ -25,10 +25,11 @@ Fix with `ruff check --fix main.py core utils tests` and `black main.py core uti
 ## Tests
 
 ```bash
-python -m unittest discover -s tests
+python -m unittest discover -s tests -t .
 ```
 
-- Add or update tests with every behaviour change. Fixtures live in `tests/`.
+- Add or update tests with every behaviour change. Tests sit in sub-directories that mirror the source layout (`tests/platform/`, `tests/report/`, ...); shared builders are in `tests/support/` and data files in `tests/fixtures/`.
+- Always discover with `-t .`: without it `tests/` itself becomes the top-level directory and `tests/platform/` would be imported as `platform`, shadowing the standard library.
 - Tests never call real cloud APIs or real platforms. Mock `boto3`, the Azure SDK and HTTP.
 - Tests that cannot run on a platform (POSIX file modes on Windows) are skipped with `unittest.skipIf` or `skipUnless` and a reason, never deleted.
 - The Ubuntu 3.14 job runs the suite under `coverage` and prints the report. There is no threshold.
