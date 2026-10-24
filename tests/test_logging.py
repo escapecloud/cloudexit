@@ -38,7 +38,7 @@ class LoggerNameTests(unittest.TestCase):
             "cloudexit.platform.client",
             "cloudexit.providers.aws.inventory",
             "cloudexit.report.egress",
-            "cloudexit.catalogue.store",
+            "cloudexit.catalogue.download",
             "cloudexit.settings",
             "cloudexit.engine",
         ):

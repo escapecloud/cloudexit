@@ -81,13 +81,15 @@ from cloudexit.catalogue.store import (
     CatalogueUnavailable,
     catalogue_base_url,
     catalogue_info,
-    ensure_catalogue,
     import_catalogue,
     installed_catalogue,
     set_active_catalogue,
+    use_catalogue_file,
+)
+from cloudexit.catalogue.download import (
+    ensure_catalogue,
     status_lines,
     update_catalogue,
-    use_catalogue_file,
 )
 from cloudexit.cli.parser import parse_arguments
 from cloudexit.cli.prompts import (

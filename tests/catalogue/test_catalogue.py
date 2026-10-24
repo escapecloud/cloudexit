@@ -36,16 +36,18 @@ from cloudexit.catalogue.store import (
     catalogue_base_url,
     catalogue_dir,
     catalogue_info,
-    ensure_catalogue,
     import_catalogue,
     installed_catalogue,
     migrate_legacy_dataset,
     read_state,
-    resolve_file_url,
     set_active_catalogue,
+    use_catalogue_file,
+)
+from cloudexit.catalogue.download import (
+    ensure_catalogue,
+    resolve_file_url,
     status_lines,
     update_catalogue,
-    use_catalogue_file,
 )
 from cloudexit.settings import Setting, Settings, SettingsError
 
