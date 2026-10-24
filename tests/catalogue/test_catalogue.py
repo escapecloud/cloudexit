@@ -13,7 +13,7 @@ from unittest.mock import patch
 import requests
 
 import main
-from core import utils_db
+from cloudexit.catalogue import db as catalogue_db
 from tests.support.isolation import isolated_environ
 from tests.support.catalogue import (
     build_catalogue,
@@ -25,7 +25,7 @@ from tests.support.catalogue import (
 )
 from tests.support.http import fake_http, make_response
 from cloudexit import codes
-from utils.data import (
+from cloudexit.catalogue.store import (
     CATALOGUE_BASE_URL,
     CatalogueError,
     CatalogueUnavailable,
@@ -61,7 +61,8 @@ class CatalogueTestCase(unittest.TestCase):
         self.dir = self.tmp / "catalogue"
         self.addCleanup(set_active_catalogue, None)
         patcher = patch(
-            "utils.data.LEGACY_DATABASE", self.tmp / "no-legacy" / "data.db"
+            "cloudexit.catalogue.store.LEGACY_DATABASE",
+            self.tmp / "no-legacy" / "data.db",
         )
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -318,7 +319,7 @@ class CatalogueInfoTests(CatalogueTestCase):
         self.assertEqual(active_catalogue_path(), path)
         self.assertEqual(catalogue_info().version, V3)
         self.assertEqual(active_resource_type_ids("azure"), [3])
-        self.assertEqual(utils_db.load_data("risk")[0]["name"], "Example risk")
+        self.assertEqual(catalogue_db.load_data("risk")[0]["name"], "Example risk")
 
 
 class ImportTests(CatalogueTestCase):
@@ -442,7 +443,7 @@ class MigrationTests(CatalogueTestCase):
         legacy = self.legacy(version=V2)
         _, entry = self.release(V2)
         with (
-            patch("utils.data.LEGACY_DATABASE", legacy),
+            patch("cloudexit.catalogue.store.LEGACY_DATABASE", legacy),
             fake_http(self.manifest_reply(entry)),
         ):
             result = ensure_catalogue(BASE, directory=self.dir)

@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
-from core.utils_db import load_data
+from cloudexit.catalogue.db import load_data
 from core.utils_egress import estimate_egress, load_egress_registry
 from core.utils_egress_azure import filter_data_bearing_resources
 

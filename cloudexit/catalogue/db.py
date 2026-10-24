@@ -1,8 +1,8 @@
-# core/utils_db.py
+# cloudexit/catalogue/db.py
 import sqlite3
 import logging
 
-from utils.data import active_catalogue_path
+from cloudexit.catalogue.store import active_catalogue_path
 
 # Configure logger for database operations (level left to the root handlers)
 logger = logging.getLogger("core.engine.db")

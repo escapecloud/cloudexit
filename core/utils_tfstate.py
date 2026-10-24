@@ -8,7 +8,7 @@ import sqlite3
 from typing import Any
 from collections import defaultdict
 
-from .utils_db import connect, load_data
+from cloudexit.catalogue.db import connect, load_data
 
 logger = logging.getLogger("core.engine.tfstate")
 

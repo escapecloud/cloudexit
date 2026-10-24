@@ -3,7 +3,7 @@ import os
 import shutil
 import logging
 
-from utils.data import active_catalogue_path
+from cloudexit.catalogue.store import active_catalogue_path
 
 from cloudexit.resources import asset_path
 

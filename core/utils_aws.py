@@ -17,7 +17,7 @@ from botocore.exceptions import (
     UnknownServiceError,
 )
 
-from .utils_db import connect, load_data
+from cloudexit.catalogue.db import connect, load_data
 
 logger = logging.getLogger("core.engine.aws")
 

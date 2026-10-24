@@ -13,7 +13,7 @@ from tests.support.report import stage_report_assets
 
 from cloudexit.resources import asset_path
 from core.utils_egress import GIB, write_egress_inventory
-from utils.data import active_catalogue_path
+from cloudexit.catalogue.store import active_catalogue_path
 from core.utils_report_egress import (
     CATEGORIES,
     _build_allocation,
@@ -268,7 +268,7 @@ class LoadPricingTests(unittest.TestCase):
     def test_shipped_dataset_has_contiguous_zone1_ladders(self):
         from itertools import groupby
 
-        from core.utils_db import load_data as db_load
+        from cloudexit.catalogue.db import load_data as db_load
 
         rows = [row for row in db_load("egresspricing") if not row["valid_to"]]
         rows.sort(key=lambda r: (r["csp"], r["component"], r["zone"], r["tier_from"]))

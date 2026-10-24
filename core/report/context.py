@@ -5,7 +5,7 @@ from typing import Any
 
 from cloudexit.resources import find_asset
 from core.utils_report_common import summarize_alternative_technologies
-from utils.data import CatalogueError, catalogue_info
+from cloudexit.catalogue.store import CatalogueError, catalogue_info
 from cloudexit.version import __version__
 
 from .palette import DEFAULT_APPEARANCE, SEVERITIES, Appearance

@@ -8,7 +8,7 @@ from unittest import mock
 
 from cloudexit.resources import asset_path
 from core.utils import copy_assets
-from utils.data import active_catalogue_path
+from cloudexit.catalogue.store import active_catalogue_path
 
 SOURCE_ICONS = asset_path("icons")
 

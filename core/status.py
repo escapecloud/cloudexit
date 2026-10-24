@@ -12,7 +12,7 @@ from urllib.parse import urlsplit
 import requests
 
 from cloudexit import codes
-from utils.data import (
+from cloudexit.catalogue.store import (
     CatalogueError,
     catalogue_dir,
     compare_catalogue_versions,

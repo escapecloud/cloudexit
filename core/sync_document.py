@@ -17,7 +17,7 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
-from utils.data import (
+from cloudexit.catalogue.store import (
     CatalogueError,
     active_resource_type_ids,
     catalogue_dir,
@@ -25,7 +25,7 @@ from utils.data import (
 )
 from cloudexit.version import __version__
 
-from .utils_db import load_data
+from cloudexit.catalogue.db import load_data
 
 logger = logging.getLogger("core.engine.sync_document")
 

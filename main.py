@@ -69,7 +69,7 @@ from utils.azure import (
     is_azure_cli_token_expired,
 )
 from utils.aws import is_aws_cli_installed, is_aws_profile_valid
-from utils.data import (
+from cloudexit.catalogue.store import (
     CatalogueError,
     CatalogueUnavailable,
     catalogue_base_url,

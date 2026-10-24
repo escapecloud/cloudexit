@@ -5,7 +5,7 @@ import os
 from typing import Any
 from datetime import datetime, timezone
 
-from .utils_db import connect, load_data
+from cloudexit.catalogue.db import connect, load_data
 
 logger = logging.getLogger("core.engine.egress")
 
