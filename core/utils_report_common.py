@@ -249,7 +249,7 @@ def enrich_resource_inventory(
     for idx, resource in enumerate(resource_inventory):
         resource_type = str(resource["resource_type"])
         resource_info = resource_type_mapping.get(resource_type, {})
-        icon = resource_info.get("icon", "/icons/default.png")
+        icon = resource_info.get("icon") or ""
 
         entry = {
             "id": idx + 1,
@@ -262,7 +262,7 @@ def enrich_resource_inventory(
         }
 
         if report_path is not None:
-            entry["icon_url"] = f"{report_path}/assets{icon}"
+            entry["icon_url"] = f"{report_path}/assets{icon}" if icon else None
 
         enriched_resources.append(entry)
 

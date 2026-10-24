@@ -55,7 +55,7 @@ def build_flow_run(report_path, *, platform_scores=False, **kwargs):
     conn = sqlite3.connect(db_path)
     conn.executescript(FLOW_TABLES)
     conn.executemany("INSERT INTO risk VALUES (?, ?, ?, ?)", RISKS)
-    conn.execute("UPDATE resourcetype SET icon = '/icons/misc/no_image.png'")
+    conn.execute("UPDATE resourcetype SET icon = '/icons/aws/Compute/EC2.png'")
     if platform_scores:
         # What an earlier version stored after an upload: it must never be rendered
         conn.execute(

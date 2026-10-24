@@ -78,7 +78,7 @@ def seed_db(db_path, rows):
     conn.executescript(SCHEMA)
     conn.executemany(
         "INSERT INTO resourcetype (id, csp, code, name, icon, status, tf_code) "
-        "VALUES (?, ?, ?, ?, '/icons/misc/no_image.png', ?, ?)",
+        "VALUES (?, ?, ?, ?, '/icons/aws/Compute/EC2.png', ?, ?)",
         rows,
     )
     conn.commit()

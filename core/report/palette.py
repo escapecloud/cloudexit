@@ -11,6 +11,7 @@ HOTSPOT = "#E8A33D"
 HOTSPOT_BACKGROUND = "#FDF6EC"
 HOTSPOT_COUNT = "#B45309"
 PROVENANCE_BACKGROUND = "#F5F7F8"
+PLACEHOLDER_BACKGROUND = HAIRLINE
 
 # Fixed: the pip count and the word carry the severity without colour.
 SEVERITIES = ("critical", "high", "medium", "low")
@@ -91,6 +92,7 @@ def contrast_pairs(appearance=DEFAULT_APPEARANCE):
         ("page number and footer", MUTED, WHITE, 4.5),
         ("attention count", HOTSPOT_COUNT, HOTSPOT_BACKGROUND, 4.5),
         ("provenance note", SUBTITLE, PROVENANCE_BACKGROUND, 4.5),
+        ("icon placeholder", SUBTITLE, PLACEHOLDER_BACKGROUND, 4.5),
         ("band and rules", appearance.header_footer_color, WHITE, 3.0),
     )
 

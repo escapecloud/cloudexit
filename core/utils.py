@@ -12,9 +12,6 @@ logger = logging.getLogger("core.engine.utils")
 # Icon folder per cloud service provider id
 PROVIDER_ICON_DIRS = {1: "azure", 2: "aws"}
 
-# Icon folders every report needs, whichever provider was assessed
-SHARED_ICON_DIRS = ("severity", "misc")
-
 
 def _png_only(src: str, names: list[str]) -> list[str]:
     # Keep directories so copytree still walks the whole tree, drop every
@@ -35,9 +32,9 @@ def _icon_dirs(cloud_service_provider: int) -> list[str]:
             "Unknown cloud service provider %s, copying every provider icon set",
             cloud_service_provider,
         )
-        return [*PROVIDER_ICON_DIRS.values(), *SHARED_ICON_DIRS]
+        return list(PROVIDER_ICON_DIRS.values())
 
-    return [provider_dir, *SHARED_ICON_DIRS]
+    return [provider_dir]
 
 
 def copy_assets(report_path: str, cloud_service_provider: int) -> None:

@@ -41,17 +41,15 @@ def relative_pngs(root):
 class CopyAssetsProviderScopeTests(unittest.TestCase):
     def test_azure_assessment_copies_only_azure_icons(self):
         with staged(1) as (report_path, _):
-            self.assertEqual(icon_dirs(report_path), {"azure", "severity", "misc"})
+            self.assertEqual(icon_dirs(report_path), {"azure"})
 
     def test_aws_assessment_copies_only_aws_icons(self):
         with staged(2) as (report_path, _):
-            self.assertEqual(icon_dirs(report_path), {"aws", "severity", "misc"})
+            self.assertEqual(icon_dirs(report_path), {"aws"})
 
     def test_unknown_provider_falls_back_to_every_icon_set(self):
         with staged(99) as (report_path, _):
-            self.assertEqual(
-                icon_dirs(report_path), {"azure", "aws", "severity", "misc"}
-            )
+            self.assertEqual(icon_dirs(report_path), {"azure", "aws"})
 
     def test_provider_icon_set_is_copied_in_full(self):
         # The filter must drop non-PNG files only, never an icon.
@@ -107,19 +105,16 @@ class CopyAssetsUnrelatedAssetTests(unittest.TestCase):
                 os.path.join(str(report_path), "data", "assessment.db"),
             )
 
-    def test_shared_icons_are_copied_for_every_provider(self):
-        # no_image.png is the fallback icon and the severity icons are used by
-        # the PDF renderer, so both must travel with any report.
-        for cloud_service_provider in (1, 2):
+    def test_no_shared_icon_folder_is_copied(self):
+        # Only the assessed provider's resource icons travel with a report;
+        # the report draws a placeholder for a resource type without an icon.
+        for cloud_service_provider in (1, 2, 99):
             with self.subTest(cloud_service_provider=cloud_service_provider):
                 with staged(cloud_service_provider) as (report_path, _):
                     icons = report_path / "assets" / "icons"
 
-                    self.assertTrue((icons / "misc" / "no_image.png").is_file())
-                    for severity in ("high", "medium", "low"):
-                        self.assertTrue(
-                            (icons / "severity" / f"{severity}.png").is_file()
-                        )
+                    self.assertFalse((icons / "severity").exists())
+                    self.assertFalse((icons / "misc").exists())
 
 
 if __name__ == "__main__":
