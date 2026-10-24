@@ -56,6 +56,7 @@ class ImportOrderTests(unittest.TestCase):
     MODULES = (
         "cloudexit.engine",
         "cloudexit.cli.prompts",
+        "cloudexit.terminal",
         "cloudexit.cli.app",
         "cloudexit.providers.azure.costs",
         "cloudexit.providers.azure.cli_session",
