@@ -26,7 +26,6 @@ from core.utils_report_egress import (
     generate_egress_pdf_report,
 )
 from core.utils_report_common import enrich_resource_inventory
-from core.utils_report_pdf import transform_alt_tech_for_pdf
 from tests.report_fixtures import (
     build_fixture_context,
     build_report_fixture,
@@ -303,7 +302,7 @@ class HtmlReportTests(TempDirTestCase):
         self.assertIn(".resource-icon-placeholder", css)
 
 
-class LegacyTransformTests(unittest.TestCase):
+class EnrichedInventoryTests(unittest.TestCase):
     MAPPING = {
         "1": {"code": "A", "name": "With Icon", "icon": EC2_ICON},
         "2": {"code": "B", "name": "No Icon", "icon": ""},
@@ -315,17 +314,10 @@ class LegacyTransformTests(unittest.TestCase):
     ]
 
     def test_the_inventory_carries_no_fallback_icon(self):
-        rows = enrich_resource_inventory(self.INVENTORY, self.MAPPING, report_path="/r")
+        rows = enrich_resource_inventory(self.INVENTORY, self.MAPPING)
 
-        self.assertEqual(rows[0]["icon_url"], f"/r/assets{EC2_ICON}")
-        self.assertEqual([row["icon"] for row in rows[1:]], ["", ""])
-        self.assertEqual([row["icon_url"] for row in rows[1:]], [None, None])
-
-    def test_the_alternatives_transform_carries_no_fallback_icon(self):
-        rows = transform_alt_tech_for_pdf(self.INVENTORY, self.MAPPING, [], [], 1, "/r")
-
-        self.assertEqual(rows[0]["icon_url"], f"/r/assets{EC2_ICON}")
-        self.assertEqual([row["icon_url"] for row in rows[1:]], [None, None])
+        self.assertEqual([row["icon"] for row in rows], [EC2_ICON, "", ""])
+        self.assertTrue(all("icon_url" not in row for row in rows))
 
 
 class EgressReportTests(TempDirTestCase):

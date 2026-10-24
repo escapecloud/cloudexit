@@ -71,7 +71,7 @@ class WheelContentsTests(unittest.TestCase):
         packaged = {n for n in self.names if n.startswith("core/assets/")}
         self.assertEqual(sorted(expected - packaged), [])
         self.assertEqual(sorted(packaged - expected), [])
-        self.assertGreater(len(expected), 2000)
+        self.assertGreater(len(expected), 1000)
 
     def test_the_files_a_report_needs_are_in_the_wheel(self):
         for name in (
@@ -86,6 +86,11 @@ class WheelContentsTests(unittest.TestCase):
         ):
             with self.subTest(name):
                 self.assertIn(name, self.names)
+
+    def test_the_wheel_ships_no_svg_icons_and_no_unused_assets(self):
+        self.assertEqual([n for n in self.names if n.endswith(".svg")], [])
+        self.assertNotIn("core/assets/img/logo/favicon.ico", self.names)
+        self.assertNotIn("core/assets/fonts/IBMPlexSans-Medium.ttf", self.names)
 
     def test_the_wheel_has_no_loose_assets_directory(self):
         self.assertFalse([n for n in self.names if n.startswith("assets/")])

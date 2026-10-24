@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import sqlite3
+from datetime import datetime
 from typing import Any
 from jinja2 import Environment
 from reportlab.lib import colors
@@ -39,7 +40,6 @@ from core.utils_report import (
     _build_summary_section,
     _default_table_style,
 )
-from core.utils_report_pdf import draw_header_footer
 
 PDF_HEADER_TITLE = "EscapeCloud Community Edition - Data & Egress"
 
@@ -884,6 +884,103 @@ def _build_pricing_basis_section(prices, cloud_service_provider, styles, content
         )
     )
     return content
+
+
+def draw_header_footer(
+    report_path: str,
+    canvas,
+    doc,
+    title: str = "EscapeCloud Community Edition - Report",
+) -> None:
+    # Save the state of the canvas to not affect the drawing
+    canvas.saveState()
+    width, height = A4
+
+    # Include the date in the format mm-dd-yyyy
+    current_date = datetime.now().strftime("%m-%d-%Y")
+    left_text_content1 = title
+    left_text_content2 = f"Date: {current_date}"
+
+    # Define the header content with Paragraphs
+    header_style = ParagraphStyle(
+        "HeaderStyle", fontSize=10, textColor=HexColor("#9cafae")
+    )
+    header_data = [
+        [Paragraph(left_text_content1, header_style), "", ""],
+        [Paragraph(left_text_content2, header_style), "", ""],
+    ]
+
+    # Create the header table
+    table = Table(
+        header_data, colWidths=[width - 188 - doc.rightMargin - doc.leftMargin, 10, 150]
+    )
+
+    # Define the style for the table
+    table.setStyle(
+        TableStyle(
+            [
+                ("SPAN", (1, 0), (1, 1)),  # Merge Column 2 in both rows
+                ("SPAN", (2, 0), (2, 1)),  # Merge Column 3 in both rows
+                (
+                    "ALIGN",
+                    (0, 0),
+                    (0, 0),
+                    "LEFT",
+                ),  # Align left_text_content1 to the left
+                (
+                    "ALIGN",
+                    (0, 1),
+                    (0, 1),
+                    "LEFT",
+                ),  # Align left_text_content2 to the left
+                ("ALIGN", (2, 0), (2, 1), "RIGHT"),  # Align logo to the right
+                ("VALIGN", (0, 0), (0, 1), "TOP"),  # Vertically align to the top
+                ("VALIGN", (2, 0), (2, 1), "MIDDLE"),  # Vertically align to the middle
+                # ('GRID', (0, 0), (-1, -1), 0.5, colors.red),  # Temporary borders for visualization
+            ]
+        )
+    )
+    # Build the header table and draw it on the canvas
+    table.wrapOn(canvas, doc.leftMargin, height - doc.topMargin)
+    table.drawOn(canvas, doc.leftMargin, height - doc.topMargin)
+
+    # Add the logo
+    logo_path = find_asset(report_path, "img/logo/report_logo.png")
+    logo = Image(str(logo_path), width=150, height=30)
+
+    # Aligning logo vertically with the text
+    logo_y = height - doc.topMargin + 5
+    logo.drawOn(canvas, width - 150 - doc.rightMargin, logo_y)
+
+    # Line below the header
+    canvas.setStrokeColor(HexColor("#115e59"))
+    canvas.setLineWidth(1)
+    line_y = height - doc.topMargin - 10
+    canvas.line(doc.leftMargin, line_y, width - doc.rightMargin, line_y)
+
+    # Footer
+    footer_padding = 15  # Add padding under the page number
+    canvas.setStrokeColor(HexColor("#115e59"))
+    canvas.line(40, 60 + footer_padding, A4[0] - 40, 60 + footer_padding)
+
+    canvas.setFont("Helvetica", 8)
+    canvas.drawString(A4[0] / 2 - 30, 60 + footer_padding - 15, f"Page {doc.page}")
+
+    canvas.setFont("Helvetica-Oblique", 8)
+    canvas.setFillColor(HexColor("#9cafae"))
+    canvas.drawCentredString(
+        A4[0] / 2,
+        40,
+        "EscapeCloud Community Edition - This report is provided 'As Is,' without any warranty of any kind.",
+    )
+    canvas.drawCentredString(
+        A4[0] / 2,
+        30,
+        "EscapeCloud makes no warranty that the information contained in this report is complete or error-free. Copyright 2024-2026",
+    )
+
+    # Restore the state of the canvas
+    canvas.restoreState()
 
 
 def generate_egress_pdf_report(

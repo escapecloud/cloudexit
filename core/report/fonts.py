@@ -14,7 +14,6 @@ class MissingFontError(FileNotFoundError):
 
 
 FONT = "IBMPlexSans"
-FONT_MEDIUM = "IBMPlexSans-Medium"
 # SemiBold is the report's bold: it reads cleaner than Bold at small sizes.
 FONT_BOLD = "IBMPlexSans-SemiBold"
 FONT_ITALIC = "IBMPlexSans-Italic"
@@ -24,7 +23,6 @@ FONT_MONO_BOLD = "IBMPlexMono-SemiBold"
 
 FONT_FILES = {
     FONT: "IBMPlexSans-Regular.ttf",
-    FONT_MEDIUM: "IBMPlexSans-Medium.ttf",
     FONT_BOLD: "IBMPlexSans-SemiBold.ttf",
     FONT_ITALIC: "IBMPlexSans-Italic.ttf",
     FONT_BOLD_ITALIC: "IBMPlexSans-SemiBoldItalic.ttf",
