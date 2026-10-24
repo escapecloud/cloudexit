@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import requests
 
-from core.utils_egress import GIB, format_bytes
+from cloudexit.egress.model import GIB, format_bytes
 from cloudexit.providers.azure.egress import (
     build_egress_inventory,
     collect_azure_egress,

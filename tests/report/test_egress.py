@@ -12,7 +12,7 @@ from reportlab.platypus import PageBreak, Paragraph, Table
 from tests.support.report import stage_report_assets
 
 from cloudexit.resources import asset_path
-from core.utils_egress import GIB, write_egress_inventory
+from cloudexit.egress.model import GIB, write_egress_inventory
 from cloudexit.catalogue.store import active_catalogue_path
 from core.utils_report_egress import (
     CATEGORIES,

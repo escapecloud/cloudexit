@@ -29,7 +29,7 @@ from cloudexit.providers.azure.clients import (
     create_resource_client,
     create_subscription_client,
 )
-from core.utils_egress import estimate_egress
+from cloudexit.egress.estimate import estimate_egress
 from core.utils_report_egress import (
     generate_egress_html_report,
     generate_egress_pdf_report,

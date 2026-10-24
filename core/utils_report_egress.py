@@ -27,7 +27,7 @@ from core.report.helpers import initials
 from core.report.placeholder import IconPlaceholder
 from cloudexit.resources import asset_path, find_asset
 from cloudexit.catalogue.db import load_data
-from core.utils_egress import (
+from cloudexit.egress.model import (
     GIB,
     compute_totals,
     format_bytes,

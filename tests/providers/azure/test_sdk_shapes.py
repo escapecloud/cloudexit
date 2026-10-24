@@ -22,7 +22,7 @@ from cloudexit.providers.azure.inventory import (
     is_resource_inventory_empty,
     plain_json,
 )
-from core.utils_egress import GIB
+from cloudexit.egress.model import GIB
 from cloudexit.providers.azure.egress import build_egress_inventory
 from tests.support.http import fake_http, make_response
 from cloudexit.providers.azure.cli_session import (
