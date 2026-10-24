@@ -1,12 +1,17 @@
-from pathlib import Path
-
 from reportlab.graphics.shapes import STATE_DEFAULTS
 from reportlab.lib.fonts import addMapping
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus.tables import CellStyle
 
-FONT_DIR = Path(__file__).resolve().parents[2] / "assets" / "fonts"
+from ..resources import asset_path
+
+FONT_DIR = asset_path("fonts")
+
+
+class MissingFontError(FileNotFoundError):
+    pass
+
 
 FONT = "IBMPlexSans"
 FONT_MEDIUM = "IBMPlexSans-Medium"
@@ -34,7 +39,13 @@ def register_fonts():
     # A missing file raises: a report must never switch typeface without
     # anyone noticing.
     for name, filename in FONT_FILES.items():
-        pdfmetrics.registerFont(TTFont(name, str(FONT_DIR / filename)))
+        path = FONT_DIR / filename
+        if not path.is_file():
+            raise MissingFontError(
+                f"the font file {filename} is missing from {FONT_DIR}; "
+                "the cloudexit installation is incomplete"
+            )
+        pdfmetrics.registerFont(TTFont(name, str(path)))
     # Families let <b> and <i> in Paragraph markup find the right face.
     pdfmetrics.registerFontFamily(
         FONT,

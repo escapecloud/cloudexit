@@ -1,6 +1,8 @@
 import shutil
 from pathlib import Path
 
+from core.resources import asset_path
+
 
 def build_report_fixture():
     metadata = {
@@ -117,7 +119,7 @@ def stage_report_assets(report_path: str) -> None:
     report_assets = Path(report_path) / "assets"
     report_assets.mkdir(parents=True, exist_ok=True)
 
-    source_assets = Path("assets")
+    source_assets = asset_path()
     for folder in ("css", "img", "icons"):
         shutil.copytree(
             source_assets / folder,
@@ -171,9 +173,9 @@ def stage_minimal_assets(report_path: str) -> None:
     # What the Basic report needs: the logo and the fallback icon. Copying the
     # whole icon set for every render would dominate the test time.
     report_assets = Path(report_path) / "assets"
-    shutil.copytree(Path("assets") / "img", report_assets / "img", dirs_exist_ok=True)
+    shutil.copytree(asset_path("img"), report_assets / "img", dirs_exist_ok=True)
     shutil.copytree(
-        Path("assets") / "icons" / "misc",
+        asset_path("icons", "misc"),
         report_assets / "icons" / "misc",
         dirs_exist_ok=True,
     )
