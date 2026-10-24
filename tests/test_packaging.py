@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest import mock
 
 from cloudexit import resources
-from core.engine import generate_report, perform_risk_assessment
+from cloudexit.engine import generate_report, perform_risk_assessment
 from cloudexit.report import fonts
 from cloudexit.resources import asset_path, find_asset
 from cloudexit.report.assets import copy_assets

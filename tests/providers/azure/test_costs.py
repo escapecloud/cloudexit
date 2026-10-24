@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, Mock, patch
 from azure.core.exceptions import ClientAuthenticationError, HttpResponseError
 
 import main
-from core.engine import create_cost_inventory
+from cloudexit.engine import create_cost_inventory
 from cloudexit.providers.azure.costs import (
     COST_RATE_LIMITED,
     CostRateLimited,

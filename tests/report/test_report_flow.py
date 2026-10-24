@@ -12,7 +12,7 @@ from unittest.mock import patch
 import requests
 
 import main
-from core.engine import generate_report, perform_risk_assessment
+from cloudexit.engine import generate_report, perform_risk_assessment
 from cloudexit.platform.document import SyncDocumentError
 from cloudexit.platform.upload import (
     REASON_REJECTED,

@@ -17,7 +17,7 @@ from datetime import datetime
 from botocore.exceptions import NoCredentialsError, ProfileNotFound
 
 # Import the functions
-from core.engine import (
+from cloudexit.engine import (
     verify_credentials,
     test_permissions,
     create_resource_inventory,

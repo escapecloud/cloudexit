@@ -10,7 +10,7 @@ from pathlib import Path
 
 from pypdf import PdfReader
 
-from core.engine import generate_report, perform_risk_assessment
+from cloudexit.engine import generate_report, perform_risk_assessment
 from cloudexit.report import fonts
 from cloudexit.report.context import Provenance
 from cloudexit.report.executive_summary import generate_executive_summary
