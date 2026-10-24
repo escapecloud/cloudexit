@@ -13,8 +13,8 @@ import requests
 
 import main
 from core.engine import generate_report, perform_risk_assessment
-from core.sync_document import SyncDocumentError
-from core.upload import (
+from cloudexit.platform.document import SyncDocumentError
+from cloudexit.platform.upload import (
     REASON_REJECTED,
     REASON_UNAVAILABLE,
     UploadResult,
@@ -315,7 +315,10 @@ class UploadInterfaceTests(FlowTestCase):
         self.assertEqual((result.reason, result.exit_code), (REASON_REJECTED, 10))
 
     def test_an_unexpected_error_is_a_failed_upload_not_a_crash(self):
-        with patch("core.upload.ApiClient.from_settings", side_effect=ValueError("x")):
+        with patch(
+            "cloudexit.platform.upload.ApiClient.from_settings",
+            side_effect=ValueError("x"),
+        ):
             result = upload(minimal_document(SYNC_ID), CONFIGURED, name="Flow", meta={})
         self.assertTrue(result.failed)
         self.assertEqual(result.reason, REASON_UNAVAILABLE)

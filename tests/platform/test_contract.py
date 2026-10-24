@@ -5,11 +5,15 @@ from urllib.parse import urlsplit
 
 import yaml
 
-from core import api_v2
-from core.api_v2 import ERROR_EXIT_CODES, EXIT_STRATEGIES, PENDING_STATUSES
-from core.spool import Spool, flush
-from core.sync_document import PROVIDERS, SCHEMA_VERSION
-from core.upload import upload
+from cloudexit.platform import client as platform_client
+from cloudexit.platform.client import (
+    ERROR_EXIT_CODES,
+    EXIT_STRATEGIES,
+    PENDING_STATUSES,
+)
+from cloudexit.platform.spool import Spool, flush
+from cloudexit.platform.document import PROVIDERS, SCHEMA_VERSION
+from cloudexit.platform.upload import upload
 from tests.platform import test_client as base
 from tests.cli import test_upload_modes as modes
 from tests.support.api import (
@@ -313,7 +317,7 @@ class ErrorMatrixTests(base.ClientTestCase):
                     for _ in range(attempts)
                 ]
                 with fake_http(*replies) as fake:
-                    with self.assertRaises(api_v2.ApiError) as ctx:
+                    with self.assertRaises(platform_client.ApiError) as ctx:
                         client.push(self.document(), name="n", exit_strategy=1)
 
                 self.assertEqual(len(fake.requests) - 2, attempts)
@@ -374,7 +378,9 @@ class WarningContractTests(modes.ModeTestCase):
                     for args, kwargs in self.steps
                     if args[0] == "Platform warning"
                 ]
-                self.assertEqual(shown, [api_v2.warning_line({**self.item(code)})])
+                self.assertEqual(
+                    shown, [platform_client.warning_line({**self.item(code)})]
+                )
                 self.assertEqual(
                     [i["code"] for i in main_run()["upload"].warning_items], [code]
                 )
@@ -655,7 +661,9 @@ class DefinitionGuardTests(unittest.TestCase):
                 self.assertIn(name, (ROOT / test).read_text(encoding="utf-8"))
 
     def test_the_cli_does_not_compute_the_content_hash(self):
-        for path in (ROOT / "core").glob("*.py"):
+        for path in sorted((ROOT / "cloudexit").rglob("*.py")) + sorted(
+            (ROOT / "core").glob("*.py")
+        ):
             text = path.read_text(encoding="utf-8")
             self.assertNotIn("content_sha256", text, path.name)
 

@@ -10,8 +10,8 @@ from typing import Any
 from cloudexit import codes
 from cloudexit.settings import Settings, SettingsError, load_settings
 
-from .api_v2 import ApiClient, ApiError
-from .spool import Spool
+from cloudexit.platform.client import ApiClient, ApiError
+from cloudexit.platform.spool import Spool
 
 logger = logging.getLogger("core.engine.upload")
 

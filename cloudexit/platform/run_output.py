@@ -5,7 +5,7 @@ from typing import Any
 from cloudexit import codes
 from cloudexit.catalogue.store import compare_catalogue_versions
 
-from .upload import UploadResult
+from cloudexit.platform.upload import UploadResult
 
 
 def upload_status(result: UploadResult | None) -> str:

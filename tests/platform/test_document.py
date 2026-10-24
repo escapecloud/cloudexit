@@ -12,8 +12,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 import main
-from core import sync_document
-from core.sync_document import (
+from cloudexit.platform import document as platform_document
+from cloudexit.platform.document import (
     SCHEMA_VERSION,
     RunContext,
     ScopeError,
@@ -526,11 +526,11 @@ class Uuid7Tests(unittest.TestCase):
         self.assertEqual(len(set(ids)), 50)
 
     def test_the_default_id_is_a_version_7_uuid(self):
-        self.assertRegex(new_uuid7(), sync_document.UUID7_RE.pattern)
+        self.assertRegex(new_uuid7(), platform_document.UUID7_RE.pattern)
 
     def test_the_fallback_is_used_without_a_native_implementation(self):
-        with patch.object(sync_document.uuid, "uuid7", None, create=True):
-            self.assertRegex(new_uuid7(), sync_document.UUID7_RE.pattern)
+        with patch.object(platform_document.uuid, "uuid7", None, create=True):
+            self.assertRegex(new_uuid7(), platform_document.UUID7_RE.pattern)
 
 
 class DecimalAmountTests(unittest.TestCase):
@@ -874,7 +874,7 @@ class RunAssessmentTests(SyncDocumentTestCase):
         document = json.loads(
             (Path(report) / "raw_data" / "sync.json").read_text(encoding="utf-8")
         )
-        self.assertRegex(document["sync"]["id"], sync_document.UUID7_RE.pattern)
+        self.assertRegex(document["sync"]["id"], platform_document.UUID7_RE.pattern)
         self.assertEqual(document["assessment_type"], 1)
         self.assertFalse(document["inventory"]["egress"]["collected"])
         self.assertEqual(schema_errors(document), [])

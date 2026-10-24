@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import ANY, MagicMock, patch
 
 import main
-from core.sync_document import SyncOutput
+from cloudexit.platform.document import SyncOutput
 from cloudexit import codes
 from cloudexit.settings import Settings
 

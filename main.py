@@ -34,10 +34,10 @@ from cloudexit.report.egress import (
     generate_egress_html_report,
     generate_egress_pdf_report,
 )
-from core.api_v2 import ApiError, check_key
-from core.run_output import build_run_json, exit_code_of
-from core.status import host_catalogue_lines, run_status
-from core.spool import (
+from cloudexit.platform.client import ApiError, check_key
+from cloudexit.platform.run_output import build_run_json, exit_code_of
+from cloudexit.platform.status import host_catalogue_lines, run_status
+from cloudexit.platform.spool import (
     AUTO_FLUSH_BUDGET,
     DEFAULT_MAX_AGE_DAYS,
     Spool,
@@ -46,7 +46,7 @@ from core.spool import (
     host_id,
     parse_age,
 )
-from core.upload import (
+from cloudexit.platform.upload import (
     billing_line,
     error_failure,
     read_sync_files,
@@ -54,7 +54,7 @@ from core.upload import (
     upload,
     write_upload_record,
 )
-from core.sync_document import (
+from cloudexit.platform.document import (
     RunContext,
     SyncDocumentError,
     new_uuid7,

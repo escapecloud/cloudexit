@@ -7,8 +7,12 @@ from pathlib import Path
 from unittest.mock import patch
 
 import main
-from core.run_output import build_run_json, catalogue_outdated, upload_status
-from core.upload import UploadResult
+from cloudexit.platform.run_output import (
+    build_run_json,
+    catalogue_outdated,
+    upload_status,
+)
+from cloudexit.platform.upload import UploadResult
 from tests.support.api import (
     ASSESSMENT_ID,
     KEY,

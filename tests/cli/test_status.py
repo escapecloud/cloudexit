@@ -11,9 +11,9 @@ from unittest.mock import patch
 import requests
 
 import main
-from core.api_v2 import ApiClient
-from core.spool import Spool
-from core.status import (
+from cloudexit.platform.client import ApiClient
+from cloudexit.platform.spool import Spool
+from cloudexit.platform.status import (
     TlsResult,
     catalogue_standing,
     certificate_names,
@@ -366,7 +366,7 @@ class CheckTlsTests(unittest.TestCase):
         error.verify_message = "unable to get local issuer certificate"
         names = {"subject": "CN=platform.example.com", "issuer": "CN=Unknown CA"}
 
-        with patch("core.status._presented", return_value=names):
+        with patch("cloudexit.platform.status._presented", return_value=names):
             result = self.check(error=error)
 
         self.assertEqual(result.status, "failed")
@@ -464,7 +464,10 @@ class ReportContentTests(StatusTestCase):
         self.assertIn("empty", self.text(report))
 
     def test_the_catalogue_is_compared_with_the_platforms(self):
-        with patch("core.status._local_catalogue_version", return_value="2026-10-01"):
+        with patch(
+            "cloudexit.platform.status._local_catalogue_version",
+            return_value="2026-10-01",
+        ):
             report = self.status(configured(), [meta_reply(), whoami_reply()])
 
         self.assertIn("installed: 2026-10-01", self.text(report))
@@ -619,7 +622,10 @@ class CommandTests(StatusTestCase):
             patch("main.load_settings", return_value=configured()),
             patch("main.status_lines", return_value=["installed: none"]),
             patch("main.installed_catalogue", return_value=None),
-            patch("core.status.ApiClient.from_settings", side_effect=self.make_client),
+            patch(
+                "cloudexit.platform.status.ApiClient.from_settings",
+                side_effect=self.make_client,
+            ),
             contextlib.redirect_stdout(out),
             fake_http(meta_reply()),
         ):

@@ -13,8 +13,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 import main
-from core.api_v2 import ApiError
-from core.spool import (
+from cloudexit.platform.client import ApiError
+from cloudexit.platform.spool import (
     AUTO_FLUSH_BUDGET,
     FlushResult,
     Spool,
@@ -25,7 +25,7 @@ from core.spool import (
     spool_root,
     state_dir,
 )
-from core.upload import UploadResult, read_sync_files, upload
+from cloudexit.platform.upload import UploadResult, read_sync_files, upload
 from tests.support.isolation import isolated_environ
 from tests.support.api import (
     HOST,
