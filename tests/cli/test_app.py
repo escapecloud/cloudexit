@@ -6,7 +6,7 @@ from argparse import Namespace
 from pathlib import Path
 from unittest.mock import ANY, MagicMock, patch
 
-import main
+from cloudexit.cli import app
 from cloudexit.platform.document import SyncOutput
 from cloudexit import codes
 from cloudexit.settings import Settings
@@ -26,28 +26,31 @@ VALID_CONFIG = {
 
 def _base_patches():
     return [
-        patch("main.console.print"),
-        patch("main.print_step"),
-        patch("main.create_directory", return_value=("/tmp/report", "/tmp/report/raw")),
-        patch("main.verify_credentials", return_value=(True, "ok")),
+        patch("cloudexit.cli.app.console.print"),
+        patch("cloudexit.cli.app.print_step"),
         patch(
-            "main.test_permissions",
+            "cloudexit.cli.app.create_directory",
+            return_value=("/tmp/report", "/tmp/report/raw"),
+        ),
+        patch("cloudexit.cli.app.verify_credentials", return_value=(True, "ok")),
+        patch(
+            "cloudexit.cli.app.test_permissions",
             return_value=(True, True, True, "ok"),
         ),
         patch(
-            "main.create_resource_inventory",
+            "cloudexit.cli.app.create_resource_inventory",
             return_value={"success": True, "logs": ""},
         ),
         patch(
-            "main.create_cost_inventory",
+            "cloudexit.cli.app.create_cost_inventory",
             return_value={"success": True, "logs": ""},
         ),
         patch(
-            "main.perform_risk_assessment",
+            "cloudexit.cli.app.perform_risk_assessment",
             return_value={"success": True, "logs": ""},
         ),
         patch(
-            "main.generate_report",
+            "cloudexit.cli.app.generate_report",
             return_value={
                 "success": True,
                 "reports": {"HTML": "/tmp/report/index.html"},
@@ -64,162 +67,214 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
         for target, kwargs in overrides.items():
             patch(target, **kwargs).start()
         try:
-            main.run_assessment(VALID_CONFIG.copy(), "aws")
+            app.run_assessment(VALID_CONFIG.copy(), "aws")
         finally:
             patch.stopall()
 
     def test_config_validation_failure_exits_2(self):
         with self.assertRaises(SystemExit) as ctx:
             with (
-                patch("main.validate_config", side_effect=ValueError("bad config")),
-                patch("main.create_directory"),
-                patch("main.verify_credentials"),
-                patch("main.print_step"),
-                patch("main.console.print"),
+                patch(
+                    "cloudexit.cli.app.validate_config",
+                    side_effect=ValueError("bad config"),
+                ),
+                patch("cloudexit.cli.app.create_directory"),
+                patch("cloudexit.cli.app.verify_credentials"),
+                patch("cloudexit.cli.app.print_step"),
+                patch("cloudexit.cli.app.console.print"),
             ):
-                main.run_assessment(VALID_CONFIG.copy(), "aws")
+                app.run_assessment(VALID_CONFIG.copy(), "aws")
         self.assertEqual(ctx.exception.code, codes.CONFIG)
 
     def test_directory_creation_failure_exits_2(self):
         with self.assertRaises(SystemExit) as ctx:
             with (
-                patch("main.validate_config"),
-                patch("main.create_directory", side_effect=RuntimeError("disk full")),
-                patch("main.verify_credentials"),
-                patch("main.print_step"),
-                patch("main.console.print"),
+                patch("cloudexit.cli.app.validate_config"),
+                patch(
+                    "cloudexit.cli.app.create_directory",
+                    side_effect=RuntimeError("disk full"),
+                ),
+                patch("cloudexit.cli.app.verify_credentials"),
+                patch("cloudexit.cli.app.print_step"),
+                patch("cloudexit.cli.app.console.print"),
             ):
-                main.run_assessment(VALID_CONFIG.copy(), "aws")
+                app.run_assessment(VALID_CONFIG.copy(), "aws")
         self.assertEqual(ctx.exception.code, codes.CONFIG)
 
     def test_credential_failure_exits_3(self):
         with self.assertRaises(SystemExit) as ctx:
             with (
-                patch("main.validate_config"),
-                patch("main.create_directory", return_value=("/tmp/r", "/tmp/r/raw")),
-                patch("main.verify_credentials", return_value=(False, "bad creds")),
-                patch("main.print_step"),
-                patch("main.console.print"),
+                patch("cloudexit.cli.app.validate_config"),
+                patch(
+                    "cloudexit.cli.app.create_directory",
+                    return_value=("/tmp/r", "/tmp/r/raw"),
+                ),
+                patch(
+                    "cloudexit.cli.app.verify_credentials",
+                    return_value=(False, "bad creds"),
+                ),
+                patch("cloudexit.cli.app.print_step"),
+                patch("cloudexit.cli.app.console.print"),
             ):
-                main.run_assessment(VALID_CONFIG.copy(), "aws")
+                app.run_assessment(VALID_CONFIG.copy(), "aws")
         self.assertEqual(ctx.exception.code, codes.CREDENTIALS)
 
     def test_permission_failure_exits_4(self):
         with self.assertRaises(SystemExit) as ctx:
             with (
-                patch("main.validate_config"),
-                patch("main.create_directory", return_value=("/tmp/r", "/tmp/r/raw")),
-                patch("main.verify_credentials", return_value=(True, "ok")),
+                patch("cloudexit.cli.app.validate_config"),
                 patch(
-                    "main.test_permissions",
+                    "cloudexit.cli.app.create_directory",
+                    return_value=("/tmp/r", "/tmp/r/raw"),
+                ),
+                patch(
+                    "cloudexit.cli.app.verify_credentials", return_value=(True, "ok")
+                ),
+                patch(
+                    "cloudexit.cli.app.test_permissions",
                     return_value=(False, False, False, "no perms"),
                 ),
-                patch("main.print_step"),
-                patch("main.console.print"),
+                patch("cloudexit.cli.app.print_step"),
+                patch("cloudexit.cli.app.console.print"),
             ):
-                main.run_assessment(VALID_CONFIG.copy(), "aws")
+                app.run_assessment(VALID_CONFIG.copy(), "aws")
         self.assertEqual(ctx.exception.code, codes.PERMISSIONS)
 
     def test_resource_inventory_failure_exits_5(self):
         with self.assertRaises(SystemExit) as ctx:
             with (
-                patch("main.validate_config"),
-                patch("main.create_directory", return_value=("/tmp/r", "/tmp/r/raw")),
-                patch("main.verify_credentials", return_value=(True, "ok")),
-                patch("main.test_permissions", return_value=(True, True, True, "ok")),
+                patch("cloudexit.cli.app.validate_config"),
                 patch(
-                    "main.create_resource_inventory",
+                    "cloudexit.cli.app.create_directory",
+                    return_value=("/tmp/r", "/tmp/r/raw"),
+                ),
+                patch(
+                    "cloudexit.cli.app.verify_credentials", return_value=(True, "ok")
+                ),
+                patch(
+                    "cloudexit.cli.app.test_permissions",
+                    return_value=(True, True, True, "ok"),
+                ),
+                patch(
+                    "cloudexit.cli.app.create_resource_inventory",
                     return_value={"success": False, "logs": "api error"},
                 ),
-                patch("main.print_step"),
-                patch("main.console.print"),
+                patch("cloudexit.cli.app.print_step"),
+                patch("cloudexit.cli.app.console.print"),
             ):
-                main.run_assessment(VALID_CONFIG.copy(), "aws")
+                app.run_assessment(VALID_CONFIG.copy(), "aws")
         self.assertEqual(ctx.exception.code, codes.RESOURCE_INVENTORY)
 
     def test_cost_inventory_failure_exits_6(self):
         with self.assertRaises(SystemExit) as ctx:
             with (
-                patch("main.validate_config"),
-                patch("main.create_directory", return_value=("/tmp/r", "/tmp/r/raw")),
-                patch("main.verify_credentials", return_value=(True, "ok")),
-                patch("main.test_permissions", return_value=(True, True, True, "ok")),
+                patch("cloudexit.cli.app.validate_config"),
                 patch(
-                    "main.create_resource_inventory",
+                    "cloudexit.cli.app.create_directory",
+                    return_value=("/tmp/r", "/tmp/r/raw"),
+                ),
+                patch(
+                    "cloudexit.cli.app.verify_credentials", return_value=(True, "ok")
+                ),
+                patch(
+                    "cloudexit.cli.app.test_permissions",
+                    return_value=(True, True, True, "ok"),
+                ),
+                patch(
+                    "cloudexit.cli.app.create_resource_inventory",
                     return_value={"success": True, "logs": ""},
                 ),
                 patch(
-                    "main.create_cost_inventory",
+                    "cloudexit.cli.app.create_cost_inventory",
                     return_value={"success": False, "logs": "billing error"},
                 ),
-                patch("main.print_step"),
-                patch("main.console.print"),
+                patch("cloudexit.cli.app.print_step"),
+                patch("cloudexit.cli.app.console.print"),
             ):
-                main.run_assessment(VALID_CONFIG.copy(), "aws")
+                app.run_assessment(VALID_CONFIG.copy(), "aws")
         self.assertEqual(ctx.exception.code, codes.COST_INVENTORY)
 
     def test_risk_assessment_failure_exits_7(self):
         with self.assertRaises(SystemExit) as ctx:
             with (
-                patch("main.validate_config"),
-                patch("main.create_directory", return_value=("/tmp/r", "/tmp/r/raw")),
-                patch("main.verify_credentials", return_value=(True, "ok")),
-                patch("main.test_permissions", return_value=(True, True, True, "ok")),
+                patch("cloudexit.cli.app.validate_config"),
                 patch(
-                    "main.create_resource_inventory",
+                    "cloudexit.cli.app.create_directory",
+                    return_value=("/tmp/r", "/tmp/r/raw"),
+                ),
+                patch(
+                    "cloudexit.cli.app.verify_credentials", return_value=(True, "ok")
+                ),
+                patch(
+                    "cloudexit.cli.app.test_permissions",
+                    return_value=(True, True, True, "ok"),
+                ),
+                patch(
+                    "cloudexit.cli.app.create_resource_inventory",
                     return_value={"success": True, "logs": ""},
                 ),
                 patch(
-                    "main.create_cost_inventory",
+                    "cloudexit.cli.app.create_cost_inventory",
                     return_value={"success": True, "logs": ""},
                 ),
                 patch(
-                    "main.perform_risk_assessment",
+                    "cloudexit.cli.app.perform_risk_assessment",
                     return_value={"success": False, "logs": "risk error"},
                 ),
-                patch("main.print_step"),
-                patch("main.console.print"),
+                patch("cloudexit.cli.app.print_step"),
+                patch("cloudexit.cli.app.console.print"),
             ):
-                main.run_assessment(VALID_CONFIG.copy(), "aws")
+                app.run_assessment(VALID_CONFIG.copy(), "aws")
         self.assertEqual(ctx.exception.code, codes.RISK_ASSESSMENT)
 
     def test_report_generation_failure_exits_8(self):
         with self.assertRaises(SystemExit) as ctx:
             with (
-                patch("main.validate_config"),
-                patch("main.create_directory", return_value=("/tmp/r", "/tmp/r/raw")),
-                patch("main.verify_credentials", return_value=(True, "ok")),
-                patch("main.test_permissions", return_value=(True, True, True, "ok")),
+                patch("cloudexit.cli.app.validate_config"),
                 patch(
-                    "main.create_resource_inventory",
+                    "cloudexit.cli.app.create_directory",
+                    return_value=("/tmp/r", "/tmp/r/raw"),
+                ),
+                patch(
+                    "cloudexit.cli.app.verify_credentials", return_value=(True, "ok")
+                ),
+                patch(
+                    "cloudexit.cli.app.test_permissions",
+                    return_value=(True, True, True, "ok"),
+                ),
+                patch(
+                    "cloudexit.cli.app.create_resource_inventory",
                     return_value={"success": True, "logs": ""},
                 ),
                 patch(
-                    "main.create_cost_inventory",
+                    "cloudexit.cli.app.create_cost_inventory",
                     return_value={"success": True, "logs": ""},
                 ),
                 patch(
-                    "main.perform_risk_assessment",
+                    "cloudexit.cli.app.perform_risk_assessment",
                     return_value={"success": True, "logs": ""},
                 ),
                 patch(
-                    "main.generate_report",
+                    "cloudexit.cli.app.generate_report",
                     return_value={"success": False, "logs": "render error"},
                 ),
-                patch("main.print_step"),
-                patch("main.console.print"),
+                patch("cloudexit.cli.app.print_step"),
+                patch("cloudexit.cli.app.console.print"),
             ):
-                main.run_assessment(VALID_CONFIG.copy(), "aws")
+                app.run_assessment(VALID_CONFIG.copy(), "aws")
         self.assertEqual(ctx.exception.code, codes.REPORT)
 
     def test_unexpected_exception_exits_1(self):
         with self.assertRaises(SystemExit) as ctx:
             with (
-                patch("main.validate_config", side_effect=RuntimeError("boom")),
-                patch("main.print_step"),
-                patch("main.console.print"),
+                patch(
+                    "cloudexit.cli.app.validate_config",
+                    side_effect=RuntimeError("boom"),
+                ),
+                patch("cloudexit.cli.app.print_step"),
+                patch("cloudexit.cli.app.console.print"),
             ):
-                main.run_assessment(VALID_CONFIG.copy(), "aws")
+                app.run_assessment(VALID_CONFIG.copy(), "aws")
         self.assertEqual(ctx.exception.code, codes.UNEXPECTED)
 
     def test_unexpected_error_writes_traceback_file(self):
@@ -228,19 +283,19 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
             os.makedirs(raw_data_path, exist_ok=True)
             with self.assertRaises(SystemExit) as ctx:
                 with (
-                    patch("main.validate_config"),
+                    patch("cloudexit.cli.app.validate_config"),
                     patch(
-                        "main.create_directory",
+                        "cloudexit.cli.app.create_directory",
                         return_value=(tmp_dir, raw_data_path),
                     ),
                     patch(
-                        "main.verify_credentials",
+                        "cloudexit.cli.app.verify_credentials",
                         side_effect=RuntimeError("boom-unexpected"),
                     ),
-                    patch("main.print_step"),
-                    patch("main.console.print"),
+                    patch("cloudexit.cli.app.print_step"),
+                    patch("cloudexit.cli.app.console.print"),
                 ):
-                    main.run_assessment(VALID_CONFIG.copy(), "aws")
+                    app.run_assessment(VALID_CONFIG.copy(), "aws")
 
             self.assertEqual(ctx.exception.code, codes.UNEXPECTED)
             logs = [f for f in os.listdir(tmp_dir) if f.startswith("error-")]
@@ -251,28 +306,36 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
 
     def test_full_success_exits_0(self):
         with (
-            patch("main.validate_config"),
-            patch("main.create_directory", return_value=("/tmp/r", "/tmp/r/raw")),
-            patch("main.verify_credentials", return_value=(True, "ok")),
-            patch("main.test_permissions", return_value=(True, True, True, "ok")),
+            patch("cloudexit.cli.app.validate_config"),
             patch(
-                "main.create_resource_inventory",
+                "cloudexit.cli.app.create_directory",
+                return_value=("/tmp/r", "/tmp/r/raw"),
+            ),
+            patch("cloudexit.cli.app.verify_credentials", return_value=(True, "ok")),
+            patch(
+                "cloudexit.cli.app.test_permissions",
+                return_value=(True, True, True, "ok"),
+            ),
+            patch(
+                "cloudexit.cli.app.create_resource_inventory",
                 return_value={"success": True, "logs": ""},
             ),
             patch(
-                "main.create_cost_inventory", return_value={"success": True, "logs": ""}
-            ),
-            patch(
-                "main.perform_risk_assessment",
+                "cloudexit.cli.app.create_cost_inventory",
                 return_value={"success": True, "logs": ""},
             ),
             patch(
-                "main.generate_report", return_value={"success": True, "reports": {}}
+                "cloudexit.cli.app.perform_risk_assessment",
+                return_value={"success": True, "logs": ""},
             ),
-            patch("main.print_step"),
-            patch("main.console.print"),
+            patch(
+                "cloudexit.cli.app.generate_report",
+                return_value={"success": True, "reports": {}},
+            ),
+            patch("cloudexit.cli.app.print_step"),
+            patch("cloudexit.cli.app.console.print"),
         ):
-            result = main.run_assessment(VALID_CONFIG.copy(), "aws")
+            result = app.run_assessment(VALID_CONFIG.copy(), "aws")
 
         self.assertIsNone(result)
 
@@ -287,28 +350,35 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
             )
 
             with (
-                patch("main.validate_config"),
+                patch("cloudexit.cli.app.validate_config"),
                 patch(
-                    "main.create_directory",
+                    "cloudexit.cli.app.create_directory",
                     return_value=(tmp_dir, raw_data_path),
                 ),
-                patch("main.verify_credentials", return_value=(True, "ok")),
-                patch("main.test_permissions", return_value=(True, True, True, "ok")),
                 patch(
-                    "main.create_resource_inventory",
+                    "cloudexit.cli.app.verify_credentials", return_value=(True, "ok")
+                ),
+                patch(
+                    "cloudexit.cli.app.test_permissions",
+                    return_value=(True, True, True, "ok"),
+                ),
+                patch(
+                    "cloudexit.cli.app.create_resource_inventory",
                     return_value={"success": True, "logs": ""},
                 ),
                 patch(
-                    "main.create_cost_inventory",
+                    "cloudexit.cli.app.create_cost_inventory",
                     return_value={"success": True, "logs": ""},
                 ),
-                patch("main.prepare_sync_document", return_value=output) as mock_write,
                 patch(
-                    "main.perform_risk_assessment",
+                    "cloudexit.cli.app.prepare_sync_document", return_value=output
+                ) as mock_write,
+                patch(
+                    "cloudexit.cli.app.perform_risk_assessment",
                     return_value={"success": True, "logs": ""},
                 ) as mock_risk,
                 patch(
-                    "main.generate_report",
+                    "cloudexit.cli.app.generate_report",
                     return_value={
                         "success": True,
                         "reports": {
@@ -317,11 +387,11 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
                         },
                     },
                 ) as mock_report,
-                patch("main.upload") as mock_upload,
-                patch("main.print_step"),
-                patch("main.console.print"),
+                patch("cloudexit.cli.app.upload") as mock_upload,
+                patch("cloudexit.cli.app.print_step"),
+                patch("cloudexit.cli.app.console.print"),
             ):
-                main.run_assessment(config, "aws", dry_run=True)
+                app.run_assessment(config, "aws", dry_run=True)
 
             report_path, context = mock_write.call_args.args
             self.assertEqual(report_path, tmp_dir)
@@ -339,11 +409,11 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
     def test_dry_run_flag_passed_from_handle_aws(self):
         with (
             patch.dict(os.environ, NonInteractiveAWSTests._BASE_ENV, clear=False),
-            patch("main.validate_region"),
-            patch("main.run_assessment") as mock_run,
-            patch("main.console.print"),
+            patch("cloudexit.cli.app.validate_region"),
+            patch("cloudexit.cli.app.run_assessment") as mock_run,
+            patch("cloudexit.cli.app.console.print"),
         ):
-            main.handle_aws(_ni_aws_args(dry_run=True))
+            app.handle_aws(_ni_aws_args(dry_run=True))
 
         mock_run.assert_called_once_with(
             ANY,
@@ -398,11 +468,11 @@ class NonInteractiveAWSTests(unittest.TestCase):
     def test_builds_config_from_env_and_calls_run_assessment(self):
         with (
             patch.dict(os.environ, self._BASE_ENV, clear=False),
-            patch("main.validate_region"),
-            patch("main.run_assessment") as mock_run,
-            patch("main.console.print"),
+            patch("cloudexit.cli.app.validate_region"),
+            patch("cloudexit.cli.app.run_assessment") as mock_run,
+            patch("cloudexit.cli.app.console.print"),
         ):
-            main.handle_aws(_ni_aws_args())
+            app.handle_aws(_ni_aws_args())
 
         mock_run.assert_called_once()
         config_arg = mock_run.call_args[0][0]
@@ -417,11 +487,11 @@ class NonInteractiveAWSTests(unittest.TestCase):
         env = {**self._BASE_ENV, "AWS_SESSION_TOKEN": "sts-session-token"}
         with (
             patch.dict(os.environ, env, clear=False),
-            patch("main.validate_region"),
-            patch("main.run_assessment") as mock_run,
-            patch("main.console.print"),
+            patch("cloudexit.cli.app.validate_region"),
+            patch("cloudexit.cli.app.run_assessment") as mock_run,
+            patch("cloudexit.cli.app.console.print"),
         ):
-            main.handle_aws(_ni_aws_args())
+            app.handle_aws(_ni_aws_args())
 
         config_arg = mock_run.call_args[0][0]
         self.assertEqual(
@@ -432,30 +502,30 @@ class NonInteractiveAWSTests(unittest.TestCase):
         env = {k: v for k, v in self._BASE_ENV.items() if k != "ESC_EXIT_STRATEGY"}
         with (
             patch.dict(os.environ, env, clear=False),
-            patch("main.console.print"),
+            patch("cloudexit.cli.app.console.print"),
         ):
             with self.assertRaises(SystemExit) as ctx:
-                main.handle_aws(_ni_aws_args())
+                app.handle_aws(_ni_aws_args())
         self.assertEqual(ctx.exception.code, codes.CONFIG)
 
     def test_invalid_exit_strategy_exits_config(self):
         env = {**self._BASE_ENV, "ESC_EXIT_STRATEGY": "9"}
         with (
             patch.dict(os.environ, env, clear=False),
-            patch("main.console.print"),
+            patch("cloudexit.cli.app.console.print"),
         ):
             with self.assertRaises(SystemExit) as ctx:
-                main.handle_aws(_ni_aws_args())
+                app.handle_aws(_ni_aws_args())
         self.assertEqual(ctx.exception.code, codes.CONFIG)
 
     def test_missing_aws_region_exits_config(self):
         env = {k: v for k, v in self._BASE_ENV.items() if k != "AWS_DEFAULT_REGION"}
         with (
             patch.dict(os.environ, env, clear=False),
-            patch("main.console.print"),
+            patch("cloudexit.cli.app.console.print"),
         ):
             with self.assertRaises(SystemExit) as ctx:
-                main.handle_aws(_ni_aws_args())
+                app.handle_aws(_ni_aws_args())
         self.assertEqual(ctx.exception.code, codes.CONFIG)
 
 
@@ -477,10 +547,10 @@ class NonInteractiveAzureTests(unittest.TestCase):
             patch(
                 "azure.identity.ClientSecretCredential", return_value=mock_credential
             ),
-            patch("main.run_assessment") as mock_run,
-            patch("main.console.print"),
+            patch("cloudexit.cli.app.run_assessment") as mock_run,
+            patch("cloudexit.cli.app.console.print"),
         ):
-            main.handle_azure(_ni_azure_args())
+            app.handle_azure(_ni_azure_args())
 
         mock_run.assert_called_once()
         config_arg = mock_run.call_args[0][0]
@@ -498,10 +568,10 @@ class NonInteractiveAzureTests(unittest.TestCase):
                 "azure.identity.DefaultAzureCredential", return_value=mock_credential
             ),
             patch("azure.identity.ClientSecretCredential") as mock_client_secret_cred,
-            patch("main.run_assessment") as mock_run,
-            patch("main.console.print"),
+            patch("cloudexit.cli.app.run_assessment") as mock_run,
+            patch("cloudexit.cli.app.console.print"),
         ):
-            main.handle_azure(_ni_azure_args())
+            app.handle_azure(_ni_azure_args())
 
         mock_client_secret_cred.assert_not_called()
         mock_run.assert_called_once()
@@ -521,29 +591,29 @@ class NonInteractiveAzureTests(unittest.TestCase):
         }
         with (
             patch.dict(os.environ, env, clear=False),
-            patch("main.console.print"),
+            patch("cloudexit.cli.app.console.print"),
         ):
-            with self.assertRaises(main.ConfigError):
-                main.handle_azure(_ni_azure_args())
+            with self.assertRaises(app.ConfigError):
+                app.handle_azure(_ni_azure_args())
 
     def test_missing_subscription_id_exits_config(self):
         env = {k: v for k, v in self._BASE_ENV.items() if k != "ESC_SUBSCRIPTION_ID"}
         with (
             patch.dict(os.environ, env, clear=False),
-            patch("main.console.print"),
+            patch("cloudexit.cli.app.console.print"),
         ):
             with self.assertRaises(SystemExit) as ctx:
-                main.handle_azure(_ni_azure_args())
+                app.handle_azure(_ni_azure_args())
         self.assertEqual(ctx.exception.code, codes.CONFIG)
 
     def test_missing_resource_group_exits_config(self):
         env = {k: v for k, v in self._BASE_ENV.items() if k != "ESC_RESOURCE_GROUP"}
         with (
             patch.dict(os.environ, env, clear=False),
-            patch("main.console.print"),
+            patch("cloudexit.cli.app.console.print"),
         ):
             with self.assertRaises(SystemExit) as ctx:
-                main.handle_azure(_ni_azure_args())
+                app.handle_azure(_ni_azure_args())
         self.assertEqual(ctx.exception.code, codes.CONFIG)
 
 
@@ -583,11 +653,11 @@ class EgressStageTests(unittest.TestCase):
         patches = _base_patches()
         for p in patches:
             p.start()
-        mock_estimate = patch("main.estimate_egress").start()
-        mock_render = patch("main.generate_egress_html_report").start()
-        mock_pdf = patch("main.generate_egress_pdf_report").start()
+        mock_estimate = patch("cloudexit.cli.app.estimate_egress").start()
+        mock_render = patch("cloudexit.cli.app.generate_egress_html_report").start()
+        mock_pdf = patch("cloudexit.cli.app.generate_egress_pdf_report").start()
         try:
-            main.run_assessment(self._azure_config(), "azure")
+            app.run_assessment(self._azure_config(), "azure")
         finally:
             patch.stopall()
 
@@ -601,17 +671,18 @@ class EgressStageTests(unittest.TestCase):
         for p in patches:
             p.start()
         mock_report = patch(
-            "main.generate_report",
+            "cloudexit.cli.app.generate_report",
             return_value={"success": True, "reports": {}},
         ).start()
         mock_estimate = patch(
-            "main.estimate_egress", return_value=self._ESTIMATE_OK
+            "cloudexit.cli.app.estimate_egress", return_value=self._ESTIMATE_OK
         ).start()
         mock_render = patch(
-            "main.generate_egress_html_report", return_value=self._REPORT_OK
+            "cloudexit.cli.app.generate_egress_html_report",
+            return_value=self._REPORT_OK,
         ).start()
         mock_pdf = patch(
-            "main.generate_egress_pdf_report", return_value=self._PDF_OK
+            "cloudexit.cli.app.generate_egress_pdf_report", return_value=self._PDF_OK
         ).start()
         manager.attach_mock(mock_report, "generate_report")
         manager.attach_mock(mock_estimate, "estimate_egress")
@@ -619,7 +690,7 @@ class EgressStageTests(unittest.TestCase):
         manager.attach_mock(mock_pdf, "generate_egress_pdf_report")
         config = self._azure_config()
         try:
-            main.run_assessment(config, "azure", egress=True)
+            app.run_assessment(config, "azure", egress=True)
         finally:
             patch.stopall()
 
@@ -660,15 +731,15 @@ class EgressStageTests(unittest.TestCase):
         for p in patches:
             p.start()
         patch(
-            "main.estimate_egress",
+            "cloudexit.cli.app.estimate_egress",
             return_value={"success": False, "logs": "metrics api error"},
         ).start()
-        mock_render = patch("main.generate_egress_html_report").start()
-        mock_pdf = patch("main.generate_egress_pdf_report").start()
-        mock_print = patch("main.console.print").start()
+        mock_render = patch("cloudexit.cli.app.generate_egress_html_report").start()
+        mock_pdf = patch("cloudexit.cli.app.generate_egress_pdf_report").start()
+        mock_print = patch("cloudexit.cli.app.console.print").start()
         try:
             with self.assertRaises(SystemExit) as ctx:
-                main.run_assessment(self._azure_config(), "azure", egress=True)
+                app.run_assessment(self._azure_config(), "azure", egress=True)
         finally:
             patch.stopall()
 
@@ -682,16 +753,20 @@ class EgressStageTests(unittest.TestCase):
         patches = _base_patches()
         for p in patches:
             p.start()
-        patch("main.estimate_egress", return_value=self._ESTIMATE_OK).start()
         patch(
-            "main.generate_egress_html_report",
+            "cloudexit.cli.app.estimate_egress", return_value=self._ESTIMATE_OK
+        ).start()
+        patch(
+            "cloudexit.cli.app.generate_egress_html_report",
             return_value={"success": False, "logs": "template error"},
         ).start()
-        patch("main.generate_egress_pdf_report", return_value=self._PDF_OK).start()
-        mock_print = patch("main.console.print").start()
+        patch(
+            "cloudexit.cli.app.generate_egress_pdf_report", return_value=self._PDF_OK
+        ).start()
+        mock_print = patch("cloudexit.cli.app.console.print").start()
         try:
             with self.assertRaises(SystemExit) as ctx:
-                main.run_assessment(self._azure_config(), "azure", egress=True)
+                app.run_assessment(self._azure_config(), "azure", egress=True)
         finally:
             patch.stopall()
 
@@ -709,16 +784,21 @@ class EgressStageTests(unittest.TestCase):
         patches = _base_patches()
         for p in patches:
             p.start()
-        patch("main.estimate_egress", return_value=self._ESTIMATE_OK).start()
-        patch("main.generate_egress_html_report", return_value=self._REPORT_OK).start()
         patch(
-            "main.generate_egress_pdf_report",
+            "cloudexit.cli.app.estimate_egress", return_value=self._ESTIMATE_OK
+        ).start()
+        patch(
+            "cloudexit.cli.app.generate_egress_html_report",
+            return_value=self._REPORT_OK,
+        ).start()
+        patch(
+            "cloudexit.cli.app.generate_egress_pdf_report",
             return_value={"success": False, "logs": "reportlab error"},
         ).start()
-        mock_print = patch("main.console.print").start()
+        mock_print = patch("cloudexit.cli.app.console.print").start()
         try:
             with self.assertRaises(SystemExit) as ctx:
-                main.run_assessment(self._azure_config(), "azure", egress=True)
+                app.run_assessment(self._azure_config(), "azure", egress=True)
         finally:
             patch.stopall()
 
@@ -733,13 +813,18 @@ class EgressStageTests(unittest.TestCase):
         for p in patches:
             p.start()
         mock_estimate = patch(
-            "main.estimate_egress", return_value=self._ESTIMATE_OK
+            "cloudexit.cli.app.estimate_egress", return_value=self._ESTIMATE_OK
         ).start()
-        patch("main.generate_egress_html_report", return_value=self._REPORT_OK).start()
-        patch("main.generate_egress_pdf_report", return_value=self._PDF_OK).start()
+        patch(
+            "cloudexit.cli.app.generate_egress_html_report",
+            return_value=self._REPORT_OK,
+        ).start()
+        patch(
+            "cloudexit.cli.app.generate_egress_pdf_report", return_value=self._PDF_OK
+        ).start()
         config = VALID_CONFIG.copy()
         try:
-            main.run_assessment(config, "aws", egress=True)
+            app.run_assessment(config, "aws", egress=True)
         finally:
             patch.stopall()
 
@@ -760,10 +845,10 @@ class EgressStageTests(unittest.TestCase):
             patch(
                 "azure.identity.ClientSecretCredential", return_value=mock_credential
             ),
-            patch("main.run_assessment") as mock_run,
-            patch("main.console.print"),
+            patch("cloudexit.cli.app.run_assessment") as mock_run,
+            patch("cloudexit.cli.app.console.print"),
         ):
-            main.handle_azure(_ni_azure_args(egress=True))
+            app.handle_azure(_ni_azure_args(egress=True))
 
         mock_run.assert_called_once_with(
             ANY,
@@ -782,11 +867,11 @@ class EgressStageTests(unittest.TestCase):
     def test_handle_aws_passes_egress_flag(self):
         with (
             patch.dict(os.environ, NonInteractiveAWSTests._BASE_ENV, clear=False),
-            patch("main.validate_region"),
-            patch("main.run_assessment") as mock_run,
-            patch("main.console.print"),
+            patch("cloudexit.cli.app.validate_region"),
+            patch("cloudexit.cli.app.run_assessment") as mock_run,
+            patch("cloudexit.cli.app.console.print"),
         ):
-            main.handle_aws(_ni_aws_args(egress=True))
+            app.handle_aws(_ni_aws_args(egress=True))
 
         mock_run.assert_called_once_with(
             ANY,
@@ -805,51 +890,51 @@ class EgressStageTests(unittest.TestCase):
 
 class MainExitCodeTests(unittest.TestCase):
     def setUp(self):
-        patcher = patch("main.load_settings", return_value=Settings())
+        patcher = patch("cloudexit.cli.app.load_settings", return_value=Settings())
         patcher.start()
         self.addCleanup(patcher.stop)
 
     def test_config_error_from_handler_exits_config(self):
         with (
-            patch("main.prepare_catalogue"),
-            patch("main.console.print"),
+            patch("cloudexit.cli.app.prepare_catalogue"),
+            patch("cloudexit.cli.app.console.print"),
             patch(
-                "main.parse_arguments",
+                "cloudexit.cli.app.parse_arguments",
                 return_value=Namespace(cloud_provider="aws"),
             ),
-            patch("main.handle_aws", side_effect=main.ConfigError),
+            patch("cloudexit.cli.app.handle_aws", side_effect=app.ConfigError),
         ):
             with self.assertRaises(SystemExit) as ctx:
-                main.main()
+                app.main()
         self.assertEqual(ctx.exception.code, codes.CONFIG)
 
     def test_ctrl_c_in_handler_exits_interrupted(self):
         with (
-            patch("main.prepare_catalogue"),
-            patch("main.console.print"),
+            patch("cloudexit.cli.app.prepare_catalogue"),
+            patch("cloudexit.cli.app.console.print"),
             patch(
-                "main.parse_arguments",
+                "cloudexit.cli.app.parse_arguments",
                 return_value=Namespace(cloud_provider="aws"),
             ),
-            patch("main.handle_aws", side_effect=KeyboardInterrupt),
+            patch("cloudexit.cli.app.handle_aws", side_effect=KeyboardInterrupt),
         ):
             with self.assertRaises(SystemExit) as ctx:
-                main.main()
+                app.main()
         self.assertEqual(ctx.exception.code, codes.INTERRUPTED)
         self.assertEqual(codes.INTERRUPTED, 130)
 
     def test_ctrl_c_during_dataset_download_exits_interrupted(self):
         with (
-            patch("main.prepare_catalogue", side_effect=KeyboardInterrupt),
-            patch("main.console.print"),
+            patch("cloudexit.cli.app.prepare_catalogue", side_effect=KeyboardInterrupt),
+            patch("cloudexit.cli.app.console.print"),
             patch(
-                "main.parse_arguments",
+                "cloudexit.cli.app.parse_arguments",
                 return_value=Namespace(cloud_provider="aws"),
             ),
-            patch("main.handle_aws") as mock_handle,
+            patch("cloudexit.cli.app.handle_aws") as mock_handle,
         ):
             with self.assertRaises(SystemExit) as ctx:
-                main.main()
+                app.main()
         self.assertEqual(ctx.exception.code, codes.INTERRUPTED)
         mock_handle.assert_not_called()
 
@@ -864,14 +949,14 @@ class MainExitCodeTests(unittest.TestCase):
             egress=False,
         )
         with (
-            patch("main.prepare_catalogue"),
-            patch("main.console.print"),
-            patch("main.parse_arguments", return_value=args),
-            patch("main.load_config", return_value=None),
-            patch("main.run_assessment") as mock_run,
+            patch("cloudexit.cli.app.prepare_catalogue"),
+            patch("cloudexit.cli.app.console.print"),
+            patch("cloudexit.cli.app.parse_arguments", return_value=args),
+            patch("cloudexit.cli.app.load_config", return_value=None),
+            patch("cloudexit.cli.app.run_assessment") as mock_run,
         ):
             with self.assertRaises(SystemExit) as ctx:
-                main.main()
+                app.main()
         self.assertEqual(ctx.exception.code, codes.CONFIG)
         mock_run.assert_not_called()
 
@@ -889,15 +974,15 @@ class TfstateCliTests(unittest.TestCase):
     _ENV = {"ESC_EXIT_STRATEGY": "3", "ESC_ASSESSMENT_TYPE": "1"}
 
     def test_egress_with_tfstate_exits_config_for_aws(self):
-        with patch("main.console.print"):
+        with patch("cloudexit.cli.app.console.print"):
             with self.assertRaises(SystemExit) as ctx:
-                main.handle_aws(_ni_aws_args(tfstate="infra.tfstate", egress=True))
+                app.handle_aws(_ni_aws_args(tfstate="infra.tfstate", egress=True))
         self.assertEqual(ctx.exception.code, codes.CONFIG)
 
     def test_egress_with_tfstate_exits_config_for_azure(self):
-        with patch("main.console.print"):
+        with patch("cloudexit.cli.app.console.print"):
             with self.assertRaises(SystemExit) as ctx:
-                main.handle_azure(_ni_azure_args(tfstate="infra.tfstate", egress=True))
+                app.handle_azure(_ni_azure_args(tfstate="infra.tfstate", egress=True))
         self.assertEqual(ctx.exception.code, codes.CONFIG)
 
     def test_aws_non_interactive_needs_no_aws_env_vars(self):
@@ -909,10 +994,10 @@ class TfstateCliTests(unittest.TestCase):
         env.update(self._ENV)
         with (
             patch.dict(os.environ, env, clear=True),
-            patch("main.run_assessment") as mock_run,
-            patch("main.console.print"),
+            patch("cloudexit.cli.app.run_assessment") as mock_run,
+            patch("cloudexit.cli.app.console.print"),
         ):
-            main.handle_aws(_ni_aws_args(tfstate="infra.tfstate"))
+            app.handle_aws(_ni_aws_args(tfstate="infra.tfstate"))
 
         mock_run.assert_called_once()
         config_arg = mock_run.call_args[0][0]
@@ -931,10 +1016,10 @@ class TfstateCliTests(unittest.TestCase):
         env.update(self._ENV)
         with (
             patch.dict(os.environ, env, clear=True),
-            patch("main.run_assessment") as mock_run,
-            patch("main.console.print"),
+            patch("cloudexit.cli.app.run_assessment") as mock_run,
+            patch("cloudexit.cli.app.console.print"),
         ):
-            main.handle_azure(_ni_azure_args(tfstate="infra.tfstate"))
+            app.handle_azure(_ni_azure_args(tfstate="infra.tfstate"))
 
         mock_run.assert_called_once()
         config_arg = mock_run.call_args[0][0]
@@ -964,27 +1049,27 @@ class TfstateCliTests(unittest.TestCase):
             )
 
             with (
-                patch("main.run_assessment") as mock_run,
-                patch("main.console.print"),
+                patch("cloudexit.cli.app.run_assessment") as mock_run,
+                patch("cloudexit.cli.app.console.print"),
             ):
-                main.handle_aws(_ni_aws_args(config=str(config_path)))
+                app.handle_aws(_ni_aws_args(config=str(config_path)))
 
             config_arg = mock_run.call_args[0][0]
             self.assertEqual(
                 config_arg["providerDetails"], {"tfstatePath": str(state_path)}
             )
             # The same config must survive validation without credential fields.
-            self.assertTrue(main.validate_config(config_arg))
+            self.assertTrue(app.validate_config(config_arg))
 
     def test_tfstate_parses_from_both_subcommands(self):
         with patch("sys.argv", ["main.py", "aws", "--tfstate", "infra.tfstate"]):
-            args = main.parse_arguments()
+            args = app.parse_arguments()
         self.assertEqual(args.tfstate, "infra.tfstate")
 
         with patch(
             "sys.argv", ["main.py", "azure", "--tfstate", "infra.tfstate", "--dry-run"]
         ):
-            args = main.parse_arguments()
+            args = app.parse_arguments()
         self.assertEqual(args.tfstate, "infra.tfstate")
         self.assertTrue(args.dry_run)
 
@@ -993,7 +1078,7 @@ class TfstateCliTests(unittest.TestCase):
             "sys.argv", ["main.py", "aws", "--config", "c.json", "--tfstate", "s"]
         ):
             with self.assertRaises(SystemExit):
-                main.parse_arguments()
+                app.parse_arguments()
 
     def test_run_assessment_skips_credential_permission_and_cost_stages(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -1001,27 +1086,30 @@ class TfstateCliTests(unittest.TestCase):
             os.makedirs(raw_data_path, exist_ok=True)
 
             with (
-                patch("main.validate_config"),
-                patch("main.create_directory", return_value=(tmp_dir, raw_data_path)),
-                patch("main.verify_credentials") as mock_creds,
-                patch("main.test_permissions") as mock_perms,
-                patch("main.create_cost_inventory") as mock_cost,
+                patch("cloudexit.cli.app.validate_config"),
                 patch(
-                    "main.create_resource_inventory",
+                    "cloudexit.cli.app.create_directory",
+                    return_value=(tmp_dir, raw_data_path),
+                ),
+                patch("cloudexit.cli.app.verify_credentials") as mock_creds,
+                patch("cloudexit.cli.app.test_permissions") as mock_perms,
+                patch("cloudexit.cli.app.create_cost_inventory") as mock_cost,
+                patch(
+                    "cloudexit.cli.app.create_resource_inventory",
                     return_value={"success": True, "logs": ""},
                 ) as mock_inventory,
                 patch(
-                    "main.perform_risk_assessment",
+                    "cloudexit.cli.app.perform_risk_assessment",
                     return_value={"success": True, "logs": ""},
                 ) as mock_risk,
                 patch(
-                    "main.generate_report",
+                    "cloudexit.cli.app.generate_report",
                     return_value={"success": True, "reports": {}},
                 ) as mock_report,
-                patch("main.print_step"),
-                patch("main.console.print"),
+                patch("cloudexit.cli.app.print_step"),
+                patch("cloudexit.cli.app.console.print"),
             ):
-                main.run_assessment(TFSTATE_CONFIG.copy(), "aws")
+                app.run_assessment(TFSTATE_CONFIG.copy(), "aws")
 
         mock_creds.assert_not_called()
         mock_perms.assert_not_called()
@@ -1038,21 +1126,27 @@ class TfstateCliTests(unittest.TestCase):
             os.makedirs(raw_data_path, exist_ok=True)
 
             with (
-                patch("main.validate_config"),
-                patch("main.create_directory", return_value=(tmp_dir, raw_data_path)),
-                patch("main.create_resource_inventory", return_value=inventory_result),
+                patch("cloudexit.cli.app.validate_config"),
                 patch(
-                    "main.perform_risk_assessment",
+                    "cloudexit.cli.app.create_directory",
+                    return_value=(tmp_dir, raw_data_path),
+                ),
+                patch(
+                    "cloudexit.cli.app.create_resource_inventory",
+                    return_value=inventory_result,
+                ),
+                patch(
+                    "cloudexit.cli.app.perform_risk_assessment",
                     return_value={"success": True, "logs": ""},
                 ),
                 patch(
-                    "main.generate_report",
+                    "cloudexit.cli.app.generate_report",
                     return_value={"success": True, "reports": {}},
                 ),
-                patch("main.print_step") as mock_step,
-                patch("main.console.print"),
+                patch("cloudexit.cli.app.print_step") as mock_step,
+                patch("cloudexit.cli.app.console.print"),
             ):
-                main.run_assessment(TFSTATE_CONFIG.copy(), "aws")
+                app.run_assessment(TFSTATE_CONFIG.copy(), "aws")
 
         return [
             call
@@ -1105,13 +1199,13 @@ class TfstateCliTests(unittest.TestCase):
 
     def test_run_assessment_rejects_egress_from_tfstate_config_file(self):
         with (
-            patch("main.validate_config"),
-            patch("main.create_directory") as mock_dir,
-            patch("main.print_step"),
-            patch("main.console.print"),
+            patch("cloudexit.cli.app.validate_config"),
+            patch("cloudexit.cli.app.create_directory") as mock_dir,
+            patch("cloudexit.cli.app.print_step"),
+            patch("cloudexit.cli.app.console.print"),
         ):
             with self.assertRaises(SystemExit) as ctx:
-                main.run_assessment(TFSTATE_CONFIG.copy(), "aws", egress=True)
+                app.run_assessment(TFSTATE_CONFIG.copy(), "aws", egress=True)
 
         self.assertEqual(ctx.exception.code, codes.CONFIG)
         mock_dir.assert_not_called()

@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-import main
+from cloudexit.cli import app
 from tests.support.isolation import isolated_environ
 from tests.make_smoke_dataset import main as make_smoke_dataset
 from cloudexit import codes
@@ -15,7 +15,7 @@ from cloudexit.providers.azure.cli_session import (
     select_resource_group,
     select_subscription,
 )
-from utils.utils import NO_TERMINAL_MESSAGE, ask, prompt_required_inputs
+from cloudexit.cli.prompts import NO_TERMINAL_MESSAGE, ask, prompt_required_inputs
 from tests.support.paths import ROOT
 
 SMOKE_STATE = ROOT / "tests" / "fixtures" / "smoke" / "aws.tfstate"
@@ -34,7 +34,9 @@ class AskTests(unittest.TestCase):
         asked.assert_called_once_with("Question: ")
 
     def test_a_secret_is_read_without_echo(self):
-        with patch("utils.utils.getpass.getpass", return_value="s3cret") as asked:
+        with patch(
+            "cloudexit.cli.prompts.getpass.getpass", return_value="s3cret"
+        ) as asked:
             self.assertEqual(ask("Secret: ", secret=True), "s3cret")
         asked.assert_called_once_with("Secret: ")
 
@@ -43,8 +45,10 @@ class AskTests(unittest.TestCase):
             with self.subTest(secret=secret):
                 with (
                     patch("builtins.input", side_effect=EOFError),
-                    patch("utils.utils.getpass.getpass", side_effect=EOFError),
-                    patch("utils.utils.console.print") as printed,
+                    patch(
+                        "cloudexit.cli.prompts.getpass.getpass", side_effect=EOFError
+                    ),
+                    patch("cloudexit.cli.prompts.console.print") as printed,
                     self.assertRaises(SystemExit) as ctx,
                 ):
                     ask("Question: ", secret=secret)
@@ -68,9 +72,9 @@ class EveryPromptTests(unittest.TestCase):
     def assert_ends_with_the_message(self, call):
         with (
             patch("builtins.input", side_effect=EOFError),
-            patch("utils.utils.getpass.getpass", side_effect=EOFError),
-            patch("utils.utils.console.print") as printed,
-            patch("main.console.print"),
+            patch("cloudexit.cli.prompts.getpass.getpass", side_effect=EOFError),
+            patch("cloudexit.cli.prompts.console.print") as printed,
+            patch("cloudexit.cli.app.console.print"),
             patch("cloudexit.providers.azure.cli_session.console.print"),
             self.assertRaises(SystemExit) as ctx,
         ):
@@ -87,7 +91,7 @@ class EveryPromptTests(unittest.TestCase):
                 prompt_required_inputs()
 
         with (
-            patch("utils.utils.console.print") as printed,
+            patch("cloudexit.cli.prompts.console.print") as printed,
             self.assertRaises(SystemExit) as ctx,
         ):
             run()
@@ -99,25 +103,25 @@ class EveryPromptTests(unittest.TestCase):
         self.assert_ends_with_the_message(lambda: select_resource_group([Entry()]))
 
     def test_the_manual_aws_credentials(self):
-        self.assert_ends_with_the_message(main._aws_provider_from_prompt)
+        self.assert_ends_with_the_message(app._aws_provider_from_prompt)
 
     def test_the_manual_aws_secret_key(self):
         with (
             patch("builtins.input", return_value="AKIAEXAMPLE"),
-            patch("utils.utils.getpass.getpass", side_effect=EOFError),
-            patch("utils.utils.console.print") as printed,
+            patch("cloudexit.cli.prompts.getpass.getpass", side_effect=EOFError),
+            patch("cloudexit.cli.prompts.console.print") as printed,
             self.assertRaises(SystemExit) as ctx,
         ):
-            main._aws_provider_from_prompt()
+            app._aws_provider_from_prompt()
         self.assertEqual(ctx.exception.code, codes.CONFIG)
         self.assertIn(NO_TERMINAL_MESSAGE, str(printed.call_args_list))
 
     def test_the_manual_azure_credentials(self):
-        self.assert_ends_with_the_message(main._azure_provider_from_prompt)
+        self.assert_ends_with_the_message(app._azure_provider_from_prompt)
 
     def test_the_azure_tenant_prompt_of_the_cli_login(self):
-        with patch("main._azure_cli_credential"):
-            self.assert_ends_with_the_message(main._azure_provider_from_cli)
+        with patch("cloudexit.cli.app._azure_cli_credential"):
+            self.assert_ends_with_the_message(app._azure_provider_from_cli)
 
 
 class WithoutATerminalTests(unittest.TestCase):
@@ -200,7 +204,10 @@ class WithoutATerminalTests(unittest.TestCase):
         with patch("sys.stdin", io.StringIO("1\n3\n")):
             self.assertEqual(ask("x"), "1")
             self.assertEqual(ask("y"), "3")
-            with patch("utils.utils.console.print"), self.assertRaises(SystemExit):
+            with (
+                patch("cloudexit.cli.prompts.console.print"),
+                self.assertRaises(SystemExit),
+            ):
                 ask("z")
 
 

@@ -21,7 +21,7 @@ from tests.report.test_report_flow import AWS_RESOURCES, CONFIG, COSTS
 from tests.support.paths import ROOT
 
 SOURCE_FILES = ("pyproject.toml", "README.md", "main.py")
-SOURCE_DIRS = ("cloudexit", "core", "utils")
+SOURCE_DIRS = ("cloudexit",)
 
 
 @contextmanager
@@ -65,7 +65,9 @@ class WheelContentsTests(unittest.TestCase):
             capture_output=True,
         )
         (wheel,) = out.glob("*.whl")
-        cls.names = set(zipfile.ZipFile(wheel).namelist())
+        cls.wheel = zipfile.ZipFile(wheel)
+        cls.addClassCleanup(cls.wheel.close)
+        cls.names = set(cls.wheel.namelist())
 
     def test_the_wheel_contains_every_asset_file(self):
         expected = {f"cloudexit/assets/{name}" for name in asset_files(asset_path())}
@@ -95,6 +97,20 @@ class WheelContentsTests(unittest.TestCase):
 
     def test_the_wheel_has_no_loose_assets_directory(self):
         self.assertFalse([n for n in self.names if n.startswith("assets/")])
+
+    def test_the_only_top_level_name_installed_is_cloudexit(self):
+        top = {n.split("/")[0] for n in self.names}
+        self.assertEqual(
+            {name for name in top if not name.endswith(".dist-info")}, {"cloudexit"}
+        )
+
+    def test_the_root_script_is_not_installed(self):
+        self.assertNotIn("main.py", self.names)
+
+    def test_the_console_script_points_at_the_package(self):
+        (entry,) = [n for n in self.names if n.endswith("entry_points.txt")]
+        text = self.wheel.read(entry).decode("utf-8")
+        self.assertIn("cloudexit = cloudexit.cli:main", text)
 
 
 class AssetLookupTests(unittest.TestCase):
@@ -134,7 +150,7 @@ class AssetLookupTests(unittest.TestCase):
 
     def test_find_asset_refuses_paths_that_leave_the_assets(self):
         with tempfile.TemporaryDirectory() as report:
-            for relative in ("", "/", "../core/utils.py", "icons/../../main.py"):
+            for relative in ("", "/", "../cloudexit/engine.py", "icons/../../main.py"):
                 with self.subTest(relative=relative):
                     self.assertIsNone(find_asset(report, relative))
             self.assertIsNone(find_asset(report, "icons/aws/missing.png"))

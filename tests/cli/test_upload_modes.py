@@ -6,7 +6,7 @@ from contextlib import redirect_stderr
 from pathlib import Path
 from unittest.mock import patch
 
-import main
+from cloudexit.cli import app
 from cloudexit.platform.run_output import (
     build_run_json,
     catalogue_outdated,
@@ -55,14 +55,14 @@ class ModeTestCase(flow.FlowTestCase):
 
     def summary(self, exit_code=0):
         out = io.StringIO()
-        main._emit_run_json(out, exit_code)
+        app._emit_run_json(out, exit_code)
         return json.loads(out.getvalue())
 
 
 class UploadModeMatrixTests(ModeTestCase):
     def test_auto_without_a_platform_runs_offline_and_succeeds(self):
         report = self.report()
-        with patch("main.upload") as mock_upload:
+        with patch("cloudexit.cli.app.upload") as mock_upload:
             self.run_assessment(report, settings=Settings())
 
         mock_upload.assert_not_called()
@@ -78,7 +78,7 @@ class UploadModeMatrixTests(ModeTestCase):
         self.assert_local_report(report)
         self.assertEqual(self.sync(report)["assessment_type"], 2)
         self.assertEqual(self.forced(), [])
-        self.assertEqual(main.RUN["upload"].url, URL)
+        self.assertEqual(app.RUN["upload"].url, URL)
 
     def test_auto_with_a_platform_that_refuses_the_key_writes_the_report_first(self):
         report = self.report()
@@ -103,7 +103,7 @@ class UploadModeMatrixTests(ModeTestCase):
         ):
             with self.subTest(settings=settings.host.value):
                 with (
-                    patch("main.upload") as mock_upload,
+                    patch("cloudexit.cli.app.upload") as mock_upload,
                     self.assertRaises(SystemExit) as ctx,
                 ):
                     self.run_assessment(report, settings=settings)
@@ -119,11 +119,11 @@ class UploadModeMatrixTests(ModeTestCase):
         self.run_assessment(
             report, settings=with_mode("required"), replies=success_replies()
         )
-        self.assertEqual(main.RUN["upload"].url, URL)
+        self.assertEqual(app.RUN["upload"].url, URL)
 
     def test_off_with_a_platform_makes_no_request_and_forces_basic(self):
         report = self.report()
-        with patch("main.upload") as mock_upload:
+        with patch("cloudexit.cli.app.upload") as mock_upload:
             self.run_assessment(report, settings=with_mode("off"), replies=[])
 
         mock_upload.assert_not_called()
@@ -182,7 +182,7 @@ class UploadModeMatrixTests(ModeTestCase):
 class DryRunTests(ModeTestCase):
     def test_a_dry_run_is_upload_off_plus_the_sync_document(self):
         report = self.report()
-        with patch("main.upload") as mock_upload:
+        with patch("cloudexit.cli.app.upload") as mock_upload:
             self.run_assessment(
                 report, settings=flow.CONFIGURED, replies=[], dry_run=True
             )
@@ -270,7 +270,7 @@ class StrictTests(ModeTestCase):
         self.assertEqual(ctx.exception.code, codes.UPLOAD_REJECTED)
         self.assert_local_report(report)
         self.assertEqual(
-            [i["code"] for i in main.RUN["upload"].warning_items], ["client_deprecated"]
+            [i["code"] for i in app.RUN["upload"].warning_items], ["client_deprecated"]
         )
 
     def test_an_upload_failure_keeps_its_own_code_under_strict(self):
@@ -474,17 +474,18 @@ class RunSummaryUnitTests(unittest.TestCase):
 class StdoutSeparationTests(unittest.TestCase):
     def run_json(self, dispatch):
         out, err = io.StringIO(), io.StringIO()
-        main.RUN.clear()
+        app.RUN.clear()
         with (
             patch.object(sys, "stdout", out),
             redirect_stderr(err),
-            patch("main._dispatch", side_effect=dispatch),
+            patch("cloudexit.cli.app._dispatch", side_effect=dispatch),
             patch(
-                "main.console.print", side_effect=lambda *a, **k: err.write(str(a[0]))
+                "cloudexit.cli.app.console.print",
+                side_effect=lambda *a, **k: err.write(str(a[0])),
             ),
         ):
             try:
-                main._dispatch_json(object())
+                app._dispatch_json(object())
                 code = 0
             except SystemExit as e:
                 code = e.code

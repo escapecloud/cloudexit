@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import main
+from cloudexit.cli import app
 from cloudexit.platform.client import ApiClient
 from cloudexit.platform.upload import (
     UploadResult,
@@ -185,45 +185,50 @@ class ClosingBlockTests(unittest.TestCase):
             os.makedirs(os.path.join(report, "data"))
             os.makedirs(raw)
             patches = [
-                patch("main.validate_config"),
-                patch("main.require_azure_sdk"),
-                patch("main.create_directory", return_value=(report, raw)),
-                patch("main.add_run_log_handler"),
-                patch("main.verify_credentials", return_value=(True, "ok")),
-                patch("main.test_permissions", return_value=(True, True, True, "ok")),
+                patch("cloudexit.cli.app.validate_config"),
+                patch("cloudexit.cli.app.require_azure_sdk"),
+                patch("cloudexit.cli.app.create_directory", return_value=(report, raw)),
+                patch("cloudexit.cli.app.add_run_log_handler"),
                 patch(
-                    "main.create_resource_inventory",
+                    "cloudexit.cli.app.verify_credentials", return_value=(True, "ok")
+                ),
+                patch(
+                    "cloudexit.cli.app.test_permissions",
+                    return_value=(True, True, True, "ok"),
+                ),
+                patch(
+                    "cloudexit.cli.app.create_resource_inventory",
                     return_value={"success": True, "logs": ""},
                 ),
                 patch(
-                    "main.create_cost_inventory",
+                    "cloudexit.cli.app.create_cost_inventory",
                     return_value={"success": True, "logs": ""},
                 ),
                 patch(
-                    "main.perform_risk_assessment",
+                    "cloudexit.cli.app.perform_risk_assessment",
                     return_value={"success": True, "logs": ""},
                 ),
                 patch(
-                    "main.generate_report",
+                    "cloudexit.cli.app.generate_report",
                     return_value={
                         "success": True,
                         "reports": {"HTML": "h.html", "PDF": "p.pdf", "JSON": "j.json"},
                     },
                 ),
-                patch("main.prepare_sync_document", return_value=None),
-                patch("main.print_step"),
-                patch("main.console.status"),
+                patch("cloudexit.cli.app.prepare_sync_document", return_value=None),
+                patch("cloudexit.cli.app.print_step"),
+                patch("cloudexit.cli.app.console.status"),
                 patch(
-                    "main.console.print",
+                    "cloudexit.cli.app.console.print",
                     side_effect=lambda *a, **k: printed.append(str(a[0]) if a else ""),
                 ),
             ]
             if uploaded is not None:
-                patches.append(patch("main.upload", return_value=uploaded))
+                patches.append(patch("cloudexit.cli.app.upload", return_value=uploaded))
             for item in patches:
                 item.start()
             try:
-                main.run_assessment(
+                app.run_assessment(
                     config,
                     name,
                     non_interactive=True,

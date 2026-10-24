@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-import main
+from cloudexit.cli import app
 from cloudexit.platform.client import ApiError
 from cloudexit.platform.spool import (
     AUTO_FLUSH_BUDGET,
@@ -729,40 +729,48 @@ class AutoFlushTests(SpoolCase):
             return str(report), str(raw)
 
         patches = [
-            patch("main.validate_config"),
-            patch("main.flush", side_effect=flushing),
-            patch("main.create_directory", side_effect=directory),
-            patch("main.add_run_log_handler"),
-            patch("main.verify_credentials", return_value=(True, "ok")),
-            patch("main.test_permissions", return_value=(True, True, True, "ok")),
+            patch("cloudexit.cli.app.validate_config"),
+            patch("cloudexit.cli.app.flush", side_effect=flushing),
+            patch("cloudexit.cli.app.create_directory", side_effect=directory),
+            patch("cloudexit.cli.app.add_run_log_handler"),
+            patch("cloudexit.cli.app.verify_credentials", return_value=(True, "ok")),
             patch(
-                "main.create_resource_inventory",
+                "cloudexit.cli.app.test_permissions",
+                return_value=(True, True, True, "ok"),
+            ),
+            patch(
+                "cloudexit.cli.app.create_resource_inventory",
                 return_value={"success": True, "logs": ""},
             ),
             patch(
-                "main.create_cost_inventory", return_value={"success": True, "logs": ""}
-            ),
-            patch(
-                "main.perform_risk_assessment",
+                "cloudexit.cli.app.create_cost_inventory",
                 return_value={"success": True, "logs": ""},
             ),
             patch(
-                "main.generate_report", return_value={"success": True, "reports": {}}
+                "cloudexit.cli.app.perform_risk_assessment",
+                return_value={"success": True, "logs": ""},
             ),
-            patch("main.prepare_sync_document", return_value=None),
             patch(
-                "main.upload",
+                "cloudexit.cli.app.generate_report",
+                return_value={"success": True, "reports": {}},
+            ),
+            patch("cloudexit.cli.app.prepare_sync_document", return_value=None),
+            patch(
+                "cloudexit.cli.app.upload",
                 side_effect=lambda *a, **k: order.append(("upload", k))
                 or UploadResult(True, True, message="uploaded", sync_id=OLD),
             ),
-            patch("main.print_step", side_effect=lambda *a, **k: steps.append((a, k))),
-            patch("main.console.print"),
-            patch("main.console.status"),
+            patch(
+                "cloudexit.cli.app.print_step",
+                side_effect=lambda *a, **k: steps.append((a, k)),
+            ),
+            patch("cloudexit.cli.app.console.print"),
+            patch("cloudexit.cli.app.console.status"),
         ]
         for item in patches:
             item.start()
         try:
-            main.run_assessment(
+            app.run_assessment(
                 dict(self.CONFIG),
                 "aws",
                 non_interactive=True,
@@ -839,39 +847,47 @@ class AutoFlushTests(SpoolCase):
         )
         steps = []
         with (
-            patch("main.validate_config"),
+            patch("cloudexit.cli.app.validate_config"),
             patch(
-                "main.create_directory",
+                "cloudexit.cli.app.create_directory",
                 return_value=(str(self.tmp / "r"), str(self.tmp / "raw")),
             ),
-            patch("main.add_run_log_handler"),
-            patch("main.verify_credentials", return_value=(True, "ok")),
-            patch("main.test_permissions", return_value=(True, True, True, "ok")),
+            patch("cloudexit.cli.app.add_run_log_handler"),
+            patch("cloudexit.cli.app.verify_credentials", return_value=(True, "ok")),
             patch(
-                "main.create_resource_inventory",
+                "cloudexit.cli.app.test_permissions",
+                return_value=(True, True, True, "ok"),
+            ),
+            patch(
+                "cloudexit.cli.app.create_resource_inventory",
                 return_value={"success": True, "logs": ""},
             ),
             patch(
-                "main.create_cost_inventory", return_value={"success": True, "logs": ""}
-            ),
-            patch(
-                "main.perform_risk_assessment",
+                "cloudexit.cli.app.create_cost_inventory",
                 return_value={"success": True, "logs": ""},
             ),
             patch(
-                "main.generate_report", return_value={"success": True, "reports": {}}
+                "cloudexit.cli.app.perform_risk_assessment",
+                return_value={"success": True, "logs": ""},
             ),
-            patch("main.prepare_sync_document", return_value=None),
-            patch("main.write_upload_record"),
-            patch("main.upload", return_value=spooled),
-            patch("main.print_step", side_effect=lambda *a, **k: steps.append((a, k))),
-            patch("main.console.print"),
-            patch("main.console.status"),
+            patch(
+                "cloudexit.cli.app.generate_report",
+                return_value={"success": True, "reports": {}},
+            ),
+            patch("cloudexit.cli.app.prepare_sync_document", return_value=None),
+            patch("cloudexit.cli.app.write_upload_record"),
+            patch("cloudexit.cli.app.upload", return_value=spooled),
+            patch(
+                "cloudexit.cli.app.print_step",
+                side_effect=lambda *a, **k: steps.append((a, k)),
+            ),
+            patch("cloudexit.cli.app.console.print"),
+            patch("cloudexit.cli.app.console.status"),
             self.assertRaises(SystemExit) as ctx,
         ):
             (self.tmp / "r" / "data").mkdir(parents=True, exist_ok=True)
             (self.tmp / "raw").mkdir(exist_ok=True)
-            main.run_assessment(
+            app.run_assessment(
                 dict(self.CONFIG),
                 "aws",
                 non_interactive=True,
@@ -916,7 +932,7 @@ class CommandTestCase(SpoolCase):
         with (
             contextlib.redirect_stdout(out),
             patch(
-                "main.console.print",
+                "cloudexit.cli.app.console.print",
                 side_effect=lambda *a, **k: out.write(
                     " ".join(str(x) for x in a) + "\n"
                 ),
@@ -952,9 +968,9 @@ class UploadCommandTests(CommandTestCase):
 
     def test_a_directory_uploads_only_its_sync_documents(self):
         folder = self.files()
-        with patch("main.validate_document"):
+        with patch("cloudexit.cli.app.validate_document"):
             code, out, fake = self.run_command(
-                main.handle_upload,
+                app.handle_upload,
                 self.upload_args(str(folder)),
                 [meta_reply(), whoami_reply(), created_reply()],
             )
@@ -969,9 +985,9 @@ class UploadCommandTests(CommandTestCase):
         second = self.tmp / "second.json"
         first.write_text(json.dumps(self.document(MIDDLE)))
         second.write_text(json.dumps(self.document(NEW)))
-        with patch("main.validate_document"):
+        with patch("cloudexit.cli.app.validate_document"):
             code, out, fake = self.run_command(
-                main.handle_upload,
+                app.handle_upload,
                 self.upload_args(str(second), str(first)),
                 [
                     meta_reply(),
@@ -995,7 +1011,7 @@ class UploadCommandTests(CommandTestCase):
         missing = self.tmp / "missing.json"
 
         code, out, fake = self.run_command(
-            main.handle_upload, self.upload_args(str(other), str(missing))
+            app.handle_upload, self.upload_args(str(other), str(missing))
         )
 
         self.assertEqual(code, codes.UPLOAD_REJECTED)
@@ -1006,9 +1022,7 @@ class UploadCommandTests(CommandTestCase):
     def test_a_folder_without_sync_documents_is_reported(self):
         empty = self.tmp / "empty"
         empty.mkdir()
-        code, out, _ = self.run_command(
-            main.handle_upload, self.upload_args(str(empty))
-        )
+        code, out, _ = self.run_command(app.handle_upload, self.upload_args(str(empty)))
 
         self.assertEqual(code, codes.UPLOAD_REJECTED)
         self.assertIn("holds no sync documents", out)
@@ -1018,7 +1032,7 @@ class UploadCommandTests(CommandTestCase):
         file.write_text(json.dumps(self.document(OLD)))
 
         code, out, fake = self.run_command(
-            main.handle_upload, self.upload_args(str(file))
+            app.handle_upload, self.upload_args(str(file))
         )
 
         self.assertEqual(code, codes.UPLOAD_REJECTED)
@@ -1027,9 +1041,9 @@ class UploadCommandTests(CommandTestCase):
     def test_an_upload_that_cannot_get_through_is_spooled_and_exits_12(self):
         file = self.tmp / "sync.json"
         file.write_text(json.dumps(self.document(OLD)))
-        with patch("main.validate_document"):
+        with patch("cloudexit.cli.app.validate_document"):
             code, out, _ = self.run_command(
-                main.handle_upload,
+                app.handle_upload,
                 self.upload_args(str(file)),
                 [meta_reply(), whoami_reply(), unavailable()],
             )
@@ -1041,9 +1055,9 @@ class UploadCommandTests(CommandTestCase):
     def test_spool_on_error_keeps_a_refused_upload(self):
         file = self.tmp / "sync.json"
         file.write_text(json.dumps(self.document(OLD)))
-        with patch("main.validate_document"):
+        with patch("cloudexit.cli.app.validate_document"):
             code, out, _ = self.run_command(
-                main.handle_upload,
+                app.handle_upload,
                 self.upload_args(str(file), spool_on_error=True),
                 [meta_reply(), whoami_reply(), refused()],
             )
@@ -1055,9 +1069,9 @@ class UploadCommandTests(CommandTestCase):
         file = self.tmp / "sync.json"
         file.write_text(json.dumps(self.document(OLD)))
         billing = {"class": "new", "charged_credits": 20, "balance": 380}
-        with patch("main.validate_document"):
+        with patch("cloudexit.cli.app.validate_document"):
             code, out, _ = self.run_command(
-                main.handle_upload,
+                app.handle_upload,
                 self.upload_args(str(file)),
                 [meta_reply(), whoami_reply(), created_reply(billing=billing)],
             )
@@ -1068,9 +1082,9 @@ class UploadCommandTests(CommandTestCase):
     def test_an_account_key_needs_to_be_told_where_the_sync_goes(self):
         file = self.tmp / "sync.json"
         file.write_text(json.dumps(self.document(OLD)))
-        with patch("main.validate_document"):
+        with patch("cloudexit.cli.app.validate_document"):
             code, out, _ = self.run_command(
-                main.handle_upload,
+                app.handle_upload,
                 self.upload_args(str(file)),
                 [meta_reply(), whoami_reply(kind="account")],
             )
@@ -1081,7 +1095,7 @@ class UploadCommandTests(CommandTestCase):
     def test_without_a_platform_there_is_nothing_to_upload_to(self):
         with patch.dict(os.environ, {"CLOUDEXIT_API_KEY": ""}):
             code, out, fake = self.run_command(
-                main.handle_upload, self.upload_args(str(self.tmp / "x.json"))
+                app.handle_upload, self.upload_args(str(self.tmp / "x.json"))
             )
         self.assertEqual(code, codes.UPLOAD_AUTH)
         self.assertIn("No platform is configured", out)
@@ -1091,7 +1105,7 @@ class UploadCommandTests(CommandTestCase):
 
         with patch.dict(os.environ, {"CLOUDEXIT_API_KEY": corrupt(KEY)}):
             code, out, fake = self.run_command(
-                main.handle_upload, self.upload_args(str(self.tmp / "x.json"))
+                app.handle_upload, self.upload_args(str(self.tmp / "x.json"))
             )
         self.assertEqual(code, codes.UPLOAD_AUTH)
         self.assertEqual(fake.requests, [])
@@ -1119,7 +1133,7 @@ class SpoolCommandTests(CommandTestCase):
         error = ApiError("maintenance", "m", 12, request_id="r", retryable=True)
         self.add(OLD, created=NOW - 2 * DAY, error=error, attempts=4)
         with patch("time.time", return_value=NOW):
-            code, out, _ = self.run_command(main.handle_spool, self.spool_args("list"))
+            code, out, _ = self.run_command(app.handle_spool, self.spool_args("list"))
 
         lines = out.strip().splitlines()
         self.assertEqual(code, 0)
@@ -1133,24 +1147,24 @@ class SpoolCommandTests(CommandTestCase):
     def test_list_marks_what_the_platform_will_reject(self):
         self.add(OLD, created=NOW - 31 * DAY)
         with patch("time.time", return_value=NOW):
-            _, out, _ = self.run_command(main.handle_spool, self.spool_args("list"))
+            _, out, _ = self.run_command(app.handle_spool, self.spool_args("list"))
         self.assertIn("will be rejected (too old)", out)
 
     def test_list_of_an_empty_spool(self):
-        _, out, _ = self.run_command(main.handle_spool, self.spool_args("list"))
+        _, out, _ = self.run_command(app.handle_spool, self.spool_args("list"))
         self.assertIn("The spool is empty.", out)
 
     def test_list_can_be_limited_to_one_host(self):
         self.add(OLD)
         _, out, _ = self.run_command(
-            main.handle_spool, self.spool_args("list", host="https://other.example.com")
+            app.handle_spool, self.spool_args("list", host="https://other.example.com")
         )
         self.assertIn("The spool is empty.", out)
 
     def test_flush_delivers_and_clears_the_spool(self):
         self.add(OLD)
         code, out, fake = self.run_command(
-            main.handle_spool,
+            app.handle_spool,
             self.spool_args("flush"),
             [meta_reply(), whoami_reply(), created_reply()],
         )
@@ -1162,7 +1176,7 @@ class SpoolCommandTests(CommandTestCase):
     def test_flush_exits_12_while_something_still_waits(self):
         self.add(OLD)
         code, out, _ = self.run_command(
-            main.handle_spool,
+            app.handle_spool,
             self.spool_args("flush"),
             [meta_reply(), whoami_reply(), unavailable()],
         )
@@ -1172,7 +1186,7 @@ class SpoolCommandTests(CommandTestCase):
         self.assertEqual(len(self.spool.entries()), 1)
 
     def test_flush_of_an_empty_spool(self):
-        code, out, fake = self.run_command(main.handle_spool, self.spool_args("flush"))
+        code, out, fake = self.run_command(app.handle_spool, self.spool_args("flush"))
         self.assertEqual(code, 0)
         self.assertIn("Nothing to deliver", out)
         self.assertEqual(fake.requests, [])
@@ -1180,7 +1194,7 @@ class SpoolCommandTests(CommandTestCase):
     def test_flush_can_name_the_host(self):
         self.add(OLD)
         code, out, fake = self.run_command(
-            main.handle_spool,
+            app.handle_spool,
             self.spool_args("flush", host="https://other.example.com"),
         )
         self.assertIn("Nothing to deliver", out)
@@ -1188,14 +1202,14 @@ class SpoolCommandTests(CommandTestCase):
 
     def test_flush_needs_a_platform(self):
         with patch.dict(os.environ, {"CLOUDEXIT_HOST": ""}):
-            code, out, _ = self.run_command(main.handle_spool, self.spool_args("flush"))
+            code, out, _ = self.run_command(app.handle_spool, self.spool_args("flush"))
         self.assertEqual(code, codes.UPLOAD_AUTH)
 
     def test_purge_asks_first_and_deletes_on_yes(self):
         self.add(OLD)
         self.add(NEW)
         with patch("builtins.input", return_value="y") as asked:
-            code, out, _ = self.run_command(main.handle_spool, self.spool_args("purge"))
+            code, out, _ = self.run_command(app.handle_spool, self.spool_args("purge"))
 
         self.assertIn("Delete 2 spooled syncs?", asked.call_args.args[0])
         self.assertIn("Deleted 2 spooled syncs.", out)
@@ -1207,7 +1221,7 @@ class SpoolCommandTests(CommandTestCase):
             with self.subTest(answer=answer):
                 with patch("builtins.input", return_value=answer):
                     _, out, _ = self.run_command(
-                        main.handle_spool, self.spool_args("purge")
+                        app.handle_spool, self.spool_args("purge")
                     )
                 self.assertIn("Nothing deleted.", out)
                 self.assertEqual(len(self.spool.entries()), 1)
@@ -1216,7 +1230,7 @@ class SpoolCommandTests(CommandTestCase):
         self.add(OLD)
         with patch("builtins.input", side_effect=AssertionError("asked")):
             _, out, _ = self.run_command(
-                main.handle_spool, self.spool_args("purge", yes=True)
+                app.handle_spool, self.spool_args("purge", yes=True)
             )
         self.assertEqual(self.spool.entries(), [])
 
@@ -1225,7 +1239,7 @@ class SpoolCommandTests(CommandTestCase):
         self.add(NEW, created=NOW - 1 * DAY)
         with patch("time.time", return_value=NOW):
             _, out, _ = self.run_command(
-                main.handle_spool, self.spool_args("purge", older_than="30d", yes=True)
+                app.handle_spool, self.spool_args("purge", older_than="30d", yes=True)
             )
 
         self.assertIn("Deleted 1 spooled sync.", out)
@@ -1233,20 +1247,20 @@ class SpoolCommandTests(CommandTestCase):
 
     def test_purge_of_nothing(self):
         _, out, _ = self.run_command(
-            main.handle_spool, self.spool_args("purge", yes=True)
+            app.handle_spool, self.spool_args("purge", yes=True)
         )
         self.assertIn("Nothing to purge.", out)
 
     def test_purge_with_a_bad_age_is_a_configuration_error(self):
         code, out, _ = self.run_command(
-            main.handle_spool, self.spool_args("purge", older_than="soon")
+            app.handle_spool, self.spool_args("purge", older_than="soon")
         )
         self.assertEqual(code, codes.CONFIG)
 
     def test_purge_without_a_terminal_says_to_use_yes(self):
         self.add(OLD)
         with patch("builtins.input", side_effect=EOFError):
-            code, out, _ = self.run_command(main.handle_spool, self.spool_args("purge"))
+            code, out, _ = self.run_command(app.handle_spool, self.spool_args("purge"))
 
         self.assertEqual(code, codes.CONFIG)
         self.assertEqual(len(self.spool.entries()), 1)

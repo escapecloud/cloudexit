@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 import requests
 
-import main
+from cloudexit.cli import app
 from cloudexit.platform.client import ApiClient
 from cloudexit.platform.spool import Spool
 from cloudexit.platform.status import (
@@ -573,13 +573,15 @@ class CommandTests(StatusTestCase):
 
         with (
             patch("sys.argv", ["cloudexit", *argv]),
-            patch("main.load_settings", return_value=settings or configured()),
-            patch("main.run_status", side_effect=checked),
+            patch(
+                "cloudexit.cli.app.load_settings", return_value=settings or configured()
+            ),
+            patch("cloudexit.cli.app.run_status", side_effect=checked),
             contextlib.redirect_stdout(out),
             fake_http(*(replies or [])),
         ):
             try:
-                main.main()
+                app.main()
                 code = 0
             except SystemExit as e:
                 code = e.code
@@ -619,9 +621,9 @@ class CommandTests(StatusTestCase):
         out = io.StringIO()
         with (
             patch("sys.argv", ["cloudexit", "catalogue", "status"]),
-            patch("main.load_settings", return_value=configured()),
-            patch("main.status_lines", return_value=["installed: none"]),
-            patch("main.installed_catalogue", return_value=None),
+            patch("cloudexit.cli.app.load_settings", return_value=configured()),
+            patch("cloudexit.cli.app.status_lines", return_value=["installed: none"]),
+            patch("cloudexit.cli.app.installed_catalogue", return_value=None),
             patch(
                 "cloudexit.platform.status.ApiClient.from_settings",
                 side_effect=self.make_client,
@@ -629,7 +631,7 @@ class CommandTests(StatusTestCase):
             contextlib.redirect_stdout(out),
             fake_http(meta_reply()),
         ):
-            main.main()
+            app.main()
 
         self.assertIn("installed: none", out.getvalue())
         self.assertIn("platform:  2026-11-02 (", out.getvalue())
@@ -638,12 +640,12 @@ class CommandTests(StatusTestCase):
         out = io.StringIO()
         with (
             patch("sys.argv", ["cloudexit", "catalogue", "status"]),
-            patch("main.load_settings", return_value=Settings()),
-            patch("main.status_lines", return_value=["installed: none"]),
+            patch("cloudexit.cli.app.load_settings", return_value=Settings()),
+            patch("cloudexit.cli.app.status_lines", return_value=["installed: none"]),
             contextlib.redirect_stdout(out),
             fake_http(),
         ):
-            main.main()
+            app.main()
 
         self.assertNotIn("platform:", out.getvalue())
 

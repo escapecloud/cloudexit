@@ -8,7 +8,7 @@ from typing import Any
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 
-from utils.utils import print_step
+from cloudexit.cli.prompts import print_step
 
 from cloudexit.catalogue.db import connect
 from cloudexit.providers.azure.sdk import azure_import
