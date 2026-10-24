@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from botocore.exceptions import BotoCoreError, ClientError
 
 from .utils_aws import (
-    AWS_RETRY_CONFIG,
+    create_client,
     extract_result_path,
     paginate_or_call,
 )
@@ -142,9 +142,7 @@ def _resource_identity(item: dict[str, Any], sizing: dict[str, Any]) -> tuple[st
 
 
 def _enumeration_client(session: Any, region: str, entry: dict[str, Any]) -> Any:
-    return session.client(
-        entry["enumeration"]["service"], region_name=region, config=AWS_RETRY_CONFIG
-    )
+    return create_client(session, entry["enumeration"]["service"], region)
 
 
 def _enumerate(session: Any, region: str, entry: dict[str, Any]) -> tuple[Any, list]:
@@ -204,9 +202,7 @@ def _collect_s3_buckets(
     session: Any, region: str, code: str, entry: dict[str, Any]
 ) -> list[dict[str, Any]]:
     s3_client = _enumeration_client(session, region, entry)
-    cloudwatch = session.client(
-        "cloudwatch", region_name=region, config=AWS_RETRY_CONFIG
-    )
+    cloudwatch = create_client(session, "cloudwatch", region)
 
     bucket_names = _list_buckets_in_region(s3_client, region, entry["enumeration"])
 
@@ -325,9 +321,7 @@ def _collect_rds_instances(
     session: Any, region: str, code: str, entry: dict[str, Any]
 ) -> list[dict[str, Any]]:
     _, instances = _enumerate(session, region, entry)
-    cloudwatch = session.client(
-        "cloudwatch", region_name=region, config=AWS_RETRY_CONFIG
-    )
+    cloudwatch = create_client(session, "cloudwatch", region)
 
     rows = []
     specs = []

@@ -42,6 +42,7 @@ class UploadResult:
     warnings: tuple[str, ...] = ()
     replayed: bool = False
     pending: bool = False
+    billing: dict[str, int] | None = None
 
     @property
     def failed(self) -> bool:
@@ -84,6 +85,16 @@ def error_failure(error: ApiError, sync_id: str | None = None) -> UploadResult:
         error_code=error.code,
         request_id=error.request_id,
     )
+
+
+def billing_line(billing: dict[str, int] | None) -> str | None:
+    if not billing or "charged_credits" not in billing:
+        return None
+    charged = billing["charged_credits"]
+    line = f"Charged {charged} credit{'' if charged == 1 else 's'}"
+    if "balance" in billing:
+        line += f"; balance {billing['balance']}"
+    return line + "."
 
 
 def upload(
@@ -140,6 +151,7 @@ def upload(
         warnings=pushed.warnings,
         replayed=pushed.replayed,
         pending=pushed.pending,
+        billing=pushed.billing,
     )
 
 
@@ -159,6 +171,7 @@ def _record(result: UploadResult | None) -> dict[str, Any] | None:
         "url": result.url,
         "request_id": result.request_id,
         "pending": result.pending,
+        "billing": result.billing,
         "warnings": list(result.warnings),
     }
     return {key: value for key, value in info.items() if value}

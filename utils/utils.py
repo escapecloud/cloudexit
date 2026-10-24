@@ -1,4 +1,5 @@
 # utils/utils.py
+import getpass
 import os
 import sys
 import logging
@@ -50,11 +51,28 @@ def build_config(
     }
 
 
+NO_TERMINAL_MESSAGE = (
+    "This run needs answers to prompts, but no terminal is attached. "
+    "Use --non-interactive and set ESC_EXIT_STRATEGY and ESC_ASSESSMENT_TYPE "
+    "(see --help)."
+)
+
+
+def ask(prompt: str, *, secret: bool = False) -> str:
+    # Every question goes through here, so a run without a terminal (CI, a
+    # pipe, < /dev/null) ends with a message instead of an EOFError traceback.
+    try:
+        return getpass.getpass(prompt) if secret else input(prompt)
+    except EOFError:
+        console.print(f"[red]{NO_TERMINAL_MESSAGE}[/red]")
+        sys.exit(codes.CONFIG)
+
+
 def prompt_required_inputs() -> tuple[int, int]:
     while True:
         try:
             exit_strategy = int(
-                input(
+                ask(
                     "Enter Exit Strategy (1 for 'Repatriation to On-Premises', 3 for 'Migration to Alternate Cloud'): "
                 ).strip()
             )
@@ -69,9 +87,7 @@ def prompt_required_inputs() -> tuple[int, int]:
     while True:
         try:
             assessment_type = int(
-                input(
-                    "Enter Assessment Type (1 for 'Basic', 2 for 'Standard'): "
-                ).strip()
+                ask("Enter Assessment Type (1 for 'Basic', 2 for 'Standard'): ").strip()
             )
             if assessment_type not in [1, 2]:
                 raise ValueError("Invalid assessment type.")

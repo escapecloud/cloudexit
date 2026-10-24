@@ -3,12 +3,14 @@ import json
 import os
 import logging
 import sqlite3
+import time
 from typing import Any
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 from collections import defaultdict
 
 from utils.azure import azure_import
+from utils.utils import print_step
 
 from .utils_db import connect, load_data
 
@@ -16,6 +18,70 @@ logger = logging.getLogger("core.engine.azure")
 logging.getLogger("azure").setLevel(logging.WARNING)
 
 MANAGEMENT_URL = "https://management.azure.com"
+
+COST_RETRY_STATUSES = (429, 503)
+COST_MAX_ATTEMPTS = 4
+COST_MAX_WAIT_SECONDS = 180
+COST_DEFAULT_WAITS = (20, 40, 60)
+COST_RATE_LIMITED = (
+    "Azure Cost Management kept rate limiting this subscription; "
+    "try again in a few minutes."
+)
+
+
+class CostRateLimited(Exception):
+    pass
+
+
+def retry_wait(error: Any, attempt: int) -> float:
+    # Azure says how long to wait in Retry-After or in one of its own
+    # rate-limit headers; without either, wait a little longer each time.
+    headers = getattr(getattr(error, "response", None), "headers", None) or {}
+    waits = []
+    for name, value in headers.items():
+        lowered = str(name).lower()
+        if lowered == "retry-after" or (
+            lowered.startswith("x-ms-ratelimit-microsoft.costmanagement-")
+            and lowered.endswith("-retry-after")
+        ):
+            try:
+                waits.append(max(0.0, float(value)))
+            except (TypeError, ValueError):
+                continue
+    if waits:
+        return max(waits)
+    return float(COST_DEFAULT_WAITS[min(attempt, len(COST_DEFAULT_WAITS) - 1)])
+
+
+def query_costs(client: Any, scope: str, query: Any) -> Any:
+    HttpResponseError = azure_import("azure.core.exceptions", "HttpResponseError")
+    waited = 0.0
+    for attempt in range(COST_MAX_ATTEMPTS):
+        try:
+            return client.query.usage(scope, query)
+        except HttpResponseError as error:
+            if getattr(error, "status_code", None) not in COST_RETRY_STATUSES:
+                raise
+            wait = retry_wait(error, attempt)
+            if (
+                attempt == COST_MAX_ATTEMPTS - 1
+                or waited + wait > COST_MAX_WAIT_SECONDS
+            ):
+                raise CostRateLimited(COST_RATE_LIMITED) from error
+            logger.debug(
+                "Azure cost query answered %s; retrying in %.0f s (attempt %d of %d)",
+                error.status_code,
+                wait,
+                attempt + 1,
+                COST_MAX_ATTEMPTS,
+            )
+            print_step(
+                f"Azure cost API is rate limited, retrying in {wait:.0f} s…",
+                status="warning",
+            )
+            time.sleep(wait)
+            waited += wait
+    raise CostRateLimited(COST_RATE_LIMITED)  # pragma: no cover
 
 
 def create_credential(provider_details: dict[str, Any]) -> Any:
@@ -246,7 +312,8 @@ def build_azure_cost_inventory(
             },
         )
 
-        cost_data = cost_management_client.query.usage(
+        cost_data = query_costs(
+            cost_management_client,
             f'/subscriptions/{provider_details["subscriptionId"]}/resourceGroups/{provider_details["resourceGroupName"]}',
             query,
         )
@@ -308,6 +375,10 @@ def build_azure_cost_inventory(
 
     except sqlite3.Error as e:
         logger.error(f"SQLite error: {str(e)}", exc_info=True)
+        raise
+    except CostRateLimited:
+        # The console gets the one clear line; the traceback stays in run.log
+        logger.debug("Azure cost query kept being rate limited", exc_info=True)
         raise
     except Exception as e:
         logger.error(f"Error creating Azure cost inventory: {str(e)}", exc_info=True)

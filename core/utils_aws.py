@@ -1,5 +1,6 @@
 # core/utils_aws.py
 import boto3
+import botocore.session
 import json
 import os
 import logging
@@ -7,20 +8,103 @@ import sqlite3
 from typing import Any
 from datetime import date, datetime, timezone
 from collections import defaultdict
+from functools import lru_cache
 from dateutil.relativedelta import relativedelta
 from botocore.config import Config
+from botocore.exceptions import (
+    ConnectTimeoutError,
+    EndpointConnectionError,
+    UnknownServiceError,
+)
 
 from .utils_db import connect, load_data
 
 logger = logging.getLogger("core.engine.aws")
 
-AWS_RETRY_CONFIG = Config(retries={"mode": "adaptive", "max_attempts": 8})
+# Throttling keeps its eight adaptive attempts; an endpoint that cannot be
+# reached is given up on much sooner (see limit_connection_retries).
+AWS_RETRY_CONFIG = Config(
+    connect_timeout=5,
+    read_timeout=30,
+    retries={"mode": "adaptive", "max_attempts": 8},
+)
+CONNECTION_ERRORS = (ConnectTimeoutError, EndpointConnectionError)
+CONNECTION_ATTEMPTS = 2
+
+SERVICE_OK = "ok"
+SERVICE_NOT_OFFERED = "not_offered"
+SERVICE_UNKNOWN = "unknown"
 
 # Upper bound on the items collected for a single resource type. Some list
 # operations (e.g. describe_images, describe_snapshots) return every publicly
 # shared resource in the region when called without an owner filter, which would
 # otherwise stall the scan and blow up the raw-data file.
 MAX_ITEMS_PER_RESOURCE_TYPE = 50_000
+
+
+def limit_connection_retries(
+    attempts: int, caught_exception: Any = None, **kwargs: Any
+) -> None:
+    # botocore retries a connection error as often as it retries throttling,
+    # which makes a dead endpoint cost minutes. Raising from the retry check
+    # ends the call with the original error after the second attempt.
+    if attempts >= CONNECTION_ATTEMPTS and isinstance(
+        caught_exception, CONNECTION_ERRORS
+    ):
+        raise caught_exception
+
+
+def create_client(session: Any, service_name: str, region: str) -> Any:
+    client = session.client(service_name, region_name=region, config=AWS_RETRY_CONFIG)
+    client.meta.events.register_first("needs-retry", limit_connection_retries)
+    return client
+
+
+@lru_cache(maxsize=None)
+def _service_regions(service_name: str) -> tuple[frozenset[str], bool] | None:
+    # What the installed botocore knows about where a service is offered; None
+    # when it does not know the service at all.
+    session = botocore.session.get_session()
+    if service_name not in session.get_available_services():
+        return None
+    regional: set[str] = set()
+    global_endpoint = False
+    for partition in session.get_available_partitions():
+        regions = set(session.get_available_regions(service_name, partition))
+        everything = set(
+            session.get_available_regions(
+                service_name, partition, allow_non_regional=True
+            )
+        )
+        regional |= regions
+        global_endpoint = global_endpoint or bool(everything - regions)
+    return frozenset(regional), global_endpoint
+
+
+@lru_cache(maxsize=None)
+def _known_regions() -> frozenset[str]:
+    session = botocore.session.get_session()
+    return frozenset(
+        region
+        for partition in session.get_available_partitions()
+        for region in session.get_available_regions("ec2", partition)
+    )
+
+
+def service_status(service_name: str, region: str) -> str:
+    info = _service_regions(service_name)
+    if info is None:
+        return SERVICE_UNKNOWN
+    regional, global_endpoint = info
+    # A global service is called wherever the user is; a region the installed
+    # botocore has never heard of is left to the call itself.
+    if global_endpoint or region in regional or region not in _known_regions():
+        return SERVICE_OK
+    return SERVICE_NOT_OFFERED
+
+
+def _names(services: dict[str, int]) -> str:
+    return ", ".join(sorted(services)) or "none"
 
 
 def extract_result_path(container: Any, result_path: list) -> list:
@@ -152,6 +236,14 @@ def build_aws_resource_inventory(
         # master data that produced it.
         spec_sources = defaultdict(int)
 
+        # Calls that were not made or did not work, by reason and service
+        skipped = {
+            SERVICE_NOT_OFFERED: defaultdict(int),
+            SERVICE_UNKNOWN: defaultdict(int),
+            "failed": defaultdict(int),
+        }
+        unreachable: set[str] = set()
+
         # Iterate through each resource type in the JSON
         for idx, (resource_type_code, resource_info) in enumerate(
             resource_type_mapping.items(), start=1
@@ -191,10 +283,35 @@ def build_aws_resource_inventory(
                 call_kwargs,
             )
 
-            try:
-                client = session.client(
-                    service_name, region_name=region, config=AWS_RETRY_CONFIG
+            if service_name in skipped[SERVICE_UNKNOWN]:
+                skipped[SERVICE_UNKNOWN][service_name] += 1
+                continue
+            status = service_status(service_name, region)
+            if status != SERVICE_OK:
+                if service_name not in skipped[status]:
+                    logger.debug(
+                        "Skipping %s: %s",
+                        service_name,
+                        (
+                            f"not offered in {region}"
+                            if status == SERVICE_NOT_OFFERED
+                            else "unknown to the installed boto3"
+                        ),
+                    )
+                skipped[status][service_name] += 1
+                continue
+            if service_name in unreachable:
+                logger.debug(
+                    "Skipping %s.%s: the %s endpoint could not be reached",
+                    service_name,
+                    operation_name,
+                    service_name,
                 )
+                skipped["failed"][service_name] += 1
+                continue
+
+            try:
+                client = create_client(session, service_name, region)
                 if not hasattr(client, operation_name):
                     # logger.error(f"Operation {operation_name} does not exist for service {service_name}")
                     continue
@@ -227,7 +344,25 @@ def build_aws_resource_inventory(
                     }
                 )
 
+            except UnknownServiceError:
+                if service_name not in skipped[SERVICE_UNKNOWN]:
+                    logger.debug(
+                        "Skipping %s: unknown to the installed boto3", service_name
+                    )
+                skipped[SERVICE_UNKNOWN][service_name] += 1
+                continue
+            except CONNECTION_ERRORS as exc:
+                unreachable.add(service_name)
+                skipped["failed"][service_name] += 1
+                logger.debug(
+                    "Cannot reach %s in %s, skipping the service: %s",
+                    service_name,
+                    region,
+                    exc,
+                )
+                continue
             except Exception as exc:
+                skipped["failed"][service_name] += 1
                 # Expected for services the caller can't access or that aren't
                 # available in a region. Keep at DEBUG (run.log only) so it never
                 # floods the console, while still distinguishing a failed service
@@ -241,6 +376,18 @@ def build_aws_resource_inventory(
                     exc,
                 )
                 continue
+
+        skipped_calls = sum(sum(counts.values()) for counts in skipped.values())
+        if skipped_calls:
+            logger.info(
+                "%d service calls skipped (not offered in %s: %s; unknown to boto3: "
+                "%s; failed: %s)",
+                skipped_calls,
+                region,
+                _names(skipped[SERVICE_NOT_OFFERED]),
+                _names(skipped[SERVICE_UNKNOWN]),
+                _names(skipped["failed"]),
+            )
 
         logger.info(
             "Resource type resolution: %d of %d rows scanned (%d from params, "
@@ -331,9 +478,7 @@ def build_aws_cost_inventory(
             aws_session_token=provider_details.get("sessionToken"),
             region_name=provider_details["region"],
         )
-        cost_explorer = session.client(
-            "ce", region_name="us-east-1", config=AWS_RETRY_CONFIG
-        )
+        cost_explorer = create_client(session, "ce", "us-east-1")
 
         db_path = os.path.join(report_path, "data", "assessment.db")
 
