@@ -25,7 +25,10 @@ from core.engine import (
     perform_risk_assessment,
     generate_report,
 )
-from core.utils_azure import create_resource_client, create_subscription_client
+from cloudexit.providers.azure.clients import (
+    create_resource_client,
+    create_subscription_client,
+)
 from core.utils_egress import estimate_egress
 from core.utils_report_egress import (
     generate_egress_html_report,
@@ -58,17 +61,22 @@ from core.sync_document import (
     prepare_sync_document,
     validate_document,
 )
-from utils.azure import (
+from cloudexit.providers.azure.sdk import (
     AzureSdkError,
     azure_import,
     require_azure_sdk,
+)
+from cloudexit.providers.azure.cli_session import (
     select_subscription,
     select_resource_group,
     is_azure_cli_installed,
     is_azure_cli_logged_in,
     is_azure_cli_token_expired,
 )
-from utils.aws import is_aws_cli_installed, is_aws_profile_valid
+from cloudexit.providers.aws.cli_profile import (
+    is_aws_cli_installed,
+    is_aws_profile_valid,
+)
 from cloudexit.catalogue.store import (
     CatalogueError,
     CatalogueUnavailable,

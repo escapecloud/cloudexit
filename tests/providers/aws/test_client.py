@@ -2,6 +2,7 @@ import logging
 import os
 import tempfile
 import unittest
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -14,17 +15,24 @@ from botocore.exceptions import (
     UnknownServiceError,
 )
 
-from core import utils_aws
-from core.utils_aws import (
+from cloudexit.providers.aws import client as aws_client
+from cloudexit.providers.aws import costs as aws_costs
+from cloudexit.providers.aws.client import (
     AWS_RETRY_CONFIG,
     CONNECTION_ATTEMPTS,
     SERVICE_NOT_OFFERED,
     SERVICE_OK,
     SERVICE_UNKNOWN,
-    build_aws_resource_inventory,
+    convert_datetime,
     create_client,
+    extract_result_path,
+    paginate,
+    paginate_or_call,
+    parse_resource_type_params,
+    resolve_aws_call_spec,
     service_status,
 )
+from cloudexit.providers.aws.inventory import build_aws_resource_inventory
 
 REGION = "eu-central-1"
 URL = "https://ec2.eu-central-1.amazonaws.com"
@@ -124,13 +132,13 @@ class RetryBehaviourTests(unittest.TestCase):
 
     def test_the_retry_limit_ignores_every_other_error(self):
         # Called as botocore does; only a connection error is cut short.
-        utils_aws.limit_connection_retries(5, caught_exception=RuntimeError("x"))
-        utils_aws.limit_connection_retries(5, caught_exception=None)
-        utils_aws.limit_connection_retries(
+        aws_client.limit_connection_retries(5, caught_exception=RuntimeError("x"))
+        aws_client.limit_connection_retries(5, caught_exception=None)
+        aws_client.limit_connection_retries(
             1, caught_exception=ConnectTimeoutError(endpoint_url=URL)
         )
         with self.assertRaises(EndpointConnectionError):
-            utils_aws.limit_connection_retries(
+            aws_client.limit_connection_retries(
                 2, caught_exception=EndpointConnectionError(endpoint_url=URL)
             )
 
@@ -192,18 +200,23 @@ class SweepTests(unittest.TestCase):
                 os.makedirs(os.path.join(report, "data"))
                 os.makedirs(raw)
                 patches = [
-                    patch("core.utils_aws.load_data", return_value=rows),
-                    patch("core.utils_aws.boto3.Session", return_value=session),
-                    patch("core.utils_aws.connect"),
                     patch(
-                        "core.utils_aws.paginate_or_call",
+                        "cloudexit.providers.aws.inventory.load_data", return_value=rows
+                    ),
+                    patch(
+                        "cloudexit.providers.aws.inventory.boto3.Session",
+                        return_value=session,
+                    ),
+                    patch("cloudexit.providers.aws.inventory.connect"),
+                    patch(
+                        "cloudexit.providers.aws.inventory.paginate_or_call",
                         side_effect=calls or (lambda *a, **k: []),
                     ),
                 ]
                 if status is not None:
                     patches.append(
                         patch(
-                            "core.utils_aws.service_status",
+                            "cloudexit.providers.aws.inventory.service_status",
                             side_effect=lambda service, region: status.get(
                                 service, SERVICE_OK
                             ),
@@ -375,12 +388,330 @@ class ClientFactoryTests(unittest.TestCase):
             "cloudwatch", region_name=REGION, config=AWS_RETRY_CONFIG
         )
         client.meta.events.register_first.assert_called_once_with(
-            "needs-retry", utils_aws.limit_connection_retries
+            "needs-retry", aws_client.limit_connection_retries
         )
 
     def test_the_cost_explorer_stays_pinned_to_us_east_1(self):
-        source = Path(utils_aws.__file__).read_text(encoding="utf-8")
+        source = Path(aws_costs.__file__).read_text(encoding="utf-8")
         self.assertIn('create_client(session, "ce", "us-east-1")', source)
+
+
+class ConvertDatetimeTests(unittest.TestCase):
+    def test_converts_datetime_in_flat_dict(self):
+        dt = datetime(2026, 1, 15, 12, 30, 0)
+        result = convert_datetime({"created": dt, "name": "test"})
+        self.assertEqual(result["created"], "2026-01-15T12:30:00")
+        self.assertEqual(result["name"], "test")
+
+    def test_converts_datetime_in_list(self):
+        dt = datetime(2026, 3, 1)
+        result = convert_datetime([dt, "keep"])
+        self.assertEqual(result[0], "2026-03-01T00:00:00")
+        self.assertEqual(result[1], "keep")
+
+    def test_converts_nested_datetime(self):
+        dt = datetime(2026, 6, 15)
+        result = convert_datetime({"items": [{"ts": dt}]})
+        self.assertEqual(result["items"][0]["ts"], "2026-06-15T00:00:00")
+
+    def test_leaves_non_datetime_values_unchanged(self):
+        data = {"count": 5, "name": "ec2", "tags": ["a", "b"]}
+        result = convert_datetime(data)
+        self.assertEqual(result, {"count": 5, "name": "ec2", "tags": ["a", "b"]})
+
+    def test_handles_empty_structures(self):
+        self.assertEqual(convert_datetime({}), {})
+        self.assertEqual(convert_datetime([]), [])
+        self.assertIsNone(convert_datetime(None))
+
+
+class ParseResourceTypeParamsTests(unittest.TestCase):
+    def test_parses_json_string(self):
+        self.assertEqual(
+            parse_resource_type_params('{"service": "s3"}'), {"service": "s3"}
+        )
+
+    def test_empty_object_string(self):
+        self.assertEqual(parse_resource_type_params("{}"), {})
+
+    def test_none_and_empty_string_degrade_to_empty_dict(self):
+        self.assertEqual(parse_resource_type_params(None), {})
+        self.assertEqual(parse_resource_type_params(""), {})
+
+    def test_malformed_json_degrades_to_empty_dict(self):
+        self.assertEqual(parse_resource_type_params("{not json"), {})
+
+    def test_non_object_json_degrades_to_empty_dict(self):
+        self.assertEqual(parse_resource_type_params("[1, 2]"), {})
+
+    def test_dict_passes_through(self):
+        self.assertEqual(
+            parse_resource_type_params({"service": "ec2"}), {"service": "ec2"}
+        )
+
+
+class ResolveAwsCallSpecTests(unittest.TestCase):
+    def test_four_part_code_with_no_params(self):
+        spec = resolve_aws_call_spec("AWS.s3.list_buckets.Buckets", {})
+        self.assertEqual(
+            spec,
+            {
+                "source": "code",
+                "service": "s3",
+                "operation": "list_buckets",
+                "result_path": ["Buckets"],
+                "kwargs": {},
+            },
+        )
+
+    def test_five_part_code_with_no_params_keeps_full_result_path(self):
+        spec = resolve_aws_call_spec(
+            "AWS.cloudfront.list_distributions.DistributionList.Items", {}
+        )
+        self.assertEqual(spec["result_path"], ["DistributionList", "Items"])
+        self.assertEqual(spec["service"], "cloudfront")
+
+    def test_params_take_precedence_over_code(self):
+        spec = resolve_aws_call_spec(
+            "AWS.wrong.wrong_op.Wrong",
+            {
+                "service": "cloudfront",
+                "operation": "list_distributions",
+                "result_path": ["DistributionList", "Items"],
+            },
+        )
+        self.assertEqual(
+            spec,
+            {
+                "source": "params",
+                "service": "cloudfront",
+                "operation": "list_distributions",
+                "result_path": ["DistributionList", "Items"],
+                "kwargs": {},
+            },
+        )
+
+    def test_params_with_kwargs(self):
+        spec = resolve_aws_call_spec(
+            "AWS.ec2.describe_snapshots.Snapshots",
+            {
+                "service": "ec2",
+                "operation": "describe_snapshots",
+                "result_path": ["Snapshots"],
+                "kwargs": {"OwnerIds": ["self"]},
+            },
+        )
+        self.assertEqual(spec["kwargs"], {"OwnerIds": ["self"]})
+
+    def test_unknown_params_keys_are_ignored(self):
+        spec = resolve_aws_call_spec(
+            "AWS.s3.list_buckets.Buckets",
+            {
+                "service": "s3",
+                "operation": "list_buckets",
+                "result_path": ["Buckets"],
+                "future_key": "whatever",
+            },
+        )
+        self.assertNotIn("future_key", spec)
+        self.assertEqual(spec["service"], "s3")
+
+    def test_params_missing_result_path_defaults_to_empty(self):
+        spec = resolve_aws_call_spec(
+            "AWS.iam", {"service": "iam", "operation": "list_users"}
+        )
+        self.assertEqual(spec["result_path"], [])
+
+    def test_other_cloud_params_fall_back_to_code(self):
+        spec = resolve_aws_call_spec(
+            "AWS.s3.list_buckets.Buckets", {"kind": "functionapp"}
+        )
+        self.assertEqual(spec["service"], "s3")
+
+    def test_partial_params_fall_back_to_code(self):
+        spec = resolve_aws_call_spec("AWS.s3.list_buckets.Buckets", {"service": "s3"})
+        self.assertEqual(spec["operation"], "list_buckets")
+
+    def test_source_records_which_branch_resolved_the_row(self):
+        from_code = resolve_aws_call_spec("AWS.s3.list_buckets.Buckets", {})
+        from_params = resolve_aws_call_spec(
+            "AWS.s3.list_buckets.Buckets",
+            {"service": "s3", "operation": "list_buckets"},
+        )
+        self.assertEqual(from_code["source"], "code")
+        self.assertEqual(from_params["source"], "params")
+
+    def test_two_part_placeholder_is_unresolvable(self):
+        self.assertIsNone(resolve_aws_call_spec("AWS.iam", {}))
+
+    def test_malformed_code_is_unresolvable(self):
+        self.assertIsNone(resolve_aws_call_spec("AWS.ec2.describe_instances", {}))
+        self.assertIsNone(resolve_aws_call_spec("Azure.a.b.c", {}))
+        self.assertIsNone(resolve_aws_call_spec("", {}))
+
+
+class ExtractResultPathTests(unittest.TestCase):
+    def test_single_key(self):
+        self.assertEqual(extract_result_path({"Items": [1, 2]}, ["Items"]), [1, 2])
+
+    def test_nested_key(self):
+        self.assertEqual(
+            extract_result_path({"A": {"B": ["x"]}}, ["A", "B"]),
+            ["x"],
+        )
+
+    def test_missing_intermediate_key_returns_empty(self):
+        self.assertEqual(extract_result_path({"A": {}}, ["A", "B"]), [])
+        self.assertEqual(extract_result_path({}, ["A", "B"]), [])
+
+    def test_non_dict_intermediate_returns_empty(self):
+        self.assertEqual(extract_result_path({"A": "scalar"}, ["A", "B"]), [])
+
+    def test_non_list_final_value_returns_empty(self):
+        self.assertEqual(extract_result_path({"A": {"B": 5}}, ["A", "B"]), [])
+        self.assertEqual(extract_result_path({"A": {"B": {}}}, ["A", "B"]), [])
+
+    def test_empty_path_returns_empty(self):
+        self.assertEqual(extract_result_path({"Items": [1]}, []), [])
+
+    def test_non_dict_container_returns_empty(self):
+        self.assertEqual(extract_result_path(None, ["Items"]), [])
+
+
+class PaginateTests(unittest.TestCase):
+    def _fake_client(self, pages):
+        """Build a stub client whose paginator yields the given pages."""
+        paginator = MagicMock()
+        paginator.paginate.return_value = iter(pages)
+        client = MagicMock()
+        client.get_paginator.return_value = paginator
+        return client
+
+    def test_collects_items_across_pages(self):
+        client = self._fake_client(
+            [{"Items": [1, 2, 3]}, {"Items": [4, 5]}, {"Items": [6]}]
+        )
+        self.assertEqual(paginate(client, "any_op", ["Items"]), [1, 2, 3, 4, 5, 6])
+
+    def test_missing_result_key_treated_as_empty(self):
+        client = self._fake_client([{"Items": [1]}, {}])
+        self.assertEqual(paginate(client, "any_op", ["Items"]), [1])
+
+    def test_walks_nested_result_path_per_page(self):
+        client = self._fake_client(
+            [
+                {"DistributionList": {"Items": ["d1", "d2"]}},
+                {"DistributionList": {"Items": ["d3"]}},
+            ]
+        )
+        self.assertEqual(
+            paginate(client, "list_distributions", ["DistributionList", "Items"]),
+            ["d1", "d2", "d3"],
+        )
+
+    def test_page_missing_intermediate_key_yields_nothing_for_that_page(self):
+        client = self._fake_client(
+            [{"DistributionList": {"Items": ["d1"]}}, {}, {"DistributionList": {}}]
+        )
+        self.assertEqual(
+            paginate(client, "list_distributions", ["DistributionList", "Items"]),
+            ["d1"],
+        )
+
+    def test_bare_string_result_path_is_treated_as_single_key(self):
+        client = self._fake_client([{"Volumes": ["v1", "v2"]}])
+        self.assertEqual(paginate(client, "describe_volumes", "Volumes"), ["v1", "v2"])
+
+    def test_stops_and_truncates_at_max_items(self):
+        pages = [{"Items": list(range(4))} for _ in range(10)]
+        client = self._fake_client(pages)
+
+        result = paginate(client, "any_op", ["Items"], 10)
+
+        self.assertEqual(len(result), 10)
+        self.assertEqual(result, list(range(4)) * 2 + [0, 1])
+
+    def test_forwards_kwargs_to_paginator(self):
+        client = self._fake_client([{"Items": []}])
+        paginate(client, "any_op", ["Items"], MaxResults=50)
+        client.get_paginator.return_value.paginate.assert_called_once_with(
+            MaxResults=50
+        )
+
+    def test_throttling_mid_pagination_does_not_silently_truncate(self):
+
+        def flaky_pages():
+            yield {"Items": ["r1", "r2"]}
+            raise botocore.exceptions.ClientError(
+                {"Error": {"Code": "Throttling", "Message": "slow down"}},
+                "ListSomething",
+            )
+
+        paginator = MagicMock()
+        paginator.paginate.return_value = flaky_pages()
+        client = MagicMock()
+        client.get_paginator.return_value = paginator
+
+        with self.assertRaises(botocore.exceptions.ClientError):
+            paginate(client, "any_op", "Items")
+
+
+class PaginateOrCallTests(unittest.TestCase):
+    def test_uses_paginator_when_available(self):
+        paginator = MagicMock()
+        paginator.paginate.return_value = iter([{"Items": [1, 2]}, {"Items": [3]}])
+        client = MagicMock()
+        client.can_paginate.return_value = True
+        client.get_paginator.return_value = paginator
+
+        self.assertEqual(paginate_or_call(client, "list_things", ["Items"]), [1, 2, 3])
+        client.can_paginate.assert_called_once_with("list_things")
+
+    def test_falls_back_to_single_call_when_not_paginable(self):
+        client = MagicMock()
+        client.can_paginate.return_value = False
+        client.list_things.return_value = {"Items": ["a", "b"]}
+
+        self.assertEqual(paginate_or_call(client, "list_things", ["Items"]), ["a", "b"])
+        client.list_things.assert_called_once_with()
+
+    def test_non_dict_response_returns_empty_list(self):
+        client = MagicMock()
+        client.can_paginate.return_value = False
+        client.list_things.return_value = None
+
+        self.assertEqual(paginate_or_call(client, "list_things", ["Items"]), [])
+
+    def test_walks_nested_result_path_on_single_call(self):
+        client = MagicMock()
+        client.can_paginate.return_value = False
+        client.get_apps.return_value = {
+            "ApplicationsResponse": {"Applications": ["a1", "a2"]}
+        }
+
+        self.assertEqual(
+            paginate_or_call(
+                client, "get_apps", ["ApplicationsResponse", "Applications"]
+            ),
+            ["a1", "a2"],
+        )
+
+    def test_forwards_kwargs_to_single_call(self):
+        client = MagicMock()
+        client.can_paginate.return_value = False
+        client.describe_images.return_value = {"Images": []}
+
+        paginate_or_call(client, "describe_images", ["Images"], Owners=["self"])
+        client.describe_images.assert_called_once_with(Owners=["self"])
+
+    def test_truncates_single_call_at_max_items(self):
+        client = MagicMock()
+        client.can_paginate.return_value = False
+        client.list_things.return_value = {"Items": list(range(20))}
+
+        self.assertEqual(
+            paginate_or_call(client, "list_things", ["Items"], 5), [0, 1, 2, 3, 4]
+        )
 
 
 if __name__ == "__main__":

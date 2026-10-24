@@ -11,20 +11,24 @@ from azure.core.credentials import AccessToken
 from azure.mgmt.costmanagement.models import QueryDefinition, TimeframeType
 from dateutil.relativedelta import relativedelta
 
-from core.utils_azure import (
-    build_azure_cost_inventory,
-    build_azure_resource_inventory,
-    cost_result_dict,
+from cloudexit.providers.azure.clients import (
     create_cost_client,
     create_resource_client,
     create_subscription_client,
+)
+from cloudexit.providers.azure.costs import build_azure_cost_inventory, cost_result_dict
+from cloudexit.providers.azure.inventory import (
+    build_azure_resource_inventory,
     is_resource_inventory_empty,
     plain_json,
 )
 from core.utils_egress import GIB
-from core.utils_egress_azure import build_egress_inventory
+from cloudexit.providers.azure.egress import build_egress_inventory
 from tests.support.http import fake_http, make_response
-from utils.azure import select_resource_group, select_subscription
+from cloudexit.providers.azure.cli_session import (
+    select_resource_group,
+    select_subscription,
+)
 
 SUBSCRIPTION = "00000000-0000-0000-0000-000000000000"
 GROUP = "rg-demo"
@@ -287,7 +291,9 @@ class SelectionTests(ShapeTestCase):
 
         with (
             mock.patch("builtins.input", return_value="1"),
-            mock.patch("utils.azure.console.print") as printed,
+            mock.patch(
+                "cloudexit.providers.azure.cli_session.console.print"
+            ) as printed,
         ):
             chosen = select_subscription(subscriptions)
             name = select_resource_group(groups)
@@ -429,7 +435,9 @@ REGISTRY = {
 }
 
 
-@mock.patch("core.utils_egress_azure.load_egress_registry", return_value=REGISTRY)
+@mock.patch(
+    "cloudexit.providers.azure.egress.load_egress_registry", return_value=REGISTRY
+)
 class EgressSizingTests(ShapeTestCase):
     def test_an_allocated_size_is_read_with_the_api_version_as_a_keyword(self, _):
         client = create_resource_client(self.credential, SUBSCRIPTION)
@@ -455,7 +463,8 @@ class EgressSizingTests(ShapeTestCase):
             {"BlobCapacity": []},
         ]
         with mock.patch(
-            "core.utils_egress_azure.fetch_monitor_metrics", side_effect=metrics
+            "cloudexit.providers.azure.egress.fetch_monitor_metrics",
+            side_effect=metrics,
         ):
             rows, findings = build_egress_inventory(self.credential, client, resources)
 

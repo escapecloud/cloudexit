@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 from botocore.exceptions import ClientError
 
 from core.utils_egress import GIB
-from core.utils_egress_aws import (
+from cloudexit.providers.aws.egress import (
     _collect_dynamodb_tables,
     _collect_list_item_size,
     _collect_not_sizeable,
@@ -119,7 +119,7 @@ _REGISTRY_PATCHER = None
 def setUpModule():
     global _REGISTRY_PATCHER
     _REGISTRY_PATCHER = patch(
-        "core.utils_egress_aws.load_egress_registry",
+        "cloudexit.providers.aws.egress.load_egress_registry",
         return_value=TEST_REGISTRY,
     )
     _REGISTRY_PATCHER.start()
@@ -655,7 +655,7 @@ class CollectAwsEgressTests(unittest.TestCase):
             clients[service] = client
         return clients
 
-    @patch("core.utils_egress_aws.boto3")
+    @patch("cloudexit.providers.aws.egress.boto3")
     def test_returns_rows_and_archive_tiers(self, mock_boto3):
         clients = self._empty_clients()
         mock_boto3.Session.return_value = _mock_session(clients)
@@ -671,7 +671,7 @@ class CollectAwsEgressTests(unittest.TestCase):
             region_name=REGION,
         )
 
-    @patch("core.utils_egress_aws.boto3")
+    @patch("cloudexit.providers.aws.egress.boto3")
     def test_one_failing_service_does_not_fail_the_stage(self, mock_boto3):
         clients = self._empty_clients()
         clients["s3"].list_buckets.side_effect = _client_error(
@@ -692,7 +692,7 @@ class CollectAwsEgressTests(unittest.TestCase):
 
 
 class UnknownStrategyTests(unittest.TestCase):
-    @patch("core.utils_egress_aws.boto3")
+    @patch("cloudexit.providers.aws.egress.boto3")
     def test_unknown_strategy_warns_and_skips_without_raising(self, mock_boto3):
         registry = {
             "AWS.future.list_things.Things": {
@@ -706,7 +706,9 @@ class UnknownStrategyTests(unittest.TestCase):
         _mock_paginator(ec2_client, [{"Volumes": [{"VolumeId": "vol-1", "Size": 10}]}])
         mock_boto3.Session.return_value = _mock_session({"ec2": ec2_client})
 
-        with patch("core.utils_egress_aws.load_egress_registry", return_value=registry):
+        with patch(
+            "cloudexit.providers.aws.egress.load_egress_registry", return_value=registry
+        ):
             with self.assertLogs("core.engine.egress.aws", level="WARNING") as captured:
                 rows, _ = collect_aws_egress(
                     {
@@ -722,7 +724,7 @@ class UnknownStrategyTests(unittest.TestCase):
 
 
 class CollectorFailureVisibilityTests(unittest.TestCase):
-    @patch("core.utils_egress_aws.boto3")
+    @patch("cloudexit.providers.aws.egress.boto3")
     def test_a_dropped_resource_type_is_warned_not_buried_at_debug(self, mock_boto3):
         # A master-data row missing its sizing block removes a whole resource
         # type from the estimate; that must be visible in run.log.
@@ -732,7 +734,9 @@ class CollectorFailureVisibilityTests(unittest.TestCase):
         _mock_paginator(ec2_client, [{"Volumes": [{"VolumeId": "vol-1", "Size": 10}]}])
         mock_boto3.Session.return_value = _mock_session({"ec2": ec2_client})
 
-        with patch("core.utils_egress_aws.load_egress_registry", return_value=registry):
+        with patch(
+            "cloudexit.providers.aws.egress.load_egress_registry", return_value=registry
+        ):
             with self.assertLogs("core.engine.egress.aws", level="WARNING") as captured:
                 rows, _ = collect_aws_egress(
                     {

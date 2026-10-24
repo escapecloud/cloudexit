@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import requests
 
 from core.utils_egress import GIB, format_bytes
-from core.utils_egress_azure import (
+from cloudexit.providers.azure.egress import (
     build_egress_inventory,
     collect_azure_egress,
     fetch_monitor_metrics,
@@ -71,7 +71,7 @@ _REGISTRY_PATCHER = None
 def setUpModule():
     global _REGISTRY_PATCHER
     _REGISTRY_PATCHER = patch(
-        "core.utils_egress_azure.load_egress_registry",
+        "cloudexit.providers.azure.egress.load_egress_registry",
         return_value=TEST_REGISTRY,
     )
     _REGISTRY_PATCHER.start()
@@ -134,7 +134,7 @@ class RegistryFilteringTests(unittest.TestCase):
 
 
 class FetchMonitorMetricsTests(unittest.TestCase):
-    @patch("core.utils_egress_azure.requests.get")
+    @patch("cloudexit.providers.azure.egress.requests.get")
     def test_parses_normal_response_using_latest_datapoint(self, mock_get):
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -162,7 +162,7 @@ class FetchMonitorMetricsTests(unittest.TestCase):
             result, {"UsedCapacity": [{"dimension": None, "value": 123.0}]}
         )
 
-    @patch("core.utils_egress_azure.requests.get")
+    @patch("cloudexit.providers.azure.egress.requests.get")
     def test_parses_dimension_split_response(self, mock_get):
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -207,7 +207,7 @@ class FetchMonitorMetricsTests(unittest.TestCase):
         params = mock_get.call_args.kwargs["params"]
         self.assertEqual(params["$filter"], "Tier eq '*'")
 
-    @patch("core.utils_egress_azure.requests.get")
+    @patch("cloudexit.providers.azure.egress.requests.get")
     def test_handles_empty_series_without_treating_as_zero(self, mock_get):
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -219,7 +219,7 @@ class FetchMonitorMetricsTests(unittest.TestCase):
 
         self.assertEqual(result, {"storage": []})
 
-    @patch("core.utils_egress_azure.requests.get")
+    @patch("cloudexit.providers.azure.egress.requests.get")
     def test_handles_missing_datapoints_without_treating_as_zero(self, mock_get):
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -236,7 +236,7 @@ class FetchMonitorMetricsTests(unittest.TestCase):
 
         self.assertEqual(result, {"storage": []})
 
-    @patch("core.utils_egress_azure.requests.get")
+    @patch("cloudexit.providers.azure.egress.requests.get")
     def test_returns_none_on_http_error(self, mock_get):
         mock_response = MagicMock()
         mock_response.raise_for_status.side_effect = requests.HTTPError("403")
@@ -246,7 +246,7 @@ class FetchMonitorMetricsTests(unittest.TestCase):
 
         self.assertIsNone(result)
 
-    @patch("core.utils_egress_azure.requests.get")
+    @patch("cloudexit.providers.azure.egress.requests.get")
     def test_returns_none_on_connection_error(self, mock_get):
         mock_get.side_effect = requests.ConnectionError("network down")
 
@@ -256,7 +256,7 @@ class FetchMonitorMetricsTests(unittest.TestCase):
 
 
 class StorageAccountTierSplitTests(unittest.TestCase):
-    @patch("core.utils_egress_azure.fetch_monitor_metrics")
+    @patch("cloudexit.providers.azure.egress.fetch_monitor_metrics")
     def test_hot_cool_archive_split_and_archive_flag(self, mock_fetch):
         mock_fetch.side_effect = [
             {"UsedCapacity": [{"dimension": None, "value": float(60 * GIB)}]},
@@ -284,7 +284,7 @@ class StorageAccountTierSplitTests(unittest.TestCase):
         self.assertTrue(any("Archive" in flag for flag in row["flags"]))
         self.assertEqual(findings, [])
 
-    @patch("core.utils_egress_azure.fetch_monitor_metrics")
+    @patch("cloudexit.providers.azure.egress.fetch_monitor_metrics")
     def test_geo_replicated_sku_adds_informational_finding(self, mock_fetch):
         mock_fetch.side_effect = [
             {"UsedCapacity": [{"dimension": None, "value": float(GIB)}]},
@@ -304,7 +304,7 @@ class StorageAccountTierSplitTests(unittest.TestCase):
         self.assertEqual(len(info_findings), 1)
         self.assertIn("not additional data to egress", info_findings[0]["message"])
 
-    @patch("core.utils_egress_azure.fetch_monitor_metrics", return_value=None)
+    @patch("cloudexit.providers.azure.egress.fetch_monitor_metrics", return_value=None)
     def test_no_datapoints_records_unknown_size(self, mock_fetch):
         resource = _mock_resource("Microsoft.Storage/storageAccounts", "sa1", "/sa1")
 
@@ -347,7 +347,7 @@ class AllocatedSizeTests(unittest.TestCase):
 
 
 class VaultDetectionTests(unittest.TestCase):
-    @patch("core.utils_egress_azure.fetch_monitor_metrics")
+    @patch("cloudexit.providers.azure.egress.fetch_monitor_metrics")
     def test_vault_produces_warning_finding_and_no_size(self, mock_fetch):
         resource = _mock_resource("Microsoft.RecoveryServices/vaults", "vault1", "/v1")
         resource_client = MagicMock()
@@ -366,7 +366,7 @@ class VaultDetectionTests(unittest.TestCase):
 
 
 class CollectAzureEgressTests(unittest.TestCase):
-    @patch("core.utils_egress_azure.fetch_monitor_metrics")
+    @patch("cloudexit.providers.azure.egress.fetch_monitor_metrics")
     @patch("azure.mgmt.resource.resources.ResourceManagementClient")
     def test_returns_rows_and_archive_tiers(self, mock_rmc_cls, mock_fetch):
         mock_fetch.side_effect = [
@@ -394,7 +394,7 @@ class CollectAzureEgressTests(unittest.TestCase):
 
 
 class UnknownStrategyTests(unittest.TestCase):
-    @patch("core.utils_egress_azure.fetch_monitor_metrics")
+    @patch("cloudexit.providers.azure.egress.fetch_monitor_metrics")
     def test_unknown_strategy_warns_and_skips_without_raising(self, mock_fetch):
         mock_fetch.side_effect = [
             {"UsedCapacity": [{"dimension": None, "value": float(GIB)}]},
@@ -416,7 +416,8 @@ class UnknownStrategyTests(unittest.TestCase):
         ]
 
         with patch(
-            "core.utils_egress_azure.load_egress_registry", return_value=registry
+            "cloudexit.providers.azure.egress.load_egress_registry",
+            return_value=registry,
         ):
             with self.assertLogs(
                 "core.engine.egress.azure", level="WARNING"

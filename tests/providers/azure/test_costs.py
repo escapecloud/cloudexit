@@ -3,16 +3,18 @@ import os
 import sqlite3
 import tempfile
 import unittest
+from datetime import date
 from unittest.mock import MagicMock, Mock, patch
 
-from azure.core.exceptions import HttpResponseError
+from azure.core.exceptions import ClientAuthenticationError, HttpResponseError
 
 import main
 from core.engine import create_cost_inventory
-from core.utils_azure import (
+from cloudexit.providers.azure.costs import (
     COST_RATE_LIMITED,
     CostRateLimited,
     build_azure_cost_inventory,
+    get_missing_months_azure,
     query_costs,
     retry_wait,
 )
@@ -67,8 +69,8 @@ class RetryWaitTests(unittest.TestCase):
 
 class QueryCostsTests(unittest.TestCase):
     def setUp(self):
-        sleep = patch("core.utils_azure.time.sleep")
-        notice = patch("core.utils_azure.print_step")
+        sleep = patch("cloudexit.providers.azure.costs.time.sleep")
+        notice = patch("cloudexit.providers.azure.costs.print_step")
         self.sleep = sleep.start()
         self.notice = notice.start()
         self.addCleanup(sleep.stop)
@@ -167,7 +169,10 @@ class CostInventoryTests(unittest.TestCase):
         )
         conn.commit()
         conn.close()
-        for target in ("core.utils_azure.time.sleep", "core.utils_azure.print_step"):
+        for target in (
+            "cloudexit.providers.azure.costs.time.sleep",
+            "cloudexit.providers.azure.costs.print_step",
+        ):
             patcher = patch(target)
             patcher.start()
             self.addCleanup(patcher.stop)
@@ -278,8 +283,8 @@ class RunExitTests(unittest.TestCase):
                     "azure.mgmt.costmanagement.CostManagementClient",
                     return_value=client,
                 ),
-                patch("core.utils_azure.time.sleep"),
-                patch("core.utils_azure.print_step"),
+                patch("cloudexit.providers.azure.costs.time.sleep"),
+                patch("cloudexit.providers.azure.costs.print_step"),
                 patch(
                     "main.print_step",
                     side_effect=lambda *a, **k: steps.append((a, k)),
@@ -294,6 +299,118 @@ class RunExitTests(unittest.TestCase):
         failed = [k for a, k in steps if k.get("status") == "error"]
         self.assertEqual([k["logs"] for k in failed], [COST_RATE_LIMITED])
         self.assertNotIn("Traceback", COST_RATE_LIMITED)
+
+
+class GetMissingMonthsAzureTests(unittest.TestCase):
+    def test_returns_missing_months(self):
+        today = date.today()
+        # Provide 3 months, expect 3 missing from the 6-month window
+        processed = {
+            today.replace(day=1).isoformat(),
+        }
+        missing = get_missing_months_azure(processed, 6)
+        self.assertEqual(len(missing), 5)
+
+    def test_returns_empty_when_all_present(self):
+        from dateutil.relativedelta import relativedelta
+
+        today = date.today()
+        start = today.replace(day=1) - relativedelta(months=5)
+        processed = set()
+        for i in range(6):
+            m = (start + relativedelta(months=i)).replace(day=1)
+            processed.add(m.isoformat())
+
+        missing = get_missing_months_azure(processed, 6)
+        self.assertEqual(len(missing), 0)
+
+    def test_handles_timestamp_format(self):
+        from dateutil.relativedelta import relativedelta
+
+        today = date.today()
+        start = today.replace(day=1) - relativedelta(months=5)
+        processed = set()
+        for i in range(6):
+            m = (start + relativedelta(months=i)).replace(day=1)
+            processed.add(f"{m.isoformat()}T00:00:00")
+
+        missing = get_missing_months_azure(processed, 6)
+        self.assertEqual(len(missing), 0)
+
+    def test_returns_all_when_none_processed(self):
+        missing = get_missing_months_azure(set(), 6)
+        self.assertEqual(len(missing), 6)
+
+
+class BuildAzureCostInventoryErrorTests(unittest.TestCase):
+    @patch("azure.identity.ClientSecretCredential")
+    def test_auth_error_is_reraised(self, mock_cred_cls):
+        mock_cred_cls.side_effect = ClientAuthenticationError(
+            message="Invalid credentials"
+        )
+
+        from cloudexit.providers.azure.costs import build_azure_cost_inventory
+
+        with self.assertRaises(ClientAuthenticationError):
+            build_azure_cost_inventory(
+                1,
+                {
+                    "tenantId": "t",
+                    "clientId": "c",
+                    "clientSecret": "s",
+                    "subscriptionId": "sub",
+                    "resourceGroupName": "rg",
+                },
+                "/fake/report",
+                "/fake/raw",
+            )
+
+    @patch("cloudexit.providers.azure.costs.connect")
+    @patch("azure.mgmt.costmanagement.CostManagementClient")
+    @patch("azure.identity.ClientSecretCredential")
+    def test_sqlite_error_is_reraised(self, mock_cred_cls, mock_cost_cls, mock_connect):
+        import sqlite3
+
+        mock_cost_client = MagicMock()
+        mock_cost_cls.return_value = mock_cost_client
+
+        mock_cost_data = MagicMock()
+        mock_cost_data.rows = [
+            [42.5, "2026-01-01T00:00:00", "USD"],
+        ]
+        mock_cost_data.as_dict.return_value = {}
+        mock_cost_client.query.usage.return_value = mock_cost_data
+
+        mock_conn = MagicMock()
+        mock_connect.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        mock_connect.return_value.__exit__ = MagicMock(return_value=False)
+        mock_cursor = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_cursor.execute.side_effect = sqlite3.Error("disk I/O error")
+
+        from cloudexit.providers.azure.costs import build_azure_cost_inventory
+        import tempfile
+        import os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            report_path = os.path.join(tmp, "report")
+            raw_data_path = os.path.join(tmp, "raw")
+            os.makedirs(os.path.join(report_path, "data"), exist_ok=True)
+            os.makedirs(raw_data_path, exist_ok=True)
+
+            with self.assertRaises(sqlite3.Error):
+                build_azure_cost_inventory(
+                    1,
+                    {
+                        "tenantId": "t",
+                        "clientId": "c",
+                        "clientSecret": "s",
+                        "subscriptionId": "sub",
+                        "resourceGroupName": "rg",
+                    },
+                    report_path,
+                    raw_data_path,
+                )
 
 
 if __name__ == "__main__":

@@ -8,15 +8,18 @@ from typing import Any
 from botocore.exceptions import NoCredentialsError
 
 from .utils import copy_assets
-from .utils_aws import build_aws_resource_inventory, build_aws_cost_inventory
-from .utils_azure import (
-    CostRateLimited,
-    build_azure_cost_inventory,
-    build_azure_resource_inventory,
+from cloudexit.providers.aws.costs import build_aws_cost_inventory
+from cloudexit.providers.aws.inventory import build_aws_resource_inventory
+from cloudexit.providers.azure.clients import (
     create_credential,
     create_resource_client,
 )
-from utils.azure import azure_import
+from cloudexit.providers.azure.costs import (
+    CostRateLimited,
+    build_azure_cost_inventory,
+)
+from cloudexit.providers.azure.inventory import build_azure_resource_inventory
+from cloudexit.providers.azure.sdk import azure_import
 from cloudexit.catalogue.db import connect, load_data
 from .utils_tfstate import build_tfstate_resource_inventory
 from .report.context import build_context, collect_provenance
