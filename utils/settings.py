@@ -18,6 +18,7 @@ except ModuleNotFoundError:
     legacy_config = None
 
 DEFAULT_TIMEOUT = 10.0
+DEFAULT_UPLOAD_BUDGET = 300.0
 LOCAL_HTTP_HOSTS = ("localhost", "127.0.0.1")
 KEY_PREFIXES = ("esc_sk_", "exc_eu_sk_", "exc_us_sk_")
 
@@ -30,6 +31,7 @@ ENV_VARS = {
     "upload": "CLOUDEXIT_UPLOAD",
     "ca_bundle": "CLOUDEXIT_CA_BUNDLE",
     "timeout": "CLOUDEXIT_TIMEOUT",
+    "upload_budget": "CLOUDEXIT_UPLOAD_BUDGET",
     "spool_dir": "CLOUDEXIT_SPOOL_DIR",
     "catalogue_url": "CLOUDEXIT_CATALOGUE_URL",
 }
@@ -41,6 +43,7 @@ FLAGS = {
     "assessment_id": "--assessment-id",
     "ca_bundle": "--ca-bundle",
     "timeout": "--timeout",
+    "upload_budget": "--upload-budget",
 }
 
 FILE_KEYS = ("host", "api_key", "api_key_file", "assessment_id", "ca_bundle", "upload")
@@ -71,6 +74,9 @@ class Settings:
     ca_bundle: Setting = field(default_factory=Setting)
     timeout: Setting = field(
         default_factory=lambda: Setting(DEFAULT_TIMEOUT, "default")
+    )
+    upload_budget: Setting = field(
+        default_factory=lambda: Setting(DEFAULT_UPLOAD_BUDGET, "default")
     )
     spool_dir: Setting = field(default_factory=Setting)
     catalogue_url: Setting = field(default_factory=Setting)
@@ -132,6 +138,7 @@ def flags_from_args(args: Any) -> dict[str, Any]:
             ("assessment_id", "assessment_id"),
             ("ca_bundle", "ca_bundle"),
             ("timeout", "timeout"),
+            ("upload_budget", "upload_budget"),
         )
         if getattr(args, attr, None) is not None
     }
@@ -306,6 +313,19 @@ def _parse_timeout(setting: Setting) -> Setting:
     return Setting(seconds, setting.source)
 
 
+def _parse_budget(setting: Setting) -> Setting:
+    try:
+        seconds = float(setting.value)
+    except (TypeError, ValueError):
+        seconds = -1.0
+    if seconds < 0:
+        raise SettingsError(
+            f"upload budget ({setting.source}) must be a number of seconds, "
+            "0 or more"
+        )
+    return Setting(seconds, setting.source)
+
+
 def _parse_upload(setting: Setting) -> Setting:
     value = setting.value
     if isinstance(value, str):
@@ -385,6 +405,7 @@ def load_settings(
     host = _first(layers, "host")
     ca_bundle = _first(layers, "ca_bundle")
     timeout = _first(layers, "timeout")
+    budget = _first(layers, "upload_budget")
     upload = _first(layers, "upload")
 
     settings = Settings(
@@ -397,6 +418,11 @@ def load_settings(
         ca_bundle=_check_ca_bundle(ca_bundle) if ca_bundle.value else ca_bundle,
         timeout=(
             _parse_timeout(timeout) if timeout.value is not None else Settings().timeout
+        ),
+        upload_budget=(
+            _parse_budget(budget)
+            if budget.value is not None
+            else Settings().upload_budget
         ),
         spool_dir=_first(layers, "spool_dir"),
         catalogue_url=_first(layers, "catalogue_url"),
@@ -419,6 +445,7 @@ def describe(settings: Settings) -> list[str]:
         "upload",
         "ca_bundle",
         "timeout",
+        "upload_budget",
         "spool_dir",
         "catalogue_url",
     ):

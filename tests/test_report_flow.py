@@ -60,6 +60,7 @@ CONFIG = {
 CONFIGURED = Settings(
     host=Setting("https://platform.test", "env CLOUDEXIT_HOST"),
     api_key=Setting(KEY, "env CLOUDEXIT_API_KEY"),
+    upload_budget=Setting(0.0, "env CLOUDEXIT_UPLOAD_BUDGET"),
 )
 
 
@@ -80,6 +81,7 @@ class FlowTestCase(unittest.TestCase):
             {
                 "XDG_DATA_HOME": str(self.tmp / "data"),
                 "XDG_CACHE_HOME": str(self.tmp / "cache"),
+                "XDG_STATE_HOME": str(self.tmp / "state"),
             },
         )
         patcher.start()
@@ -433,6 +435,8 @@ class RunFlowTests(FlowTestCase):
         config = copy.deepcopy(CONFIG)
         config["assessmentType"] = assessment_type
         self.forget_meta()
+        # The spool has tests of its own; here an earlier run must not answer for this one
+        kwargs.setdefault("flush_spool", False)
         with fake_http(*replies) if replies is not None else nullcontext():
             return main.run_assessment(config, "aws", settings=settings, **kwargs)
 

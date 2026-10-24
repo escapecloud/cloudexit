@@ -118,7 +118,13 @@ class UploadBillingTests(unittest.TestCase):
         self.tmp = Path(tmp.name)
 
     def upload(self, billing):
-        with patch.dict(os.environ, {"XDG_CACHE_HOME": str(self.tmp / "cache")}):
+        with patch.dict(
+            os.environ,
+            {
+                "XDG_CACHE_HOME": str(self.tmp / "cache"),
+                "XDG_STATE_HOME": str(self.tmp / "state"),
+            },
+        ):
             with fake_http(meta_reply(), whoami_reply(), created_reply(**billing)):
                 return upload(
                     minimal_document(SYNC_ID),

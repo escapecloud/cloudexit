@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from utils import codes
-from utils.settings import Settings, load_settings
+from utils.settings import Settings, SettingsError, load_settings
 
 from .api_v2 import ApiClient, ApiError
+from .spool import Spool
 
 logger = logging.getLogger("core.engine.upload")
 
@@ -43,6 +44,7 @@ class UploadResult:
     replayed: bool = False
     pending: bool = False
     billing: dict[str, int] | None = None
+    spooled: bool = False
 
     @property
     def failed(self) -> bool:
@@ -97,12 +99,49 @@ def billing_line(billing: dict[str, int] | None) -> str | None:
     return line + "."
 
 
+def _spool(
+    spool: Spool,
+    settings: Settings,
+    document: dict[str, Any],
+    error: ApiError,
+    name: str,
+    meta: dict[str, Any],
+) -> bool:
+    try:
+        spool.add(
+            settings.host.value,
+            document,
+            error=error,
+            attempts=error.attempts,
+            name=name,
+            exit_strategy=meta.get("exit_strategy"),
+            assessment_id=settings.assessment_id.value,
+        )
+        return True
+    except (OSError, ValueError, SettingsError) as exc:
+        logger.warning("The sync could not be spooled: %s", exc)
+        return False
+
+
+def _unspool(spool: Spool, settings: Settings, sync_id: str | None) -> None:
+    # A sync that got through no longer needs its spooled copy
+    try:
+        entry = spool.find(settings.host.value, sync_id or "")
+        if entry:
+            spool.remove(entry)
+    except (OSError, SettingsError):
+        logger.debug("The spooled copy could not be removed", exc_info=True)
+
+
 def upload(
     document: dict[str, Any] | None,
     settings: Settings | None,
     *,
     name: str,
-    meta: dict[str, int],
+    meta: dict[str, Any],
+    spool_on_error: bool = False,
+    spool: Spool | None = None,
+    **client_options: Any,
 ) -> UploadResult:
     sync_id = ((document or {}).get("sync") or {}).get("id")
     if document is None:
@@ -112,18 +151,26 @@ def upload(
             sync_id,
         )
     settings = settings or load_settings()
+    spool = spool or Spool.from_settings(settings)
 
     try:
-        client = ApiClient.from_settings(settings)
+        client = ApiClient.from_settings(settings, **client_options)
         pushed = client.push(
             document,
             name=name,
-            exit_strategy=meta["exit_strategy"],
+            exit_strategy=meta.get("exit_strategy"),
             assessment_id=settings.assessment_id.value,
         )
     except ApiError as error:
         logger.debug("The upload failed: %s", error.code)
-        return error_failure(error, sync_id)
+        result = error_failure(error, sync_id)
+        # A failure that may pass is kept for later; a final one only on request
+        temporary = error.retryable and error.exit_code == codes.UPLOAD_UNAVAILABLE
+        if (temporary or spool_on_error) and _spool(
+            spool, settings, document, error, name, meta
+        ):
+            result = replace(result, spooled=True)
+        return result
     except Exception as exc:
         # Whatever goes wrong in the upload must not cost the local report
         logger.debug("The upload raised %s", type(exc).__name__, exc_info=True)
@@ -133,6 +180,7 @@ def upload(
             sync_id,
         )
 
+    _unspool(spool, settings, sync_id)
     if pushed.pending:
         message = "accepted, still processing"
     elif pushed.replayed:
@@ -155,6 +203,47 @@ def upload(
     )
 
 
+def _looks_like_sync(data: Any) -> bool:
+    sync = data.get("sync") if isinstance(data, dict) else None
+    return bool(
+        isinstance(sync, dict) and sync.get("id") and data.get("schema_version")
+    )
+
+
+def read_sync_files(
+    paths: list[str],
+) -> tuple[list[tuple[Path, dict[str, Any]]], list[tuple[Path, str]]]:
+    # Files are read as they are; a directory contributes the sync documents
+    # among its .json files (a report's raw_data folder holds other JSON too).
+    found: list[tuple[Path, dict[str, Any]]] = []
+    problems: list[tuple[Path, str]] = []
+    for raw in paths:
+        path = Path(raw)
+        if path.is_dir():
+            candidates = sorted(path.glob("*.json"))
+            explicit = False
+        elif path.is_file():
+            candidates, explicit = [path], True
+        else:
+            problems.append((path, "no such file or directory"))
+            continue
+        before = len(found)
+        for candidate in candidates:
+            try:
+                data = json.loads(candidate.read_text(encoding="utf-8"))
+            except (OSError, ValueError) as exc:
+                if explicit:
+                    problems.append((candidate, f"cannot be read as JSON ({exc})"))
+                continue
+            if _looks_like_sync(data):
+                found.append((candidate, data))
+            elif explicit:
+                problems.append((candidate, "is not a sync document"))
+        if not explicit and len(found) == before:
+            problems.append((path, "holds no sync documents"))
+    return found, problems
+
+
 REPORT_KEYS = ("status", "reason", "sync_id", "assessment_id", "url")
 
 
@@ -171,6 +260,7 @@ def _record(result: UploadResult | None) -> dict[str, Any] | None:
         "url": result.url,
         "request_id": result.request_id,
         "pending": result.pending,
+        "spooled": result.spooled,
         "billing": result.billing,
         "warnings": list(result.warnings),
     }

@@ -387,6 +387,8 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
             settings=None,
             emit_payload=None,
             egress_names="plain",
+            spool_on_error=False,
+            flush_spool=True,
         )
 
 
@@ -804,6 +806,8 @@ class EgressStageTests(unittest.TestCase):
             settings=None,
             emit_payload=None,
             egress_names="plain",
+            spool_on_error=False,
+            flush_spool=True,
         )
 
     def test_handle_aws_passes_egress_flag(self):
@@ -824,6 +828,8 @@ class EgressStageTests(unittest.TestCase):
             settings=None,
             emit_payload=None,
             egress_names="plain",
+            spool_on_error=False,
+            flush_spool=True,
         )
 
 

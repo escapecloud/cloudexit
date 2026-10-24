@@ -68,6 +68,8 @@ class ClientTestCase(unittest.TestCase):
         self.clients += 1
         options.setdefault("cache_path", self.tmp / f"cache-{self.clients}")
         options.setdefault("environ", {})
+        # One attempt: the tests that exercise the retries ask for a budget
+        options.setdefault("budget", 0.0)
         options.setdefault("clock", lambda: self.now)
         options.setdefault("sleep", self.sleep)
         options.setdefault("monotonic", lambda: self.clock[0])
