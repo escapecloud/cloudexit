@@ -3,9 +3,8 @@ import logging
 import requests
 from typing import Any
 from datetime import datetime, timedelta, timezone
-from azure.identity import ClientSecretCredential
 
-from .utils_azure import create_resource_client
+from .utils_azure import create_credential, create_resource_client
 from .utils_egress import GIB, format_bytes, load_egress_registry, new_row
 
 logger = logging.getLogger("core.engine.egress.azure")
@@ -281,11 +280,7 @@ def build_egress_inventory(
 def collect_azure_egress(
     provider_details: dict[str, Any],
 ) -> tuple[list[dict[str, Any]], set[str]]:
-    credential = provider_details.get("credential") or ClientSecretCredential(
-        tenant_id=provider_details["tenantId"],
-        client_id=provider_details["clientId"],
-        client_secret=provider_details["clientSecret"],
-    )
+    credential = create_credential(provider_details)
     subscription_id = provider_details["subscriptionId"]
     resource_group_name = provider_details["resourceGroupName"]
 

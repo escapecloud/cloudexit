@@ -7,12 +7,8 @@ from typing import Any
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 from collections import defaultdict
-from azure.identity import ClientSecretCredential
-from azure.mgmt.resource.resources import ResourceManagementClient
-from azure.mgmt.resource.subscriptions import SubscriptionClient
-from azure.mgmt.costmanagement import CostManagementClient
-from azure.mgmt.costmanagement.models import QueryDefinition, TimeframeType
-from azure.core.exceptions import AzureError, ClientAuthenticationError
+
+from utils.azure import azure_import
 
 from .utils_db import connect, load_data
 
@@ -22,15 +18,36 @@ logging.getLogger("azure").setLevel(logging.WARNING)
 MANAGEMENT_URL = "https://management.azure.com"
 
 
+def create_credential(provider_details: dict[str, Any]) -> Any:
+    # A credential from the Azure CLI or the environment wins; otherwise the
+    # service principal from the configuration is used.
+    credential = provider_details.get("credential")
+    if credential:
+        return credential
+    ClientSecretCredential = azure_import("azure.identity", "ClientSecretCredential")
+    return ClientSecretCredential(
+        tenant_id=provider_details["tenantId"],
+        client_id=provider_details["clientId"],
+        client_secret=provider_details["clientSecret"],
+    )
+
+
 def create_resource_client(credential: Any, subscription_id: str) -> Any:
+    ResourceManagementClient = azure_import(
+        "azure.mgmt.resource.resources", "ResourceManagementClient"
+    )
     return ResourceManagementClient(credential, subscription_id)
 
 
 def create_subscription_client(credential: Any) -> Any:
+    SubscriptionClient = azure_import("azure.mgmt.subscription", "SubscriptionClient")
     return SubscriptionClient(credential)
 
 
 def create_cost_client(credential: Any) -> Any:
+    CostManagementClient = azure_import(
+        "azure.mgmt.costmanagement", "CostManagementClient"
+    )
     return CostManagementClient(credential, base_url=MANAGEMENT_URL)
 
 
@@ -57,6 +74,7 @@ def cost_result_dict(result: Any) -> dict[str, Any]:
 def is_resource_inventory_empty(
     credential: Any, subscription_id: str, resource_group_name: str
 ) -> bool:
+    AzureError = azure_import("azure.core.exceptions", "AzureError")
     try:
         resource_client = create_resource_client(credential, subscription_id)
         # logger.info("Checking Azure resource inventory...")
@@ -84,13 +102,11 @@ def build_azure_resource_inventory(
     report_path: str,
     raw_data_path: str,
 ) -> None:
+    ClientAuthenticationError = azure_import(
+        "azure.core.exceptions", "ClientAuthenticationError"
+    )
     try:
-        # Use DefaultAzureCredential if provided, otherwise fall back to ClientSecretCredential
-        credential = provider_details.get("credential") or ClientSecretCredential(
-            tenant_id=provider_details["tenantId"],
-            client_id=provider_details["clientId"],
-            client_secret=provider_details["clientSecret"],
-        )
+        credential = create_credential(provider_details)
         subscription_id = provider_details["subscriptionId"]
         resource_group_name = provider_details["resourceGroupName"]
 
@@ -203,13 +219,12 @@ def build_azure_cost_inventory(
     report_path: str,
     raw_data_path: str,
 ) -> None:
+    QueryDefinition = azure_import(
+        "azure.mgmt.costmanagement.models", "QueryDefinition"
+    )
+    TimeframeType = azure_import("azure.mgmt.costmanagement.models", "TimeframeType")
     try:
-        # Use DefaultAzureCredential if provided, otherwise fall back to ClientSecretCredential
-        credential = provider_details.get("credential") or ClientSecretCredential(
-            tenant_id=provider_details["tenantId"],
-            client_id=provider_details["clientId"],
-            client_secret=provider_details["clientSecret"],
-        )
+        credential = create_credential(provider_details)
         cost_management_client = create_cost_client(credential)
 
         db_path = os.path.join(report_path, "data", "assessment.db")

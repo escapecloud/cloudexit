@@ -53,7 +53,7 @@ class GetMissingMonthsAzureTests(unittest.TestCase):
 
 
 class IsResourceInventoryEmptyTests(unittest.TestCase):
-    @patch("core.utils_azure.ResourceManagementClient")
+    @patch("azure.mgmt.resource.resources.ResourceManagementClient")
     def test_returns_true_when_no_resources(self, mock_rmc_cls):
         mock_client = MagicMock()
         mock_rmc_cls.return_value = mock_client
@@ -62,7 +62,7 @@ class IsResourceInventoryEmptyTests(unittest.TestCase):
         result = is_resource_inventory_empty(MagicMock(), "sub-123", "rg-test")
         self.assertTrue(result)
 
-    @patch("core.utils_azure.ResourceManagementClient")
+    @patch("azure.mgmt.resource.resources.ResourceManagementClient")
     def test_returns_false_when_resources_exist(self, mock_rmc_cls):
         mock_client = MagicMock()
         mock_rmc_cls.return_value = mock_client
@@ -74,7 +74,7 @@ class IsResourceInventoryEmptyTests(unittest.TestCase):
         result = is_resource_inventory_empty(MagicMock(), "sub-123", "rg-test")
         self.assertFalse(result)
 
-    @patch("core.utils_azure.ResourceManagementClient")
+    @patch("azure.mgmt.resource.resources.ResourceManagementClient")
     def test_raises_on_azure_error(self, mock_rmc_cls):
         mock_client = MagicMock()
         mock_rmc_cls.return_value = mock_client
@@ -88,7 +88,7 @@ class IsResourceInventoryEmptyTests(unittest.TestCase):
 
 class BuildAzureResourceInventoryErrorTests(unittest.TestCase):
     @patch("core.utils_azure.is_resource_inventory_empty")
-    @patch("core.utils_azure.ClientSecretCredential")
+    @patch("azure.identity.ClientSecretCredential")
     def test_auth_error_is_reraised(self, mock_cred_cls, mock_empty_check):
         mock_cred_cls.side_effect = ClientAuthenticationError(
             message="Invalid credentials"
@@ -111,7 +111,7 @@ class BuildAzureResourceInventoryErrorTests(unittest.TestCase):
             )
 
     @patch("core.utils_azure.is_resource_inventory_empty", return_value=True)
-    @patch("core.utils_azure.ClientSecretCredential")
+    @patch("azure.identity.ClientSecretCredential")
     def test_returns_early_when_inventory_empty(self, mock_cred_cls, mock_empty_check):
         from core.utils_azure import build_azure_resource_inventory
 
@@ -133,7 +133,7 @@ class BuildAzureResourceInventoryErrorTests(unittest.TestCase):
 
 
 class BuildAzureCostInventoryErrorTests(unittest.TestCase):
-    @patch("core.utils_azure.ClientSecretCredential")
+    @patch("azure.identity.ClientSecretCredential")
     def test_auth_error_is_reraised(self, mock_cred_cls):
         mock_cred_cls.side_effect = ClientAuthenticationError(
             message="Invalid credentials"
@@ -156,8 +156,8 @@ class BuildAzureCostInventoryErrorTests(unittest.TestCase):
             )
 
     @patch("core.utils_azure.connect")
-    @patch("core.utils_azure.CostManagementClient")
-    @patch("core.utils_azure.ClientSecretCredential")
+    @patch("azure.mgmt.costmanagement.CostManagementClient")
+    @patch("azure.identity.ClientSecretCredential")
     def test_sqlite_error_is_reraised(self, mock_cred_cls, mock_cost_cls, mock_connect):
         import sqlite3
 

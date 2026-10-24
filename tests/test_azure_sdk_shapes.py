@@ -8,9 +8,9 @@ from pathlib import Path
 from unittest import mock
 
 from azure.core.credentials import AccessToken
+from azure.mgmt.costmanagement.models import QueryDefinition, TimeframeType
 from dateutil.relativedelta import relativedelta
 
-from core import utils_azure
 from core.utils_azure import (
     build_azure_cost_inventory,
     build_azure_resource_inventory,
@@ -141,7 +141,7 @@ class ClientSurfaceTests(ShapeTestCase):
         )
         self.assertEqual(
             type(create_subscription_client(self.credential)).__module__,
-            "azure.mgmt.resource.subscriptions._client",
+            "azure.mgmt.subscription._subscription_client",
         )
 
     def test_the_authorization_client_still_has_role_assignments(self):
@@ -395,9 +395,9 @@ class CostQueryTests(ShapeTestCase):
         with fake_http(self.result([[1, "2026-01-01T00:00:00", "USD"]])):
             result = client.query.usage(
                 GROUP_ID,
-                utils_azure.QueryDefinition(
+                QueryDefinition(
                     type="Usage",
-                    timeframe=utils_azure.TimeframeType.CUSTOM,
+                    timeframe=TimeframeType.CUSTOM,
                     time_period={
                         "from": "2026-01-01T00:00:00Z",
                         "to": "2026-02-01T00:00:00Z",

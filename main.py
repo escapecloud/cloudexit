@@ -8,12 +8,12 @@ import os
 import getpass
 import traceback
 from dataclasses import replace
+from typing import Any
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.markup import escape
 from datetime import datetime
 from botocore.exceptions import NoCredentialsError, ProfileNotFound
-from azure.identity import DefaultAzureCredential, ClientSecretCredential
 
 # Import the functions
 from core.engine import (
@@ -44,6 +44,9 @@ from core.sync_document import (
     prepare_sync_document,
 )
 from utils.azure import (
+    AzureSdkError,
+    azure_import,
+    require_azure_sdk,
     select_subscription,
     select_resource_group,
     is_azure_cli_installed,
@@ -313,7 +316,15 @@ def handle_aws(args):
     )
 
 
-def _azure_cli_credential() -> DefaultAzureCredential:
+def _require_azure_sdk() -> None:
+    try:
+        require_azure_sdk()
+    except AzureSdkError as e:
+        console.print(f"[red]{e}[/red]")
+        sys.exit(codes.CONFIG)
+
+
+def _azure_cli_credential() -> Any:
     if not is_azure_cli_installed():
         console.print(
             "[red]Azure CLI is not installed. Install it from https://aka.ms/install-azure-cli.[/red]"
@@ -330,6 +341,7 @@ def _azure_cli_credential() -> DefaultAzureCredential:
             "[bold cyan]az login --scope https://management.azure.com/.default[/bold cyan]"
         )
         raise ConfigError
+    DefaultAzureCredential = azure_import("azure.identity", "DefaultAzureCredential")
     return DefaultAzureCredential()
 
 
@@ -349,6 +361,9 @@ def _azure_provider_noninteractive(args) -> dict:
                     "[red]--non-interactive with AZURE_CLIENT_SECRET also requires AZURE_CLIENT_ID.[/red]"
                 )
                 raise ConfigError
+            ClientSecretCredential = azure_import(
+                "azure.identity", "ClientSecretCredential"
+            )
             credential = ClientSecretCredential(
                 tenant_id=tenant_id,
                 client_id=client_id,
@@ -360,6 +375,9 @@ def _azure_provider_noninteractive(args) -> dict:
                     "[red]--non-interactive Azure OIDC requires AZURE_CLIENT_ID when AZURE_CLIENT_SECRET is not set.[/red]"
                 )
                 raise ConfigError
+            DefaultAzureCredential = azure_import(
+                "azure.identity", "DefaultAzureCredential"
+            )
             credential = DefaultAzureCredential()
 
     provider_details = {
@@ -421,6 +439,7 @@ def _azure_provider_from_prompt() -> dict:
     client_id = input("Enter Service Principal / Client ID: ").strip()
     client_secret = getpass.getpass("Enter Client Secret (input hidden): ").strip()
 
+    ClientSecretCredential = azure_import("azure.identity", "ClientSecretCredential")
     try:
         credential = ClientSecretCredential(
             tenant_id=tenant_id, client_id=client_id, client_secret=client_secret
@@ -467,6 +486,9 @@ def handle_azure(args):
 
     _reject_egress_with_tfstate(args)
     tfstate_path = getattr(args, "tfstate", None)
+    # Fail before any prompt; a config file is checked when the run starts
+    if not tfstate_path and not args.config:
+        _require_azure_sdk()
 
     if args.config:
         config = load_config(args.config)
@@ -564,6 +586,8 @@ def run_assessment(
         # tfstate mode reads a local state file: no credentials, no permission
         # check, no cost data — and no egress estimation, which needs live APIs.
         is_tfstate = bool(config["providerDetails"].get("tfstatePath"))
+        if config["cloudServiceProvider"] == 1 and not is_tfstate:
+            _require_azure_sdk()
         if is_tfstate and egress:
             print_step(
                 "Configuration validation failed.",
