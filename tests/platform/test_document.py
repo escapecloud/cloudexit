@@ -41,8 +41,8 @@ from tests.support.sync import (
     egress_row,
     schema_errors,
 )
-from utils import codes
-from utils.version import __version__
+from cloudexit import codes
+from cloudexit.version import __version__
 
 LOGGER = "core.engine.sync_document"
 AWS_DETAILS = {

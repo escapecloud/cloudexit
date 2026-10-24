@@ -39,7 +39,7 @@ from tests.support.api import (
     whoami_reply,
 )
 from tests.support.http import fake_http
-from utils import codes
+from cloudexit import codes
 from utils.settings import Setting, Settings
 from tests.support.paths import ROOT
 

@@ -15,7 +15,7 @@ import main
 from tests.support.isolation import isolated_environ
 from tests.make_smoke_dataset import main as make_smoke_dataset
 from tests.support.paths import ROOT
-from utils import codes
+from cloudexit import codes
 from utils import azure as azure_utils
 from utils.azure import AzureSdkError, azure_import, require_azure_sdk
 

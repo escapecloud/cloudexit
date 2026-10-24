@@ -3,7 +3,7 @@ from pathlib import Path, PurePosixPath
 
 
 def asset_path(*parts: str) -> Path:
-    root = files("core")
+    root = files("cloudexit")
     if not isinstance(root, Path):
         raise RuntimeError(
             "the cloudexit assets are not on the file system "

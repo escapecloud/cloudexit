@@ -5,7 +5,7 @@ import logging
 
 from utils.data import active_catalogue_path
 
-from .resources import asset_path
+from cloudexit.resources import asset_path
 
 logger = logging.getLogger("core.engine.utils")
 

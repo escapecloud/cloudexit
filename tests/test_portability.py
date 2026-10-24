@@ -19,6 +19,7 @@ from tests.support.paths import ROOT
 
 SOURCES = [
     ROOT / "main.py",
+    *(ROOT / "cloudexit").rglob("*.py"),
     *(ROOT / "core").rglob("*.py"),
     *(ROOT / "utils").rglob("*.py"),
 ]

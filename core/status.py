@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 
 import requests
 
-from utils import codes
+from cloudexit import codes
 from utils.data import (
     CatalogueError,
     catalogue_dir,

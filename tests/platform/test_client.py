@@ -46,7 +46,7 @@ from tests.support.api import (
 )
 from tests.support.http import fake_http, make_response
 from tests.support.sync import DEFINITION, schema_errors
-from utils import codes
+from cloudexit import codes
 from utils.settings import Setting
 
 SYNC_ID = "01933b9e-7c2a-7d41-9a51-3c8f0a6e0001"
@@ -579,7 +579,7 @@ class PolicyTests(ClientTestCase):
     def setUp(self):
         super().setUp()
         # The policies below are written against this client version, not the
-        # one in utils/version.py, which changes with every release
+        # one in cloudexit/version.py, which changes with every release
         self.enterContext(patch.object(api_v2, "__version__", "1.1.7"))
 
     def test_a_blocked_or_too_old_client_is_refused_before_the_push(self):

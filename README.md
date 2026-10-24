@@ -173,7 +173,7 @@ With `--egress-names hashed` each egress resource name is replaced by an HMAC-SH
 
 ## The report
 
-Every run writes the same three files: `report.pdf`, `index.html` and `raw_data/assessment_result.json`. The PDF is the Basic Executive Summary, set in IBM Plex (SIL Open Font License, in `core/assets/fonts/`). It opens with a cover and a document information page that record where the data came from: the cloudexit version, the run ID, the data catalogue version and hash, and either a link to the platform's reports or the statement that the data was self-collected. The same facts are in the PDF metadata and in a `provenance` object in the JSON report. The last page says what the full assessment on a platform adds.
+Every run writes the same three files: `report.pdf`, `index.html` and `raw_data/assessment_result.json`. The PDF is the Basic Executive Summary, set in IBM Plex (SIL Open Font License, in `cloudexit/assets/fonts/`). It opens with a cover and a document information page that record where the data came from: the cloudexit version, the run ID, the data catalogue version and hash, and either a link to the platform's reports or the statement that the data was self-collected. The same facts are in the PDF metadata and in a `provenance` object in the JSON report. The last page says what the full assessment on a platform adds.
 
 ## Reports and uploads
 

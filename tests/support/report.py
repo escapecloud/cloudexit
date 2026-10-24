@@ -1,7 +1,7 @@
 import shutil
 from pathlib import Path
 
-from core.resources import asset_path
+from cloudexit.resources import asset_path
 
 
 def build_report_fixture():

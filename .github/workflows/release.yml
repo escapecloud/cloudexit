@@ -37,12 +37,12 @@ jobs:
             echo "Tag v$VERSION already exists on origin"; exit 1
           fi
 
-      - name: Bump utils/version.py
+      - name: Bump cloudexit/version.py
         env:
           VERSION: ${{ inputs.version }}
         run: |
-          sed -i "s/^__version__ = .*/__version__ = \"$VERSION\"/" utils/version.py
-          grep -q "^__version__ = \"$VERSION\"$" utils/version.py || { echo "sed did not update version"; exit 1; }
+          sed -i "s/^__version__ = .*/__version__ = \"$VERSION\"/" cloudexit/version.py
+          grep -q "^__version__ = \"$VERSION\"$" cloudexit/version.py || { echo "sed did not update version"; exit 1; }
 
       - name: Commit, tag, and push to the dispatched branch
         env:

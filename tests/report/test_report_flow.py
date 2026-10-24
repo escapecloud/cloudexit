@@ -40,7 +40,7 @@ from tests.support.api import (
 from tests.support.flow import LOCAL_RISKS, SERVER_SCORES, build_flow_run
 from tests.support.http import fake_http, make_response
 from tests.support.sync import SYNC_ID, egress_row
-from utils import codes
+from cloudexit import codes
 from utils.settings import Setting, Settings
 
 AWS_RESOURCES = [(1, "eu-central-1", 8), (4, "eu-central-1", 2)]

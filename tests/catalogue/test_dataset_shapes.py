@@ -18,7 +18,7 @@ from tests.support.dataset_shapes import VERSION, build_shape
 from tests.support.http import fake_http, make_response
 from tests.support.isolation import isolated_environ
 from tests.support.sync import schema_errors
-from utils import codes
+from cloudexit import codes
 from utils.data import (
     UNPACK_FLOOR,
     CatalogueError,

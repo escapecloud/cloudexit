@@ -18,7 +18,7 @@ from tests.support.api import (
 )
 from tests.support.isolation import isolated_environ
 from tests.make_smoke_dataset import main as make_smoke_dataset
-from utils import codes
+from cloudexit import codes
 from tests.support.paths import ROOT
 
 SMOKE_STATE = ROOT / "tests" / "fixtures" / "smoke" / "aws.tfstate"

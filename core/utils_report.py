@@ -19,7 +19,7 @@ from reportlab.platypus import (
 
 # Utils
 from core.report.helpers import initials
-from core.resources import asset_path
+from cloudexit.resources import asset_path
 from core.utils_report_html import (
     transform_cost_inventory_for_html,
     transform_risk_inventory_for_html,

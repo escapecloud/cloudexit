@@ -296,7 +296,7 @@ class HtmlReportTests(TempDirTestCase):
         self.assertIn(PLACEHOLDER.format("VM"), html)
 
     def test_the_stylesheet_styles_the_placeholder(self):
-        from core.resources import asset_path
+        from cloudexit.resources import asset_path
 
         css = asset_path("css", "style.css").read_text(encoding="utf-8")
         self.assertIn(".resource-icon-placeholder", css)
