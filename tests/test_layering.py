@@ -61,7 +61,7 @@ def edges():
         for name in imported_modules(path):
             target = area_of(name) if name.startswith("cloudexit.") else None
             if target and target != source:
-                found.add((source, target, str(path.relative_to(ROOT))))
+                found.add((source, target, path.relative_to(ROOT).as_posix()))
     return found
 
 
