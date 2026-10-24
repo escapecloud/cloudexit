@@ -111,9 +111,9 @@ Want to see how a regulatory-aligned report looks (DORA / FINMA / UK PRA)? Run w
 
 ## Platform settings
 
-Connecting to a platform is optional. Without any settings cloudexit runs fully offline. Each value is resolved separately, highest precedence first:
+Connecting to a platform is optional. Without a host and an API key cloudexit runs fully offline. Each value is resolved separately, highest precedence first:
 
-1. **Flags**: `--host`, `--api-key-file`, `--config-profile`, `--assessment-id`, `--ca-bundle`, `--timeout`
+1. **Flags**: `--host`, `--api-key-file`, `--config-profile`, `--assessment-id`, `--ca-bundle`, `--timeout`, `--upload`
 2. **Environment**: `CLOUDEXIT_HOST`, `CLOUDEXIT_API_KEY_FILE`, `CLOUDEXIT_API_KEY`, `CLOUDEXIT_PROFILE`, `CLOUDEXIT_ASSESSMENT_ID`, `CLOUDEXIT_UPLOAD`, `CLOUDEXIT_CA_BUNDLE`, `CLOUDEXIT_TIMEOUT`
 3. **Config file**: `~/.config/cloudexit/config.toml` (`$XDG_CONFIG_HOME/cloudexit/config.toml`, or `%APPDATA%\cloudexit\config.toml` on Windows), with a `[default]` table and optional `[profiles.<name>]` tables. See [`config.example.toml`](./config.example.toml).
 4. **Deprecated**: the `HOST` and `KEY` environment variables (only when both are set) and `config.py`. Both still work and print a warning.
@@ -123,14 +123,36 @@ Prefer a key file (`--api-key-file`, `CLOUDEXIT_API_KEY_FILE` or `api_key_file`)
 ```bash
 cloudexit config path   # where the config file is looked up
 cloudexit config show   # every resolved value and its source (keys are masked)
+cloudexit status        # check the settings, the TLS chain, the key and the platform
 ```
+
+### Upload modes
+
+`--upload` (also `CLOUDEXIT_UPLOAD` and `upload` in the config file) decides what a run does with a configured platform:
+
+| Mode | What happens |
+| --- | --- |
+| `auto` (default) | Uploads when a host and an API key are configured, and runs offline when neither is. If the upload fails, the report is still written and the run exits with the upload code. A host without a key, or a key without a host, is a configuration error (exit 2), never a quiet offline run. |
+| `required` | Exits 2 before anything is collected when no host and key are configured. |
+| `off` | Never contacts the platform, even with a key configured. The run is the local Basic report ("Forcing Basic Assessment: uploads are off."). |
+
+`--dry-run` is `--upload=off` plus the sync document in `raw_data/sync.json`; it keeps the assessment depth you asked for, so the document can be uploaded later with `cloudexit upload`. It cannot be combined with `--upload=auto` or `--upload=required` on the command line. "Forcing Basic Assessment" appears only with `--upload=off` or when nothing is configured; a configured platform keeps the depth you asked for.
+
+`cloudexit status` shows where each setting comes from (keys masked), checks the TLS connection (which CA bundle was used and, on failure, which certificate was not trusted), and asks the platform for its `/meta` (versions, limits, catalogue version, whether this cloudexit version is accepted) and `/whoami` (organisation, key kind, assessment, scopes, expiry, with a warning from 14 days before it). It also lists the spooled syncs and compares the installed catalogue with the platform's. `--output json` prints the same as one JSON object.
+
+| Exit code | Meaning |
+| --- | --- |
+| 0 | Everything checked is fine, or no platform is configured. |
+| 11 | A host without a key (or the reverse), or a key the platform does not accept. |
+| 12 | The TLS check failed or the platform is unreachable. |
+| 15 | The platform does not accept this cloudexit version or the sync document version. |
 
 ## Catalogue dataset
 
 cloudexit assesses against a catalogue dataset that it keeps up to date. It is stored in your data directory (`~/.local/share/cloudexit/catalogue/`, `$XDG_DATA_HOME/cloudexit/catalogue/`, or `%LOCALAPPDATA%\cloudexit\catalogue\` on Windows) together with the previous version. Each run checks for a newer catalogue first. If that check fails, the run continues with the installed catalogue and says so; without any catalogue it stops.
 
 ```bash
-cloudexit catalogue status                # installed and latest catalogue
+cloudexit catalogue status                # installed and latest catalogue (and the platform's, when a key is configured)
 cloudexit catalogue update                # download the latest (or --version V)
 cloudexit catalogue import FILE.db.gz     # install a file on an air-gapped machine (--sha256 to verify)
 cloudexit aws --tfstate infra.tfstate --catalogue FILE.db.gz   # use a file for one run, without installing it
@@ -156,6 +178,32 @@ Every run writes the same three files: `report.pdf`, `index.html` and `raw_data/
 ## Reports and uploads
 
 The local report is always the Basic report, computed on your machine, whether or not a platform is configured. Anything the platform computes stays on the platform: after an upload the local report only records the link (also stored in `raw_data/upload.json`). If an upload fails, the report is still written, with a short "Not uploaded: <reason>" banner, and the run exits with an upload code after everything else has finished. Problems in the collection stages take precedence over upload codes.
+
+`--strict` also fails the run when the platform reports warnings (an outdated catalogue, unknown resource types, a downgraded assessment tier, a deprecated cloudexit version, and so on). The report is written first, then the run exits 10; an upload failure keeps its own code.
+
+`--output json` makes stdout carry exactly one JSON object when the run ends, and sends the banner and the step output to stderr:
+
+```json
+{
+  "exit_code": 0,
+  "report_dir": "/work/reports/20261102_101500",
+  "sync_json": "/work/reports/20261102_101500/raw_data/sync.json",
+  "upload": {
+    "status": "uploaded",
+    "reason": null,
+    "assessment_id": "…",
+    "sync_id": "…",
+    "platform_sync_id": "…",
+    "url": "https://…",
+    "warnings": [{"code": "collector_catalogue_outdated", "message": "…"}],
+    "error": null
+  },
+  "results": {"…": "what the platform returned, never shown in the local report"},
+  "catalogue": {"version": "2026-11-02", "outdated": false}
+}
+```
+
+`upload.status` is `uploaded`, `spooled`, `skipped` (`reason` is `offline`, `off` or `dry_run`) or `failed`; `error` holds `code`, `message` and `request_id`. `results` is `null` unless the platform answered. The summary never contains the API key.
 
 | Exit code | Meaning |
 | --- | --- |
@@ -230,6 +278,8 @@ cloudexit runs headlessly in CI pipelines via `--non-interactive` and environmen
 ```
 
 [View on GitHub Marketplace →](https://github.com/marketplace/actions/github-action-for-cloudexit)
+
+In a pipeline that must upload, add `--upload=required` so a missing key fails the job before anything is collected, `--strict` to fail on platform warnings, and `--output json` to read the result from stdout.
 
 ## Ecosystem
 

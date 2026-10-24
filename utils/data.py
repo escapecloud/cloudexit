@@ -6,6 +6,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import shutil
 import sqlite3
 import sys
@@ -607,3 +608,26 @@ def status_lines(
     if installed is None or installed.version != latest["catalogue_version"]:
         lines.append("an update is available: run `cloudexit catalogue update`")
     return lines
+
+
+CATALOGUE_VERSION_PARTS = re.compile(r"^(\d{4})-(\d{2})-(\d{2})(?:\.(\d+))?$")
+
+
+def parse_catalogue_version(text: str | None) -> tuple[int, int, int, int] | None:
+    # A date, and an optional numeric suffix that tells releases of one day apart
+    match = CATALOGUE_VERSION_PARTS.match(str(text or "").strip())
+    if not match:
+        return None
+    year, month, day, suffix = match.groups()
+    return int(year), int(month), int(day), int(suffix or 0)
+
+
+def compare_catalogue_versions(local: str | None, other: str | None) -> str | None:
+    # "older", "same" or "newer": how the local catalogue stands against the
+    # other one; None when either version cannot be read.
+    first, second = parse_catalogue_version(local), parse_catalogue_version(other)
+    if first is None or second is None:
+        return None
+    if first == second:
+        return "same"
+    return "older" if first < second else "newer"

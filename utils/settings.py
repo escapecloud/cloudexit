@@ -21,6 +21,7 @@ DEFAULT_TIMEOUT = 10.0
 DEFAULT_UPLOAD_BUDGET = 300.0
 LOCAL_HTTP_HOSTS = ("localhost", "127.0.0.1")
 KEY_PREFIXES = ("esc_sk_", "exc_eu_sk_", "exc_us_sk_")
+UPLOAD_MODES = ("auto", "required", "off")
 
 ENV_VARS = {
     "host": "CLOUDEXIT_HOST",
@@ -44,6 +45,7 @@ FLAGS = {
     "ca_bundle": "--ca-bundle",
     "timeout": "--timeout",
     "upload_budget": "--upload-budget",
+    "upload": "--upload",
 }
 
 FILE_KEYS = ("host", "api_key", "api_key_file", "assessment_id", "ca_bundle", "upload")
@@ -70,7 +72,7 @@ class Settings:
     api_key_file: Setting = field(default_factory=Setting)
     profile: Setting = field(default_factory=Setting)
     assessment_id: Setting = field(default_factory=Setting)
-    upload: Setting = field(default_factory=Setting)
+    upload: Setting = field(default_factory=lambda: Setting("auto", "default"))
     ca_bundle: Setting = field(default_factory=Setting)
     timeout: Setting = field(
         default_factory=lambda: Setting(DEFAULT_TIMEOUT, "default")
@@ -139,6 +141,7 @@ def flags_from_args(args: Any) -> dict[str, Any]:
             ("ca_bundle", "ca_bundle"),
             ("timeout", "timeout"),
             ("upload_budget", "upload_budget"),
+            ("upload", "upload"),
         )
         if getattr(args, attr, None) is not None
     }
@@ -236,8 +239,10 @@ def _table_layer(table: Any, label: str, path: Path) -> dict[str, Setting]:
             logger.warning("Unknown key %r in %s of %s is ignored.", key, label, path)
             continue
         if key == "upload":
-            if not isinstance(value, bool):
-                raise SettingsError(f"{key} in {label} of {path} must be true or false")
+            if not isinstance(value, (bool, str)):
+                raise SettingsError(
+                    f"{key} in {label} of {path} must be auto, required or off"
+                )
         elif not isinstance(value, str):
             raise SettingsError(f"{key} in {label} of {path} must be a string")
         elif not value.strip():
@@ -327,15 +332,20 @@ def _parse_budget(setting: Setting) -> Setting:
 
 
 def _parse_upload(setting: Setting) -> Setting:
+    # true and false from earlier versions still mean auto and off
     value = setting.value
-    if isinstance(value, str):
-        word = value.lower()
-        if word in TRUE_WORDS:
-            value = True
+    if isinstance(value, bool):
+        value = "auto" if value else "off"
+    elif isinstance(value, str):
+        word = value.strip().lower()
+        if word in UPLOAD_MODES:
+            value = word
+        elif word in TRUE_WORDS:
+            value = "auto"
         elif word in FALSE_WORDS:
-            value = False
-    if not isinstance(value, bool):
-        raise SettingsError(f"upload ({setting.source}) must be true or false")
+            value = "off"
+    if value not in UPLOAD_MODES:
+        raise SettingsError(f"upload ({setting.source}) must be auto, required or off")
     return Setting(value, setting.source)
 
 
@@ -414,7 +424,9 @@ def load_settings(
         api_key_file=api_key_file,
         profile=profile,
         assessment_id=_first(layers, "assessment_id"),
-        upload=_parse_upload(upload) if upload.value is not None else upload,
+        upload=(
+            _parse_upload(upload) if upload.value is not None else Settings().upload
+        ),
         ca_bundle=_check_ca_bundle(ca_bundle) if ca_bundle.value else ca_bundle,
         timeout=(
             _parse_timeout(timeout) if timeout.value is not None else Settings().timeout

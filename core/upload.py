@@ -45,6 +45,9 @@ class UploadResult:
     pending: bool = False
     billing: dict[str, int] | None = None
     spooled: bool = False
+    warning_items: tuple[dict[str, str | None], ...] = ()
+    results: dict[str, Any] | None = None
+    catalogue: dict[str, Any] | None = None
 
     @property
     def failed(self) -> bool:
@@ -200,6 +203,9 @@ def upload(
         replayed=pushed.replayed,
         pending=pushed.pending,
         billing=pushed.billing,
+        warning_items=pushed.warning_items,
+        results=pushed.results,
+        catalogue=pushed.catalogue,
     )
 
 
