@@ -23,10 +23,9 @@ from cloudexit.catalogue.store import (
     UNPACK_FLOOR,
     CatalogueError,
     read_state,
-    resolve_file_url,
     unpack_limit,
-    update_catalogue,
 )
+from cloudexit.catalogue.download import resolve_file_url, update_catalogue
 from tests.support.paths import ROOT
 
 SMOKE_STATE = ROOT / "tests" / "fixtures" / "smoke" / "aws.tfstate"
