@@ -242,8 +242,6 @@ def summarize_alternative_technologies(
 def enrich_resource_inventory(
     resource_inventory: list[dict[str, Any]],
     resource_type_mapping: dict[str, dict[str, Any]],
-    *,
-    report_path: str | None = None,
 ) -> list[dict[str, Any]]:
     enriched_resources = []
     for idx, resource in enumerate(resource_inventory):
@@ -260,9 +258,6 @@ def enrich_resource_inventory(
             "location": resource.get("location", "Unknown"),
             "count": resource.get("count", 0),
         }
-
-        if report_path is not None:
-            entry["icon_url"] = f"{report_path}/assets{icon}" if icon else None
 
         enriched_resources.append(entry)
 

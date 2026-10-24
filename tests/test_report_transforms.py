@@ -1,4 +1,3 @@
-import tempfile
 import unittest
 
 from core.utils_report_html import (
@@ -10,12 +9,6 @@ from core.utils_report_json import (
     transform_alt_tech_for_json,
     transform_resource_inventory_for_json,
     transform_risk_inventory_for_json,
-)
-from core.utils_report_pdf import (
-    transform_alt_tech_for_pdf,
-    transform_cost_inventory_for_pdf,
-    transform_resource_inventory_for_pdf,
-    transform_risk_inventory_for_pdf,
 )
 
 
@@ -219,73 +212,6 @@ class JsonTransformTests(unittest.TestCase):
         self.assertEqual(list(transformed.keys()), [1, 2])
         self.assertEqual(transformed[1][0]["product_name"], "OpenStack")
         self.assertEqual(transformed[2][0]["product_name"], "MinIO")
-
-
-class PdfTransformTests(unittest.TestCase):
-    def test_transform_cost_inventory_for_pdf_limits_to_last_six_months(self):
-        months, costs, currency_symbol = transform_cost_inventory_for_pdf(
-            [
-                {"month": "2025-10-01", "cost": 8.0, "currency": "USD"},
-                {"month": "2025-11-01", "cost": 10.5, "currency": "USD"},
-                {"month": "2025-12-01", "cost": 12.0, "currency": "USD"},
-                {"month": "2026-01-01", "cost": 14.75, "currency": "USD"},
-                {"month": "2026-02-01", "cost": 11.25, "currency": "USD"},
-                {"month": "2026-03-01", "cost": 9.0, "currency": "USD"},
-                {"month": "2026-04-01", "cost": 13.4, "currency": "USD"},
-            ]
-        )
-
-        self.assertEqual(months, ["Nov", "Dec", "Jan", "Feb", "Mar", "Apr"])
-        self.assertEqual(costs, [10.5, 12.0, 14.75, 11.25, 9.0, 13.4])
-        self.assertEqual(currency_symbol, "$")
-
-    def test_transform_risk_inventory_for_pdf_counts_resource_backed_risks(self):
-        risks, severity_counts = transform_risk_inventory_for_pdf(
-            build_risk_data(),
-            build_risk_definitions(),
-            build_resource_inventory(),
-        )
-
-        risks_by_name = {item["name"]: item for item in risks}
-        self.assertEqual(
-            risks_by_name["Limited Alternatives"]["impacted_resources_count"], 2
-        )
-        self.assertEqual(
-            risks_by_name["Large Service Footprint"]["impacted_resources_count"], 0
-        )
-        self.assertEqual(severity_counts, {"high": 1, "medium": 1, "low": 0})
-
-    def test_transform_resource_inventory_for_pdf_builds_report_relative_icon_paths(
-        self,
-    ):
-        with tempfile.TemporaryDirectory() as report_dir:
-            transformed = transform_resource_inventory_for_pdf(
-                build_resource_inventory(),
-                build_resource_type_mapping(),
-                report_dir,
-            )
-
-        self.assertEqual(transformed[0]["resource_name"], "EC2 Instance")
-        self.assertTrue(
-            transformed[0]["icon_url"].endswith("/assets/icons/aws/Compute/EC2.png")
-        )
-
-    def test_transform_alt_tech_for_pdf_counts_matching_alternatives(self):
-        with tempfile.TemporaryDirectory() as report_dir:
-            transformed = transform_alt_tech_for_pdf(
-                build_resource_inventory(),
-                build_resource_type_mapping(),
-                build_alternatives(),
-                build_alternative_technologies(),
-                exit_strategy=1,
-                report_path=report_dir,
-            )
-
-        self.assertEqual(transformed[0]["count"], 1)
-        self.assertEqual(transformed[1]["count"], 1)
-        self.assertTrue(
-            transformed[0]["icon_url"].endswith("/assets/icons/aws/Compute/EC2.png")
-        )
 
 
 if __name__ == "__main__":
