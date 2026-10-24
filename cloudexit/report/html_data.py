@@ -9,7 +9,7 @@ from cloudexit.report.aggregate import (
 )
 
 # Configure logger
-logger = logging.getLogger("core.engine.report_html")
+logger = logging.getLogger(__name__)
 
 
 def transform_cost_inventory_for_html(

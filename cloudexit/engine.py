@@ -31,7 +31,7 @@ from cloudexit.report.writers import (
 )
 
 # Configure the logger
-logger = logging.getLogger("core.engine")
+logger = logging.getLogger(__name__)
 
 
 # Stage 1

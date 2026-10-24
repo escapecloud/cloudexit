@@ -3,7 +3,7 @@ import logging
 
 from cloudexit.terminal import ask, console
 
-logger = logging.getLogger("main.utils")
+logger = logging.getLogger(__name__)
 
 
 def prompt_required_inputs() -> tuple[int, int]:

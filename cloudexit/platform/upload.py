@@ -13,7 +13,7 @@ from cloudexit.settings import Settings, SettingsError, load_settings
 from cloudexit.platform.client import ApiClient, ApiError
 from cloudexit.platform.spool import Spool
 
-logger = logging.getLogger("core.engine.upload")
+logger = logging.getLogger(__name__)
 
 REASON_UNAVAILABLE = "upload_unavailable"
 REASON_REJECTED = "upload_rejected"

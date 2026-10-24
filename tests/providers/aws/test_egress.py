@@ -709,7 +709,9 @@ class UnknownStrategyTests(unittest.TestCase):
         with patch(
             "cloudexit.providers.aws.egress.load_egress_registry", return_value=registry
         ):
-            with self.assertLogs("core.engine.egress.aws", level="WARNING") as captured:
+            with self.assertLogs(
+                "cloudexit.providers.aws.egress", level="WARNING"
+            ) as captured:
                 rows, _ = collect_aws_egress(
                     {
                         "accessKey": "AKIAIOSFODNN7EXAMPLE",
@@ -737,7 +739,9 @@ class CollectorFailureVisibilityTests(unittest.TestCase):
         with patch(
             "cloudexit.providers.aws.egress.load_egress_registry", return_value=registry
         ):
-            with self.assertLogs("core.engine.egress.aws", level="WARNING") as captured:
+            with self.assertLogs(
+                "cloudexit.providers.aws.egress", level="WARNING"
+            ) as captured:
                 rows, _ = collect_aws_egress(
                     {
                         "accessKey": "AKIAIOSFODNN7EXAMPLE",

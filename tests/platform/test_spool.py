@@ -466,7 +466,7 @@ class UploadSpoolTests(SpoolCase):
         blocker = self.tmp / "blocker"
         blocker.write_text("a file")
         self.spool = Spool(blocker / "spool")
-        with self.assertLogs("core.engine.upload", level="WARNING") as logs:
+        with self.assertLogs("cloudexit.platform.upload", level="WARNING") as logs:
             result, _ = self.run_upload(
                 [meta_reply(), whoami_reply(), *[unavailable()] * 3]
             )

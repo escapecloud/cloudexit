@@ -10,7 +10,7 @@ from cloudexit.report.aggregate import (
 )
 
 # Configure logger
-logger = logging.getLogger("core.engine.report_json")
+logger = logging.getLogger(__name__)
 
 
 def transform_resource_inventory_for_json(

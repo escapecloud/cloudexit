@@ -11,7 +11,7 @@ from dateutil.relativedelta import relativedelta
 from cloudexit.catalogue.db import connect
 from cloudexit.providers.aws.client import create_client
 
-logger = logging.getLogger("core.engine.aws")
+logger = logging.getLogger(__name__)
 
 
 def get_missing_months_aws(processed_costs: set[str], max_months: int) -> list[date]:

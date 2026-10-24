@@ -12,7 +12,7 @@ from cloudexit.egress.model import (
     write_egress_inventory,
 )
 
-logger = logging.getLogger("core.engine.egress")
+logger = logging.getLogger(__name__)
 
 
 def estimate_egress(

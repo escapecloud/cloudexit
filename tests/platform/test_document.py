@@ -44,7 +44,7 @@ from tests.support.sync import (
 from cloudexit import codes
 from cloudexit.version import __version__
 
-LOGGER = "core.engine.sync_document"
+LOGGER = "cloudexit.platform.document"
 AWS_DETAILS = {
     "accessKey": ACCESS_KEY,
     "secretKey": SECRET_KEY,

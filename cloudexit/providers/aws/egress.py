@@ -12,7 +12,7 @@ from cloudexit.providers.aws.client import (
 )
 from cloudexit.egress.model import GIB, format_bytes, load_egress_registry, new_row
 
-logger = logging.getLogger("core.engine.egress.aws")
+logger = logging.getLogger(__name__)
 
 METRIC_DATA_BATCH_SIZE = 500
 

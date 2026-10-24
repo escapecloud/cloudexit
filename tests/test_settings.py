@@ -22,7 +22,7 @@ from cloudexit.settings import (
     normalize_host,
 )
 
-LOGGER = "main.utils.settings"
+LOGGER = "cloudexit.settings"
 KEY = "sk_live_0123456789abcdef"
 
 

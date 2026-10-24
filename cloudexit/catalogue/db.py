@@ -5,7 +5,7 @@ import logging
 from cloudexit.catalogue.store import active_catalogue_path
 
 # Configure logger for database operations (level left to the root handlers)
-logger = logging.getLogger("core.engine.db")
+logger = logging.getLogger(__name__)
 
 ALLOWED_TABLES = {
     "resourcetype",

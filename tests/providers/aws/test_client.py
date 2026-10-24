@@ -185,7 +185,7 @@ class SweepTests(unittest.TestCase):
             def emit(self, record):
                 records.append(record)
 
-        aws_logger = logging.getLogger("core.engine.aws")
+        aws_logger = logging.getLogger("cloudexit.providers.aws")
         handler = Capture()
         previous = aws_logger.level
         aws_logger.addHandler(handler)

@@ -76,7 +76,7 @@ class BuildAwsResourceInventoryPerServiceTests(unittest.TestCase):
             os.makedirs(os.path.join(report_path, "data"), exist_ok=True)
             os.makedirs(raw_data_path, exist_ok=True)
 
-            with self.assertLogs("core.engine.aws", level="DEBUG") as cm:
+            with self.assertLogs("cloudexit.providers.aws", level="DEBUG") as cm:
                 build_aws_resource_inventory(
                     2,
                     {"accessKey": "AK", "secretKey": "SK", "region": "us-east-1"},
@@ -122,7 +122,7 @@ class BuildAwsResourceInventorySpecTests(unittest.TestCase):
             def emit(self, record):
                 records.append(record)
 
-        aws_logger = logging.getLogger("core.engine.aws")
+        aws_logger = logging.getLogger("cloudexit.providers.aws")
         handler = _Capture()
         previous_level = aws_logger.level
         aws_logger.addHandler(handler)

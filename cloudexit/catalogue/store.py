@@ -21,7 +21,7 @@ import requests
 
 from cloudexit.settings import Settings, SettingsError, normalize_host
 
-logger = logging.getLogger("main.utils.data")
+logger = logging.getLogger(__name__)
 
 CATALOGUE_BASE_URL = "https://cloudexit-oss-data-eu.fsn1.your-objectstorage.com"
 MANIFEST_NAME = "cloudexit-manifest.json"

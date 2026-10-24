@@ -12,7 +12,7 @@ from cloudexit.catalogue.db import connect, load_data
 from cloudexit.providers.azure.sdk import azure_import
 from cloudexit.providers.azure.clients import create_credential, create_resource_client
 
-logger = logging.getLogger("core.engine.azure")
+logger = logging.getLogger(__name__)
 
 
 def plain_json(value: Any) -> Any:

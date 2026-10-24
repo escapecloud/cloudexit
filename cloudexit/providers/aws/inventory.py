@@ -25,7 +25,7 @@ from cloudexit.providers.aws.client import (
     service_status,
 )
 
-logger = logging.getLogger("core.engine.aws")
+logger = logging.getLogger(__name__)
 
 
 def _names(services: dict[str, int]) -> str:

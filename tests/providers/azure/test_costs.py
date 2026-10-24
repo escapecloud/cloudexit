@@ -221,7 +221,7 @@ class CostInventoryTests(unittest.TestCase):
             patch(
                 "azure.mgmt.costmanagement.CostManagementClient", return_value=client
             ),
-            self.assertLogs("core.engine", level=logging.DEBUG) as logs,
+            self.assertLogs("cloudexit", level=logging.DEBUG) as logs,
         ):
             create_cost_inventory(1, self.DETAILS, self.report, self.raw)
 
@@ -238,7 +238,7 @@ class CostInventoryTests(unittest.TestCase):
             patch(
                 "azure.mgmt.costmanagement.CostManagementClient", return_value=client
             ),
-            self.assertLogs("core.engine", level=logging.ERROR),
+            self.assertLogs("cloudexit", level=logging.ERROR),
         ):
             result = create_cost_inventory(1, self.DETAILS, self.report, self.raw)
 

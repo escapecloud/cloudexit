@@ -40,7 +40,7 @@ from cloudexit.report.writers import anonymize_string
 
 PDF_HEADER_TITLE = "EscapeCloud Community Edition - Data & Egress"
 
-logger = logging.getLogger("core.engine.report_egress")
+logger = logging.getLogger(__name__)
 
 DEFAULT_PRICING_ZONE = "zone1"
 UNIT_DIVISORS = {"GB": 10**9, "GiB": 2**30}

@@ -17,7 +17,7 @@ from cloudexit.settings import normalize_host
 
 from cloudexit.platform.client import ApiClient, ApiError
 
-logger = logging.getLogger("core.engine.spool")
+logger = logging.getLogger(__name__)
 
 DEFAULT_PORTS = {"https": 443, "http": 80}
 DEFAULT_MAX_AGE_DAYS = 30

@@ -5,7 +5,7 @@ from typing import Any
 
 from cloudexit.catalogue.db import connect, load_data
 
-logger = logging.getLogger("core.engine.egress")
+logger = logging.getLogger(__name__)
 
 
 GIB = 1024**3

@@ -420,7 +420,7 @@ class UnknownStrategyTests(unittest.TestCase):
             return_value=registry,
         ):
             with self.assertLogs(
-                "core.engine.egress.azure", level="WARNING"
+                "cloudexit.providers.azure.egress", level="WARNING"
             ) as captured:
                 rows, findings = build_egress_inventory(
                     MagicMock(), MagicMock(), resources
