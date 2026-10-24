@@ -234,11 +234,11 @@ def estimate_egress(
 ) -> dict[str, Any]:
     try:
         if cloud_service_provider == 1:  # Azure
-            from .utils_egress_azure import collect_azure_egress
+            from cloudexit.providers.azure.egress import collect_azure_egress
 
             rows, archive_tiers = collect_azure_egress(provider_details)
         elif cloud_service_provider == 2:  # AWS
-            from .utils_egress_aws import collect_aws_egress
+            from cloudexit.providers.aws.egress import collect_aws_egress
 
             rows, archive_tiers = collect_aws_egress(provider_details)
         else:

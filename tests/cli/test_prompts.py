@@ -11,7 +11,10 @@ import main
 from tests.support.isolation import isolated_environ
 from tests.make_smoke_dataset import main as make_smoke_dataset
 from cloudexit import codes
-from utils.azure import select_resource_group, select_subscription
+from cloudexit.providers.azure.cli_session import (
+    select_resource_group,
+    select_subscription,
+)
 from utils.utils import NO_TERMINAL_MESSAGE, ask, prompt_required_inputs
 from tests.support.paths import ROOT
 
@@ -68,7 +71,7 @@ class EveryPromptTests(unittest.TestCase):
             patch("utils.utils.getpass.getpass", side_effect=EOFError),
             patch("utils.utils.console.print") as printed,
             patch("main.console.print"),
-            patch("utils.azure.console.print"),
+            patch("cloudexit.providers.azure.cli_session.console.print"),
             self.assertRaises(SystemExit) as ctx,
         ):
             call()

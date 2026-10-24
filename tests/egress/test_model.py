@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 from cloudexit.catalogue.db import load_data
 from core.utils_egress import estimate_egress, load_egress_registry
-from core.utils_egress_azure import filter_data_bearing_resources
+from cloudexit.providers.azure.egress import filter_data_bearing_resources
 
 # (id, csp, code, name, icon, status)
 RESOURCE_TYPES = [
@@ -222,7 +222,7 @@ class MissingTableTests(_FixtureDbTests):
 
     def test_estimate_egress_reports_the_failure_instead_of_raising(self):
         with patch(
-            "core.utils_egress_azure.collect_azure_egress",
+            "cloudexit.providers.azure.egress.collect_azure_egress",
             side_effect=sqlite3.OperationalError("no such table: resourcetype_data"),
         ):
             result = estimate_egress(

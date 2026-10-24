@@ -33,8 +33,8 @@ from core.utils_egress import (
     format_bytes,
     read_egress_inventory,
 )
-from core.utils_egress_aws import ARCHIVE_TIERS as AWS_ARCHIVE_TIERS
-from core.utils_egress_azure import ARCHIVE_TIERS as AZURE_ARCHIVE_TIERS
+from cloudexit.providers.aws.egress import ARCHIVE_TIERS as AWS_ARCHIVE_TIERS
+from cloudexit.providers.azure.egress import ARCHIVE_TIERS as AZURE_ARCHIVE_TIERS
 from core.utils_report import (
     _build_scope_section,
     _build_summary_section,

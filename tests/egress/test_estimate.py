@@ -215,7 +215,7 @@ class EstimateEgressDispatchTests(unittest.TestCase):
                 self.assertEqual(stored, len(payload["data"]["resources"]))
         return result, payload
 
-    @patch("core.utils_egress_azure.collect_azure_egress")
+    @patch("cloudexit.providers.azure.egress.collect_azure_egress")
     def test_azure_dispatch_and_json_schema(self, mock_collect):
         mock_collect.return_value = (_sample_rows(), {"Archive"})
 
@@ -236,7 +236,7 @@ class EstimateEgressDispatchTests(unittest.TestCase):
         self.assertEqual(payload["data"]["totals"]["known_size_bytes"], 100 * GIB)
         self.assertEqual(payload["data"]["totals"]["archive_tier_bytes"], 10 * GIB)
 
-    @patch("core.utils_egress_azure.collect_azure_egress")
+    @patch("cloudexit.providers.azure.egress.collect_azure_egress")
     def test_json_row_shape(self, mock_collect):
         rows = _sample_rows()
         mock_collect.return_value = (rows, {"Archive"})
@@ -266,7 +266,7 @@ class EstimateEgressDispatchTests(unittest.TestCase):
         self.assertNotIn("type", resource)
         self.assertEqual(resource["tier_bytes"], {"Hot": 50 * GIB, "Archive": 10 * GIB})
 
-    @patch("core.utils_egress_aws.collect_aws_egress")
+    @patch("cloudexit.providers.aws.egress.collect_aws_egress")
     def test_aws_dispatch_and_json_schema(self, mock_collect):
         mock_collect.return_value = (_sample_rows(), {"Archive"})
 
@@ -286,7 +286,7 @@ class EstimateEgressDispatchTests(unittest.TestCase):
         self.assertIn("Unsupported cloud service provider", result["logs"])
         self.assertIsNone(payload)
 
-    @patch("core.utils_egress_azure.collect_azure_egress")
+    @patch("cloudexit.providers.azure.egress.collect_azure_egress")
     def test_collection_error_returns_failure(self, mock_collect):
         mock_collect.side_effect = RuntimeError("enumeration failed")
 

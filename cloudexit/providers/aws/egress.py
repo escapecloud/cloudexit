@@ -1,16 +1,16 @@
-# core/utils_egress_aws.py
+# cloudexit/providers/aws/egress.py
 import boto3
 import logging
 from typing import Any
 from datetime import datetime, timedelta, timezone
 from botocore.exceptions import BotoCoreError, ClientError
 
-from .utils_aws import (
+from cloudexit.providers.aws.client import (
     create_client,
     extract_result_path,
     paginate_or_call,
 )
-from .utils_egress import GIB, format_bytes, load_egress_registry, new_row
+from core.utils_egress import GIB, format_bytes, load_egress_registry, new_row
 
 logger = logging.getLogger("core.engine.egress.aws")
 

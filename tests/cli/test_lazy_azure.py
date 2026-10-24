@@ -16,8 +16,8 @@ from tests.support.isolation import isolated_environ
 from tests.make_smoke_dataset import main as make_smoke_dataset
 from tests.support.paths import ROOT
 from cloudexit import codes
-from utils import azure as azure_utils
-from utils.azure import AzureSdkError, azure_import, require_azure_sdk
+from cloudexit.providers.azure import sdk as azure_utils
+from cloudexit.providers.azure.sdk import AzureSdkError, azure_import, require_azure_sdk
 
 SMOKE_STATE = ROOT / "tests" / "fixtures" / "smoke" / "aws.tfstate"
 

@@ -133,7 +133,7 @@ jobs:
           "$cloudexit" --version
           "$cloudexit" config path
           "$VENV_BIN/python" - <<'PY'
-          from core.utils_azure import (
+          from cloudexit.providers.azure.clients import (
               create_cost_client,
               create_resource_client,
               create_subscription_client,
@@ -201,7 +201,7 @@ jobs:
           "$cloudexit" --version
           "$cloudexit" config path
           "$RUNNER_TEMP/venv/bin/python" - <<'PY'
-          from core.utils_azure import (
+          from cloudexit.providers.azure.clients import (
               create_cost_client,
               create_resource_client,
               create_subscription_client,

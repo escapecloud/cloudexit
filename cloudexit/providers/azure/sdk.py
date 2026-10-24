@@ -1,16 +1,11 @@
-# utils/azure.py
+# cloudexit/providers/azure/sdk.py
 import importlib
 import logging
-import shutil
-import subprocess
 from importlib.metadata import PackageNotFoundError, requires
 from typing import Any
-from rich.console import Console
-
-from utils.utils import ask
 
 logger = logging.getLogger("main.utils.azure")
-console = Console()
+
 
 # The SDK classes the Azure paths use, and the distribution that provides each
 SDK_SYMBOLS = (
@@ -26,6 +21,8 @@ SDK_SYMBOLS = (
     ("azure.mgmt.costmanagement.models", "TimeframeType"),
     ("azure.mgmt.authorization", "AuthorizationManagementClient"),
 )
+
+
 SDK_DISTRIBUTIONS = {
     "azure.identity": "azure-identity",
     "azure.core": "azure-core",
@@ -81,72 +78,3 @@ def azure_import(module: str, name: str) -> Any:
 def require_azure_sdk() -> None:
     for module, name in SDK_SYMBOLS:
         azure_import(module, name)
-
-
-def is_azure_cli_installed() -> bool:
-    return shutil.which("az") is not None
-
-
-def is_azure_cli_logged_in() -> bool:
-    try:
-        # Run the 'az account show' command to check if the user is logged in
-        subprocess.run(
-            ["az", "account", "show"],
-            check=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        return True
-    except subprocess.CalledProcessError:
-        return False
-
-
-def is_azure_cli_token_expired() -> bool:
-    AzureCliCredential = azure_import("azure.identity", "AzureCliCredential")
-    ClientAuthenticationError = azure_import(
-        "azure.core.exceptions", "ClientAuthenticationError"
-    )
-    credential = AzureCliCredential()
-    try:
-        credential.get_token("https://management.azure.com/.default")
-        return False  # Token is valid
-    except ClientAuthenticationError as e:
-        if "AADSTS700082" in str(e):
-            return True  # Token expired
-        return False
-
-
-def select_subscription(subscriptions: list[Any]) -> Any:
-    # logger.info("Listing available subscriptions for selection.")
-    console.print("Available Subscriptions:")
-    for idx, sub in enumerate(subscriptions, start=1):
-        console.print(f"{idx}. {sub.display_name} ({sub.subscription_id})")
-    while True:
-        try:
-            selection = int(ask("Select a subscription by number: ").strip())
-            if not (1 <= selection <= len(subscriptions)):
-                raise ValueError("Invalid subscription selection.")
-            selected_subscription = subscriptions[selection - 1]
-            # logger.info(f"Subscription selected: {selected_subscription.display_name} ({selected_subscription.subscription_id})")
-            return selected_subscription
-        except ValueError as e:
-            logger.debug(f"Invalid subscription selection: {e}")
-            console.print(f"[red]{e} Please select a valid number.[/red]")
-
-
-def select_resource_group(resource_groups: list[Any]) -> str:
-    # logger.info("Listing available resource groups for selection.")
-    console.print("Available Resource Groups:")
-    for idx, rg in enumerate(resource_groups, start=1):
-        console.print(f"{idx}. {rg.name}")
-    while True:
-        try:
-            selection = int(ask("Select a resource group by number: ").strip())
-            if not (1 <= selection <= len(resource_groups)):
-                raise ValueError("Invalid resource group selection.")
-            selected_resource_group = resource_groups[selection - 1].name
-            # logger.info(f"Resource Group selected: {selected_resource_group}")
-            return selected_resource_group
-        except ValueError as e:
-            logger.debug(f"Invalid resource group selection: {e}")
-            console.print(f"[red]{e} Please select a valid number.[/red]")
