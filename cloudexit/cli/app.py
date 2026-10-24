@@ -91,12 +91,11 @@ from cloudexit.catalogue.store import (
     use_catalogue_file,
 )
 from cloudexit.cli.prompts import (
-    ask,
     ascii_art,
     prompt_required_inputs,
     print_help_message,
-    print_step,
 )
+from cloudexit.terminal import ask, print_step
 from cloudexit.runconfig.loader import (
     build_config,
     load_config,
