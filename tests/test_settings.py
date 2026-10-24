@@ -155,7 +155,7 @@ class PrecedenceTests(SettingsTestCase):
         ca_bundle = self.tmp / "ca.pem"
         ca_bundle.write_text("pem")
         self.write_config(
-            f'[default]\nassessment_id = "from-file"\nca_bundle = "{ca_bundle}"\n'
+            f"[default]\nassessment_id = 'from-file'\nca_bundle = '{ca_bundle}'\n"
         )
 
         settings = self.load(
@@ -340,7 +340,7 @@ class KeyFileTests(SettingsTestCase):
         self.assertEqual(self.load(None, env).api_key.value, KEY)
 
     def test_a_higher_layer_inline_key_beats_a_lower_layer_key_file(self):
-        self.write_config(f'[default]\napi_key_file = "{self.write_key()}"\n')
+        self.write_config(f"[default]\napi_key_file = '{self.write_key()}'\n")
         settings = self.load(None, {"CLOUDEXIT_API_KEY": "inline-key-123456"})
         self.assertEqual(settings.api_key.value, "inline-key-123456")
 
