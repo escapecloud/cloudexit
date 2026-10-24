@@ -30,6 +30,7 @@ dev = [
     "jsonschema",
     "PyYAML",
     "pypdf",
+    "coverage",
 ]
 
 [project.scripts]
@@ -39,6 +40,9 @@ cloudexit = "main:main"
 # ruff 0.16 enlarged its default rule set; keep the previous defaults until
 # the new rules are adopted deliberately
 select = ["E4", "E7", "E9", "F"]
+
+[tool.coverage.run]
+source = ["main", "core", "utils"]
 
 [tool.setuptools.dynamic]
 version = {attr = "utils.version.__version__"}

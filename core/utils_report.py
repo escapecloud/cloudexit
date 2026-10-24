@@ -156,7 +156,7 @@ def generate_html_report(
 
     # Save HTML report
     html_path = os.path.join(report_path, "index.html")
-    with open(html_path, "w") as report_file:
+    with open(html_path, "w", encoding="utf-8") as report_file:
         report_file.write(html_content)
 
     return html_path
@@ -215,7 +215,7 @@ def generate_json_report(
 
     # Save JSON to file
     json_path = os.path.join(raw_data_path, "assessment_result.json")
-    with open(json_path, "w") as json_file:
+    with open(json_path, "w", encoding="utf-8") as json_file:
         json.dump(report_json, json_file, indent=4)
 
     return json_path

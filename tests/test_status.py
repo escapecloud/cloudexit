@@ -19,6 +19,8 @@ from core.status import (
     check_tls,
     host_catalogue_lines,
     run_status,
+    status_budget,
+    STATUS_BUDGET,
 )
 from tests.api_fixtures import (
     EU_KEY,
@@ -30,6 +32,7 @@ from tests.api_fixtures import (
     whoami_reply,
 )
 from tests.http_fixtures import fake_http
+from tests.isolation import isolated_environ
 from tests.sync_fixtures import SYNC_ID
 from utils import codes
 from utils.data import compare_catalogue_versions, parse_catalogue_version
@@ -98,11 +101,7 @@ class StatusTestCase(unittest.TestCase):
         self.other.write_text("other")
         patcher = patch.dict(
             "os.environ",
-            {
-                "XDG_DATA_HOME": str(self.tmp / "data"),
-                "XDG_CACHE_HOME": str(self.tmp / "cache"),
-                "XDG_STATE_HOME": str(self.tmp / "state"),
-            },
+            isolated_environ(self.tmp),
         )
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -467,6 +466,13 @@ class ReportContentTests(StatusTestCase):
         self.assertEqual(data["exit_code"], codes.UPLOAD_UNAVAILABLE)
         self.assertEqual(data["problems"][0]["exit_code"], codes.UPLOAD_UNAVAILABLE)
         self.assertTrue(data["configured"])
+
+
+class StatusBudgetTests(unittest.TestCase):
+    def test_a_budget_the_user_set_applies_and_otherwise_the_default_does(self):
+        self.assertEqual(status_budget(Settings()), STATUS_BUDGET)
+        chosen = Settings(upload_budget=Setting(2.5, "flag --upload-budget"))
+        self.assertEqual(status_budget(chosen), 2.5)
 
 
 class CatalogueComparisonTests(unittest.TestCase):

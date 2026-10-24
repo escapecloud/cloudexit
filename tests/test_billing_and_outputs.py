@@ -14,6 +14,7 @@ from core.upload import (
     upload,
     write_upload_record,
 )
+from tests.isolation import isolated_environ
 from tests.api_fixtures import (
     HOST,
     KEY,
@@ -120,10 +121,7 @@ class UploadBillingTests(unittest.TestCase):
     def upload(self, billing):
         with patch.dict(
             os.environ,
-            {
-                "XDG_CACHE_HOME": str(self.tmp / "cache"),
-                "XDG_STATE_HOME": str(self.tmp / "state"),
-            },
+            isolated_environ(self.tmp),
         ):
             with fake_http(meta_reply(), whoami_reply(), created_reply(**billing)):
                 return upload(

@@ -15,6 +15,7 @@ from core.engine import generate_report, perform_risk_assessment
 from core.report import fonts
 from core.resources import asset_path, find_asset
 from core.utils import copy_assets
+from tests.isolation import isolated_environ
 from tests.flow_fixtures import build_flow_run
 from tests.test_report_flow import AWS_RESOURCES, CONFIG, COSTS
 
@@ -146,10 +147,7 @@ class RunFromAnotherDirectoryTests(unittest.TestCase):
         self.tmp = Path(tmp.name)
         patcher = mock.patch.dict(
             os.environ,
-            {
-                "XDG_DATA_HOME": str(self.tmp / "data"),
-                "XDG_CACHE_HOME": str(self.tmp / "cache"),
-            },
+            isolated_environ(self.tmp),
         )
         patcher.start()
         self.addCleanup(patcher.stop)

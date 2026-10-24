@@ -24,11 +24,21 @@ ALLOWED_TABLES = {
 }
 
 
+class _Connection(sqlite3.Connection):
+    # `with connect(...)` commits or rolls back like any connection, and also
+    # closes it: an open handle keeps Windows from removing the report folder.
+    def __exit__(self, *exc):
+        try:
+            return super().__exit__(*exc)
+        finally:
+            self.close()
+
+
 def connect(db_path=None):
     # No path means the catalogue dataset this run uses
     db_path = db_path or active_catalogue_path()
     try:
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(db_path, factory=_Connection)
         return conn
     except sqlite3.Error as e:
         logger.debug(f"Error connecting to database: {e}")
@@ -39,12 +49,11 @@ def load_data(table_name, db_path=None):
     if table_name not in ALLOWED_TABLES:
         raise ValueError(f"Disallowed table name: {table_name}")
     try:
-        conn = connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute(f"SELECT * FROM {table_name}")
-        columns = [desc[0] for desc in cursor.description]
-        rows = cursor.fetchall()
-        conn.close()
+        with connect(db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT * FROM {table_name}")
+            columns = [desc[0] for desc in cursor.description]
+            rows = cursor.fetchall()
         return [dict(zip(columns, row)) for row in rows]
     except sqlite3.Error as e:
         logger.debug(f"Error loading data from table '{table_name}': {e}")
@@ -53,12 +62,10 @@ def load_data(table_name, db_path=None):
 
 def execute_query(query, params=None, db_path=None):
     try:
-        conn = connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute(query, params or ())
-        conn.commit()
-        rowcount = cursor.rowcount
-        conn.close()
+        with connect(db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, params or ())
+            rowcount = cursor.rowcount
         return rowcount
     except sqlite3.Error as e:
         logger.debug(f"Error executing query: {e}")
@@ -67,12 +74,11 @@ def execute_query(query, params=None, db_path=None):
 
 def fetch_one(query, params=None, db_path=None):
     try:
-        conn = connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute(query, params or ())
-        row = cursor.fetchone()
-        columns = [desc[0] for desc in cursor.description]
-        conn.close()
+        with connect(db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, params or ())
+            row = cursor.fetchone()
+            columns = [desc[0] for desc in cursor.description]
         return dict(zip(columns, row)) if row else None
     except sqlite3.Error as e:
         logger.debug(f"Error fetching data: {e}")
@@ -81,12 +87,11 @@ def fetch_one(query, params=None, db_path=None):
 
 def fetch_all(query, params=None, db_path=None):
     try:
-        conn = connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute(query, params or ())
-        rows = cursor.fetchall()
-        columns = [desc[0] for desc in cursor.description]
-        conn.close()
+        with connect(db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, params or ())
+            rows = cursor.fetchall()
+            columns = [desc[0] for desc in cursor.description]
         return [dict(zip(columns, row)) for row in rows]
     except sqlite3.Error as e:
         logger.debug(f"Error fetching data: {e}")

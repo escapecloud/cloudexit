@@ -22,9 +22,11 @@ from core.sync_document import (
     decimal_amount,
     new_uuid7,
     prepare_sync_document,
+    salt_path,
     scope_key,
     validate_document,
 )
+from tests.isolation import isolated_environ
 from tests.sync_fixtures import (
     ACCESS_KEY,
     CLIENT_SECRET,
@@ -70,7 +72,7 @@ class SyncDocumentTestCase(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.tmp = Path(tmp.name)
-        patcher = patch.dict(os.environ, {"XDG_DATA_HOME": str(self.tmp / "data")})
+        patcher = patch.dict(os.environ, isolated_environ(self.tmp))
         patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -455,9 +457,7 @@ class HashedNamesTests(SyncDocumentTestCase):
     def test_the_hash_is_an_hmac_with_the_stored_scope_salt(self):
         document = self.document()
 
-        salt_file = (
-            self.tmp / "data" / "cloudexit" / "salts" / "aws:123456789012:eu-central-1"
-        )
+        salt_file = salt_path("aws:123456789012:eu-central-1")
         salt = bytes.fromhex(salt_file.read_text().strip())
         expected = hmac.new(salt, b"web-1", hashlib.sha256).hexdigest()
         self.assertEqual(self.names(document)[1], expected)
@@ -465,9 +465,7 @@ class HashedNamesTests(SyncDocumentTestCase):
     @unittest.skipUnless(os.name == "posix", "POSIX permissions")
     def test_the_salt_file_is_private(self):
         self.document()
-        salt_file = (
-            self.tmp / "data" / "cloudexit" / "salts" / "aws:123456789012:eu-central-1"
-        )
+        salt_file = salt_path("aws:123456789012:eu-central-1")
         self.assertEqual(stat.S_IMODE(salt_file.stat().st_mode), 0o600)
 
     def test_hashes_are_stable_within_a_scope(self):

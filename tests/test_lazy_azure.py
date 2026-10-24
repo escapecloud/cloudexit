@@ -12,6 +12,7 @@ from pathlib import Path
 from unittest import mock
 
 import main
+from tests.isolation import isolated_environ
 from tests.make_smoke_dataset import main as make_smoke_dataset
 from utils import codes
 from utils import azure as azure_utils
@@ -51,9 +52,7 @@ class SubprocessTestCase(unittest.TestCase):
         self.work.mkdir()
         self.env = {
             **os.environ,
-            "XDG_DATA_HOME": str(self.tmp / "data"),
-            "XDG_CONFIG_HOME": str(self.tmp / "config"),
-            "XDG_CACHE_HOME": str(self.tmp / "cache"),
+            **isolated_environ(self.tmp),
             "CLOUDEXIT_CATALOGUE_URL": "http://127.0.0.1:9",
             "ESC_EXIT_STRATEGY": "1",
             "ESC_ASSESSMENT_TYPE": "1",

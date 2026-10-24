@@ -53,14 +53,24 @@ jobs:
 
   check-tests:
     if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
+    name: tests (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, python: "3.12" }
+          - { os: ubuntu-latest, python: "3.13" }
+          - { os: ubuntu-latest, python: "3.14", coverage: true }
+          - { os: macos-latest, python: "3.14" }
+          - { os: windows-latest, python: "3.14" }
     steps:
       - uses: actions/checkout@v5
 
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: ${{ matrix.python }}
           cache: pip
 
       - name: Install dependencies
@@ -69,11 +79,26 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Unit tests
+        if: ${{ !matrix.coverage }}
         run: python -m unittest discover -s tests
+
+      - name: Unit tests with coverage
+        if: ${{ matrix.coverage }}
+        run: |
+          coverage run -m unittest discover -s tests
+          coverage report
 
   install-smoke:
     if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
+    name: install smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v5
 
@@ -82,27 +107,32 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
+      - name: Locate the virtual environment
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then bin=Scripts; else bin=bin; fi
+          echo "VENV_BIN=$RUNNER_TEMP/venv/$bin" >> "$GITHUB_ENV"
+
       - name: Install the package (not editable)
         run: |
           python -m venv "$RUNNER_TEMP/venv"
-          "$RUNNER_TEMP/venv/bin/python" -m pip install --upgrade pip
-          "$RUNNER_TEMP/venv/bin/python" -m pip install .
+          "$VENV_BIN/python" -m pip install --upgrade pip
+          "$VENV_BIN/python" -m pip install .
 
       - name: Build the smoke dataset
-        run: '"$RUNNER_TEMP/venv/bin/python" -m tests.make_smoke_dataset "$RUNNER_TEMP/smoke.db"'
+        run: '"$VENV_BIN/python" -m tests.make_smoke_dataset "$RUNNER_TEMP/smoke.db"'
 
       - name: Run from an unrelated directory
         env:
           ESC_EXIT_STRATEGY: "1"
           ESC_ASSESSMENT_TYPE: "1"
         run: |
-          cloudexit="$RUNNER_TEMP/venv/bin/cloudexit"
+          cloudexit="$VENV_BIN/cloudexit"
           workdir="$(mktemp -d)"
           cd "$workdir"
 
           "$cloudexit" --version
           "$cloudexit" config path
-          "$RUNNER_TEMP/venv/bin/python" - <<'PY'
+          "$VENV_BIN/python" - <<'PY'
           from core.utils_azure import (
               create_cost_client,
               create_resource_client,

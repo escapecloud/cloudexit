@@ -14,6 +14,7 @@ import requests
 
 import main
 from core import utils_db
+from tests.isolation import isolated_environ
 from tests.catalogue_fixtures import (
     build_catalogue,
     catalogue_bytes,
@@ -525,6 +526,7 @@ class StatusTests(CatalogueTestCase):
 
 
 class LocationTests(unittest.TestCase):
+    @unittest.skipIf(os.name == "nt", "absolute /xdg paths are POSIX paths")
     def test_xdg_data_home_and_defaults(self):
         self.assertEqual(
             catalogue_dir({"XDG_DATA_HOME": "/xdg"}, platform="linux"),
@@ -659,7 +661,7 @@ class RunIntegrationTests(CatalogueTestCase):
 class CatalogueCommandTests(CatalogueTestCase):
     def run_command(self, *argv, replies=()):
         out = io.StringIO()
-        environ = {"XDG_DATA_HOME": str(self.tmp / "data")}
+        environ = isolated_environ(self.tmp)
         with (
             patch("sys.argv", ["cloudexit", "catalogue", *argv]),
             patch.dict(os.environ, environ, clear=True),
@@ -780,7 +782,7 @@ class DatabaseContractTests(CatalogueTestCase):
         catalogue_info(path)
         active_resource_type_ids("aws", path)
         self.assertEqual(path.read_bytes(), before)
-        with sqlite3.connect(path) as conn:
+        with contextlib.closing(sqlite3.connect(path)) as conn:
             self.assertEqual(conn.execute("PRAGMA integrity_check").fetchone()[0], "ok")
 
 

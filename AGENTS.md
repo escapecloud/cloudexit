@@ -6,7 +6,7 @@ cloudexit is an offline-first CLI. It collects cloud inventory and cost data wit
 
 ## Setup
 
-- Python 3.14, the version CI runs on.
+- Develop on Python 3.14. CI also tests 3.12 and 3.13 on Linux and 3.14 on macOS and Windows, because `requires-python` is `>=3.12`: don't use anything newer than 3.12 (for example `uuid.uuid7` only behind a fallback).
 - Create and activate a virtualenv, then `pip install -r requirements-dev.txt`.
 - Run the CLI with `python3 main.py`, or `pip install -e .` and use the `cloudexit` command.
 - Local configs go in `config/` (start from a `*_example.json` template). They are never committed.
@@ -30,6 +30,8 @@ python -m unittest discover -s tests
 
 - Add or update tests with every behaviour change. Fixtures live in `tests/`.
 - Tests never call real cloud APIs or real platforms. Mock `boto3`, the Azure SDK and HTTP.
+- Tests that cannot run on a platform (POSIX file modes on Windows) are skipped with `unittest.skipIf` or `skipUnless` and a reason, never deleted.
+- The Ubuntu 3.14 job runs the suite under `coverage` and prints the report. There is no threshold.
 
 ## Branches
 

@@ -1,0 +1,2 @@
+# The definition copy is compared by file hash, so it must not get CRLF line endings
+docs/api-v2/** text eol=lf

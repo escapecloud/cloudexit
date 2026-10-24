@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import main
+from tests.isolation import isolated_environ
 from tests.make_smoke_dataset import main as make_smoke_dataset
 from utils import codes
 from utils.azure import select_resource_group, select_subscription
@@ -128,14 +129,7 @@ class WithoutATerminalTests(unittest.TestCase):
             for key, value in os.environ.items()
             if not key.startswith(("ESC_", "CLOUDEXIT_"))
         }
-        self.env.update(
-            {
-                "XDG_DATA_HOME": str(self.tmp / "data"),
-                "XDG_CONFIG_HOME": str(self.tmp / "config"),
-                "XDG_CACHE_HOME": str(self.tmp / "cache"),
-                "COLUMNS": "200",
-            }
-        )
+        self.env.update({**isolated_environ(self.tmp), "COLUMNS": "200"})
 
     def run_cli(self, stdin, *extra):
         result = subprocess.run(

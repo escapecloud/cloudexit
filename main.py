@@ -153,16 +153,33 @@ def configure_logging(verbose: int = 0) -> None:
         logging.getLogger(name).setLevel(logging.WARNING)
 
 
+_run_log_handler = None
+
+
+def close_run_log_handler() -> None:
+    # An open run.log keeps Windows from moving or deleting the report folder
+    global _run_log_handler
+    if _run_log_handler is not None:
+        logging.getLogger().removeHandler(_run_log_handler)
+        _run_log_handler.close()
+        _run_log_handler = None
+
+
 def add_run_log_handler(report_path: str) -> None:
     # A logging-setup failure must never abort the assessment, so degrade
     # gracefully if run.log cannot be created (e.g. dir missing or read-only).
+    global _run_log_handler
+    close_run_log_handler()
     try:
-        file_handler = logging.FileHandler(os.path.join(report_path, "run.log"))
+        file_handler = logging.FileHandler(
+            os.path.join(report_path, "run.log"), encoding="utf-8"
+        )
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(
             logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         )
         logging.getLogger().addHandler(file_handler)
+        _run_log_handler = file_handler
     except OSError as exc:
         logger.warning("Could not create run.log in %s: %s", report_path, exc)
 
@@ -1226,6 +1243,8 @@ def run_assessment(
         # Also funnel to run.log at DEBUG (kept off the default console).
         logger.debug("Unexpected error", exc_info=True)
         sys.exit(codes.UNEXPECTED)
+    finally:
+        close_run_log_handler()
 
 
 def parse_arguments():
@@ -1950,10 +1969,22 @@ def _dispatch_json(args):
         _emit_run_json(stdout, exit_code)
 
 
+def _use_utf8_output():
+    # The steps use arrows and dashes; a pipe or file whose encoding cannot
+    # hold them (cp1252 on Windows) must not stop a run
+    for stream in (sys.stdout, sys.stderr):
+        encoding = getattr(stream, "encoding", None) or "utf-8"
+        if encoding.lower().replace("-", "") != "utf8":
+            reconfigure = getattr(stream, "reconfigure", None)
+            if reconfigure:
+                reconfigure(encoding="utf-8", errors="replace")
+
+
 def main():
     # Parse arguments first so --version/--help exit before any side effects
     # (ASCII art, dataset download).
     args = parse_arguments()
+    _use_utf8_output()
 
     # Configure logging before any side effects so verbosity applies everywhere.
     configure_logging(getattr(args, "verbose", 0))

@@ -26,6 +26,7 @@ from core.spool import (
     state_dir,
 )
 from core.upload import UploadResult, read_sync_files, upload
+from tests.isolation import isolated_environ
 from tests.api_fixtures import (
     HOST,
     KEY,
@@ -148,6 +149,7 @@ class HostIdTests(unittest.TestCase):
 
 
 class RootTests(unittest.TestCase):
+    @unittest.skipIf(os.name == "nt", "absolute /xdg paths are POSIX paths")
     def test_the_state_directory_follows_the_platform_conventions(self):
         self.assertEqual(
             state_dir({"XDG_STATE_HOME": "/xdg"}, platform="linux"),
@@ -162,6 +164,7 @@ class RootTests(unittest.TestCase):
             Path("C:/L") / "cloudexit" / "state",
         )
 
+    @unittest.skipIf(os.name == "nt", "absolute /xdg paths are POSIX paths")
     def test_the_spool_lives_under_the_state_directory_unless_set(self):
         with patch.dict(os.environ, {"XDG_STATE_HOME": "/xdg"}):
             self.assertEqual(spool_root(None), Path("/xdg/cloudexit/spool"))
@@ -895,9 +898,7 @@ class CommandTestCase(SpoolCase):
                 "CLOUDEXIT_API_KEY": KEY,
                 "CLOUDEXIT_SPOOL_DIR": str(self.tmp / "spool"),
                 "CLOUDEXIT_UPLOAD_BUDGET": "0",
-                "XDG_CONFIG_HOME": str(self.tmp / "config"),
-                "XDG_CACHE_HOME": str(self.tmp / "cache"),
-                "XDG_STATE_HOME": str(self.tmp / "state"),
+                **isolated_environ(self.tmp),
             }
         )
         patcher = patch.dict(os.environ, env, clear=True)
@@ -1263,9 +1264,7 @@ class SpoolCliTests(unittest.TestCase):
         }
         self.env.update(
             {
-                "XDG_STATE_HOME": str(self.tmp / "state"),
-                "XDG_CONFIG_HOME": str(self.tmp / "config"),
-                "XDG_CACHE_HOME": str(self.tmp / "cache"),
+                **isolated_environ(self.tmp),
                 "COLUMNS": "200",
             }
         )
