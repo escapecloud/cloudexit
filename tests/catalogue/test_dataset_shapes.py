@@ -19,7 +19,7 @@ from tests.support.http import fake_http, make_response
 from tests.support.isolation import isolated_environ
 from tests.support.sync import schema_errors
 from cloudexit import codes
-from utils.data import (
+from cloudexit.catalogue.store import (
     UNPACK_FLOOR,
     CatalogueError,
     read_state,
@@ -339,7 +339,7 @@ class DecompressionBombTests(cat.CatalogueTestCase):
         entry["size_bytes"] = 10**12
 
         with (
-            patch("utils.data.UNPACK_CEILING", UNPACK_FLOOR),
+            patch("cloudexit.catalogue.store.UNPACK_CEILING", UNPACK_FLOOR),
             fake_http(self.manifest_reply(entry), make_response(content=bomb)),
             self.assertRaises(CatalogueError),
         ):

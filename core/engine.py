@@ -17,7 +17,7 @@ from .utils_azure import (
     create_resource_client,
 )
 from utils.azure import azure_import
-from .utils_db import connect, load_data
+from cloudexit.catalogue.db import connect, load_data
 from .utils_tfstate import build_tfstate_resource_inventory
 from .report.context import build_context, collect_provenance
 from .report.executive_summary import generate_executive_summary

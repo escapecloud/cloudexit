@@ -12,7 +12,7 @@ from collections import defaultdict
 from utils.azure import azure_import
 from utils.utils import print_step
 
-from .utils_db import connect, load_data
+from cloudexit.catalogue.db import connect, load_data
 
 logger = logging.getLogger("core.engine.azure")
 logging.getLogger("azure").setLevel(logging.WARNING)

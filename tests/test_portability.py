@@ -12,7 +12,7 @@ from pathlib import Path
 
 import main
 import tests
-from core import utils_db
+from cloudexit.catalogue import db as catalogue_db
 from tests.support.isolation import isolated_environ
 from tests.make_smoke_dataset import main as make_smoke_dataset
 from tests.support.paths import ROOT
@@ -70,7 +70,7 @@ class OpenFileTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.path = Path(tmp.name) / "run.db"
-        with utils_db.connect(self.path) as conn:
+        with catalogue_db.connect(self.path) as conn:
             conn.execute("CREATE TABLE risk (id INTEGER, name TEXT)")
             conn.execute("INSERT INTO risk VALUES (1, 'a')")
 
@@ -79,38 +79,38 @@ class OpenFileTests(unittest.TestCase):
             conn.execute("SELECT 1")
 
     def test_a_with_block_commits_and_closes_the_connection(self):
-        with utils_db.connect(self.path) as conn:
+        with catalogue_db.connect(self.path) as conn:
             conn.execute("INSERT INTO risk VALUES (2, 'b')")
         self.assert_closed(conn)
-        self.assertEqual(len(utils_db.load_data("risk", self.path)), 2)
+        self.assertEqual(len(catalogue_db.load_data("risk", self.path)), 2)
 
     def test_a_failed_with_block_rolls_back_and_closes(self):
         with self.assertRaises(RuntimeError):
-            with utils_db.connect(self.path) as conn:
+            with catalogue_db.connect(self.path) as conn:
                 conn.execute("INSERT INTO risk VALUES (3, 'c')")
                 raise RuntimeError("stop")
         self.assert_closed(conn)
-        self.assertEqual(len(utils_db.load_data("risk", self.path)), 1)
+        self.assertEqual(len(catalogue_db.load_data("risk", self.path)), 1)
 
     def test_the_helpers_close_their_connection_on_success_and_on_error(self):
         opened = []
-        real = utils_db.connect
+        real = catalogue_db.connect
 
         def spy(path=None):
             conn = real(path)
             opened.append(conn)
             return conn
 
-        utils_db.connect, original = spy, utils_db.connect
+        catalogue_db.connect, original = spy, catalogue_db.connect
         try:
-            utils_db.load_data("risk", self.path)
-            utils_db.fetch_one("SELECT * FROM risk", db_path=self.path)
-            utils_db.fetch_all("SELECT * FROM risk", db_path=self.path)
-            utils_db.execute_query("UPDATE risk SET name = 'z'", db_path=self.path)
+            catalogue_db.load_data("risk", self.path)
+            catalogue_db.fetch_one("SELECT * FROM risk", db_path=self.path)
+            catalogue_db.fetch_all("SELECT * FROM risk", db_path=self.path)
+            catalogue_db.execute_query("UPDATE risk SET name = 'z'", db_path=self.path)
             with self.assertRaises(sqlite3.Error):
-                utils_db.fetch_all("SELECT * FROM nothing", db_path=self.path)
+                catalogue_db.fetch_all("SELECT * FROM nothing", db_path=self.path)
         finally:
-            utils_db.connect = original
+            catalogue_db.connect = original
         self.assertEqual(len(opened), 5)
         for conn in opened:
             self.assert_closed(conn)
