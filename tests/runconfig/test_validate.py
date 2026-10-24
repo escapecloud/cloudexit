@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from utils.validate import validate_config, validate_region
+from cloudexit.runconfig.validate import validate_config, validate_region
 
 
 def build_aws_config():

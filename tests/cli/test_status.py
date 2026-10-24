@@ -37,7 +37,7 @@ from tests.support.isolation import isolated_environ
 from tests.support.sync import SYNC_ID
 from cloudexit import codes
 from utils.data import compare_catalogue_versions, parse_catalogue_version
-from utils.settings import Setting, Settings
+from cloudexit.settings import Setting, Settings
 
 NOW = 1_800_000_000.0
 REAL_CLIENT = ApiClient.from_settings

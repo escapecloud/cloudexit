@@ -19,7 +19,7 @@ from urllib.parse import unquote, urljoin, urlsplit
 
 import requests
 
-from utils.settings import Settings, SettingsError, normalize_host
+from cloudexit.settings import Settings, SettingsError, normalize_host
 
 logger = logging.getLogger("main.utils.data")
 

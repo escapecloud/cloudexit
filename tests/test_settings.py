@@ -11,7 +11,7 @@ from unittest.mock import patch
 import main
 from tests.support.isolation import isolated_environ
 from cloudexit import codes
-from utils.settings import (
+from cloudexit.settings import (
     DEFAULT_TIMEOUT,
     Settings,
     SettingsError,
@@ -31,7 +31,7 @@ class SettingsTestCase(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.tmp = Path(tmp.name)
-        patcher = patch("utils.settings.legacy_config", None)
+        patcher = patch("cloudexit.settings.legacy_config", None)
         patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -56,7 +56,9 @@ class SettingsTestCase(unittest.TestCase):
         return load_settings(flags, environ=environ)
 
     def legacy(self, **values):
-        return patch("utils.settings.legacy_config", types.SimpleNamespace(**values))
+        return patch(
+            "cloudexit.settings.legacy_config", types.SimpleNamespace(**values)
+        )
 
 
 class ConfigFilePathTests(unittest.TestCase):

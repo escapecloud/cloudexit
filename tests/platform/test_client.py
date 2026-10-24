@@ -47,7 +47,7 @@ from tests.support.api import (
 from tests.support.http import fake_http, make_response
 from tests.support.sync import DEFINITION, schema_errors
 from cloudexit import codes
-from utils.settings import Setting
+from cloudexit.settings import Setting
 
 SYNC_ID = "01933b9e-7c2a-7d41-9a51-3c8f0a6e0001"
 ERRORS = yaml.safe_load((DEFINITION / "errors.yaml").read_text(encoding="utf-8"))

@@ -20,7 +20,7 @@ from tests.support.api import (
 )
 from tests.report import test_report_flow as flow
 from cloudexit import codes
-from utils.settings import Setting, Settings
+from cloudexit.settings import Setting, Settings
 
 OUTDATED = {
     "code": "collector_catalogue_outdated",

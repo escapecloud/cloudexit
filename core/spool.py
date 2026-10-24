@@ -13,7 +13,7 @@ from typing import Any, Callable, Mapping
 from urllib.parse import urlsplit
 
 from cloudexit import codes
-from utils.settings import normalize_host
+from cloudexit.settings import normalize_host
 
 from .api_v2 import ApiClient, ApiError
 

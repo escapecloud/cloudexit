@@ -9,7 +9,7 @@ from unittest.mock import ANY, MagicMock, patch
 import main
 from core.sync_document import SyncOutput
 from cloudexit import codes
-from utils.settings import Settings
+from cloudexit.settings import Settings
 
 VALID_CONFIG = {
     "name": "Test Assessment",

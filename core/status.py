@@ -18,7 +18,7 @@ from utils.data import (
     compare_catalogue_versions,
     installed_catalogue,
 )
-from utils.settings import describe
+from cloudexit.settings import describe
 
 from .api_v2 import ApiClient, ApiError, check_key, client_policy, resolve_ca_bundle
 from .spool import DEFAULT_MAX_AGE_DAYS, Spool, format_age, host_id
