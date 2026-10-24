@@ -22,6 +22,8 @@ from reportlab.platypus import (
     TableStyle,
 )
 
+from core.report.helpers import initials
+from core.report.placeholder import IconPlaceholder
 from core.resources import asset_path, find_asset
 from core.utils_db import load_data
 from core.utils_egress import (
@@ -145,7 +147,6 @@ FALLBACK_ICONS = {
     ),
     "aws.backup.list_backup_vaults.backupvaultlist": "/icons/aws/Storage/Backup.png",
 }
-DEFAULT_ICON = "/icons/misc/no_image.png"
 
 
 def _unit_divisor(unit: str) -> float:
@@ -295,7 +296,7 @@ def _build_icon_lookup(report_path: str) -> dict[str, str]:
         return {}
 
 
-def _resolve_icon(resource_type: str, icon_lookup: dict[str, str]) -> str:
+def _resolve_icon(resource_type: str, icon_lookup: dict[str, str]) -> str | None:
     code = resource_type.strip().lower()
     candidate = code
     while candidate:
@@ -304,7 +305,7 @@ def _resolve_icon(resource_type: str, icon_lookup: dict[str, str]) -> str:
         if "/" not in candidate:
             break
         candidate = candidate.rsplit("/", 1)[0]
-    return FALLBACK_ICONS.get(code, DEFAULT_ICON)
+    return FALLBACK_ICONS.get(code)
 
 
 def _build_allocation(rows: list[dict[str, Any]]) -> tuple[list, list, list]:
@@ -342,6 +343,7 @@ def _build_type_groups(
             {
                 "label": row["label"],
                 "icon": _resolve_icon(row["type"], icon_lookup),
+                "initials": initials(row["label"]),
                 "category": row["category"],
                 "category_label": (
                     CATEGORIES.get(row["category"], {}).get("badge") or row["category"]
@@ -461,10 +463,10 @@ def generate_egress_html_report(report_path: str, json_path: str) -> dict[str, A
         return {"success": False, "logs": str(e)}
 
 
-def _icon_flowable(report_path: str, icon: str) -> Any:
-    icon_path = find_asset(report_path, icon) or find_asset(report_path, DEFAULT_ICON)
+def _icon_flowable(report_path: str, icon: str | None, label: str) -> Any:
+    icon_path = find_asset(report_path, icon) if icon else None
     if icon_path is None:
-        return ""
+        return IconPlaceholder(label, 20)
     return Image(str(icon_path), width=20, height=20)
 
 
@@ -729,7 +731,7 @@ def _build_data_landscape_section(
             [
                 str(index),
                 group["label"],
-                _icon_flowable(report_path, group["icon"]),
+                _icon_flowable(report_path, group["icon"], group["label"]),
                 group["size_display"],
             ]
         )

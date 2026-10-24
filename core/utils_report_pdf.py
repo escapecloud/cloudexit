@@ -90,8 +90,8 @@ def transform_alt_tech_for_pdf(
         rtype_info = resource_type_mapping.get(rtype_str, {})
         resource_name = rtype_info.get("name", "Unknown Resource")
 
-        icon_path = "/assets" + rtype_info.get("icon", "/icons/default.png")
-        icon_url = f"{report_path}{icon_path}"
+        icon = rtype_info.get("icon")
+        icon_url = f"{report_path}/assets{icon}" if icon else None
 
         count = len(grouped_alt_tech.get(rtype_str, []))
 

@@ -423,6 +423,21 @@ main {
     height: 32px;
 }
 
+.resource-icon-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: 0 0 16px;
+  border-radius: 7px;
+  background: #e3e7ea;
+  color: #4a5560;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+}
+
 .gapy-3 {
   gap: 16px 0;
 }

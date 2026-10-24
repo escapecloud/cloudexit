@@ -18,6 +18,7 @@ from reportlab.platypus import (
 )
 
 # Utils
+from core.report.helpers import initials
 from core.resources import asset_path
 from core.utils_report_html import (
     transform_cost_inventory_for_html,
@@ -69,9 +70,14 @@ def generate_html_report(
             "name": resource_type_mapping.get(str(item["resource_type"]), {}).get(
                 "name", "Unknown Resource"
             ),
-            "icon": "/assets"
-            + resource_type_mapping.get(str(item["resource_type"]), {}).get(
-                "icon", "/icons/default.png"
+            "icon": (
+                "/assets" + icon
+                if (
+                    icon := resource_type_mapping.get(
+                        str(item["resource_type"]), {}
+                    ).get("icon")
+                )
+                else ""
             ),
         }
         for item in resource_inventory
@@ -93,10 +99,16 @@ def generate_html_report(
         count = resource.get("count", 0)
         resource_info = resource_type_mapping.get(str(resource_type), {})
         name = resource_info.get("name", "Unknown Resource")
-        icon = resource_info.get("icon", "assets/icons/default.png").lstrip("/")
+        icon = (resource_info.get("icon") or "").lstrip("/")
 
         resource_counts.append(
-            {"resource_type": resource_type, "name": name, "icon": icon, "count": count}
+            {
+                "resource_type": resource_type,
+                "name": name,
+                "icon": icon,
+                "initials": initials(name),
+                "count": count,
+            }
         )
 
     # Calculate total resources

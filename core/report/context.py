@@ -13,7 +13,6 @@ from .palette import DEFAULT_APPEARANCE, SEVERITIES, Appearance
 PROVIDER_NAMES = {1: "Microsoft Azure", 2: "Amazon Web Services"}
 STRATEGY_CODES = {1: "repatriation", 2: "hybrid_cloud", 3: "alternate_cloud"}
 COST_MONTHS = 6
-MISSING_ICON = "icons/misc/no_image.png"
 DOCUMENT_CODE = "ES"
 
 
@@ -76,7 +75,7 @@ def collect_provenance(db_path, *, run_id=None, upload=None, collected_at=None):
 class ResourceTypeEntry:
     resource_type_id: str
     name: str
-    icon: str
+    icon: str | None
     resources: int = 0
     locations: set = field(default_factory=set)
 
@@ -116,7 +115,7 @@ class AlternativeEntry:
 class AlternativesEntry:
     resource_type_id: str
     name: str
-    icon: str
+    icon: str | None
     resources: int
     alternatives: list = field(default_factory=list)
 
@@ -166,10 +165,10 @@ class ReportContext:
 
 
 def _icon_path(report_path, icon):
+    # None when the resource type has no icon file; the report draws a
+    # placeholder for it.
     found = find_asset(report_path, str(icon or ""))
-    if found is not None:
-        return str(found)
-    return os.path.join(report_path, "assets", MISSING_ICON)
+    return str(found) if found is not None else None
 
 
 def _resource_entries(resource_inventory, resource_type_mapping, report_path):

@@ -397,10 +397,8 @@ class ResolveIconTests(unittest.TestCase):
 
         self.assertEqual(icon, "/icons/aws/Storage/Elastic-Block-Store.png")
 
-    def test_unknown_type_uses_default_icon(self):
-        icon = _resolve_icon("Vendor.Unknown/things", {})
-
-        self.assertEqual(icon, "/icons/misc/no_image.png")
+    def test_unknown_type_has_no_icon(self):
+        self.assertIsNone(_resolve_icon("Vendor.Unknown/things", {}))
 
 
 class AllocationSeriesTests(unittest.TestCase):

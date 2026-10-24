@@ -82,7 +82,6 @@ class WheelContentsTests(unittest.TestCase):
             "core/assets/template/egress.html",
             "core/assets/css/style.css",
             "core/assets/img/logo/report_logo.png",
-            "core/assets/icons/misc/no_image.png",
             "core/assets/icons/aws/Compute/EC2.png",
         ):
             with self.subTest(name):
@@ -123,8 +122,8 @@ class AssetLookupTests(unittest.TestCase):
 
             self.assertEqual(find_asset(report, "img/logo/report_logo.png"), copied)
             self.assertEqual(
-                find_asset(report, "/icons/misc/no_image.png"),
-                asset_path("icons", "misc", "no_image.png"),
+                find_asset(report, "/icons/aws/Compute/EC2.png"),
+                asset_path("icons", "aws", "Compute", "EC2.png"),
             )
 
     def test_find_asset_refuses_paths_that_leave_the_assets(self):
@@ -214,7 +213,7 @@ class NoCurrentDirectoryLookupTests(unittest.TestCase):
         re.compile(r"parents\[\d\]\s*/\s*[\"']assets[\"']"),
     )
     # Paths inside the report folder, or links inside the HTML report.
-    ALLOWED = ('"icon", "assets/icons/default.png"',)
+    ALLOWED = ()
 
     def sources(self):
         for name in SOURCE_DIRS:

@@ -20,6 +20,7 @@ from .brief_summary import cost_finding
 from .evidence import link_markup
 from .flow import section
 from .fonts import FONT, FONT_BOLD, FONT_MONO
+from .placeholder import LabelWithPlaceholder
 from .helpers import (
     cost_problem,
     format_amount,
@@ -102,6 +103,10 @@ def _group_row(rows, extra, label, columns):
 
 
 def _type_name_cell(entry):
+    if not entry.icon:
+        return LabelWithPlaceholder(
+            entry.name, f"<b>{escape(entry.name)}</b>", ALT_BODY
+        )
     return Paragraph(
         f'<img src={quoteattr(entry.icon)} width="11" height="11" '
         f'valign="middle"/> <b>{escape(entry.name)}</b>',

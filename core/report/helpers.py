@@ -40,3 +40,15 @@ def cost_problem(context, b):
     if len({entry.currency for entry in context.costs}) > 1:
         return b["cost_mixed_currency"]
     return None
+
+
+def initials(name):
+    # The first letter of each of the first two words; "?" when there is none.
+    letters = []
+    for word in str(name or "").split():
+        first = next((char for char in word if char.isalnum()), "")
+        if first:
+            letters.append(first.upper())
+        if len(letters) == 2:
+            break
+    return "".join(letters) or "?"

@@ -22,7 +22,7 @@ def build_report_fixture():
             "id": 101,
             "code": "AWS.EC2.DescribeInstances.Reservations",
             "name": "EC2 Instance",
-            "icon": "/icons/misc/no_image.png",
+            "icon": "/icons/aws/Compute/EC2.png",
         }
     }
     resource_inventory = [
@@ -170,12 +170,8 @@ def build_fixture_context(fixture, report_dir, **overrides):
 
 
 def stage_minimal_assets(report_path: str) -> None:
-    # What the Basic report needs: the logo and the fallback icon. Copying the
-    # whole icon set for every render would dominate the test time.
+    # What the Basic report needs: the logo. Copying the whole icon set for
+    # every render would dominate the test time; an icon missing from the report
+    # folder is read from the installed package.
     report_assets = Path(report_path) / "assets"
     shutil.copytree(asset_path("img"), report_assets / "img", dirs_exist_ok=True)
-    shutil.copytree(
-        asset_path("icons", "misc"),
-        report_assets / "icons" / "misc",
-        dirs_exist_ok=True,
-    )

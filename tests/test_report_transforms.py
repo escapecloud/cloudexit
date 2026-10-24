@@ -25,13 +25,13 @@ def build_resource_type_mapping():
             "id": 101,
             "code": "AWS.EC2.DescribeInstances.Reservations",
             "name": "EC2 Instance",
-            "icon": "/icons/misc/no_image.png",
+            "icon": "/icons/aws/Compute/EC2.png",
         },
         "202": {
             "id": 202,
             "code": "AWS.S3.ListBuckets.Buckets",
             "name": "S3 Bucket",
-            "icon": "/icons/misc/no_image.png",
+            "icon": "/icons/aws/Storage/Simple-Storage-Service.png",
         },
     }
 
@@ -267,7 +267,7 @@ class PdfTransformTests(unittest.TestCase):
 
         self.assertEqual(transformed[0]["resource_name"], "EC2 Instance")
         self.assertTrue(
-            transformed[0]["icon_url"].endswith("/assets/icons/misc/no_image.png")
+            transformed[0]["icon_url"].endswith("/assets/icons/aws/Compute/EC2.png")
         )
 
     def test_transform_alt_tech_for_pdf_counts_matching_alternatives(self):
@@ -284,7 +284,7 @@ class PdfTransformTests(unittest.TestCase):
         self.assertEqual(transformed[0]["count"], 1)
         self.assertEqual(transformed[1]["count"], 1)
         self.assertTrue(
-            transformed[0]["icon_url"].endswith("/assets/icons/misc/no_image.png")
+            transformed[0]["icon_url"].endswith("/assets/icons/aws/Compute/EC2.png")
         )
 
 

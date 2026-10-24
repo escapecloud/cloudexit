@@ -49,6 +49,21 @@
         margin: 0 8px;
         object-fit: contain;
       }
+      .resource-icon-placeholder {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        margin: 0 8px;
+        border-radius: 5px;
+        background: #e3e7ea;
+        color: #4a5560;
+        font-size: 10px;
+        font-weight: 600;
+        line-height: 1;
+        vertical-align: middle;
+      }
     </style>
     <script
       src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
@@ -351,6 +366,7 @@
                             fill="#112726"
                           />
                         </svg>
+                        {% if group.icon %}
                         <img
                           class="landscape-icon"
                           src="assets/{{ group.icon | trim }}"
@@ -358,6 +374,9 @@
                           width="22"
                           height="22"
                         />
+                        {% else %}
+                        <span class="resource-icon-placeholder" aria-hidden="true">{{ group.initials }}</span>
+                        {% endif %}
                         <span class="risk-title">{{ group.label }}</span>
                       </td>
                       <td class="text-center">

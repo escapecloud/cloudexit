@@ -441,10 +441,14 @@
                     {% if resource_inventory %} {% for resource in resource_inventory %}
                     <div class="col-xl-3 col-lg-6 col-md-6 resource-item">
                       <div class="p-3 p-lg-4 rounded-4 resource-card">
+                        {% if resource.icon | trim %}
                         <img
                           src="assets/{{ resource.icon | trim }}"
                           alt="{{ resource.name | trim }}"
                         />
+                        {% else %}
+                        <span class="resource-icon-placeholder" aria-hidden="true">{{ resource.initials }}</span>
+                        {% endif %}
                         <h3>{{ resource.name | trim }}</h3>
                         <h6>
                           {{ resource.count }} Resource{% if resource.count != 1 %}s{%
