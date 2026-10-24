@@ -827,7 +827,6 @@ class RunAssessmentTests(SyncDocumentTestCase):
         raw_data = os.path.join(report, "raw_data")
         patches = [
             patch("main.validate_config"),
-            patch("main.resolve_mode", return_value=("offline", None)),
             patch("main.create_directory", return_value=(report, raw_data)),
             patch("main.verify_credentials", return_value=(True, "ok")),
             patch("main.test_permissions", return_value=(True, True, True, "ok")),

@@ -9,8 +9,7 @@ from unittest.mock import ANY, MagicMock, patch
 import main
 from core.sync_document import SyncOutput
 from utils import codes
-from utils.connection import resolve_mode
-from utils.settings import Setting, Settings
+from utils.settings import Settings
 from utils.utils import load_config
 
 VALID_CONFIG = {
@@ -62,7 +61,6 @@ def _base_patches():
     return [
         patch("main.console.print"),
         patch("main.print_step"),
-        patch("main.resolve_mode", return_value=("offline", None)),
         patch("main.create_directory", return_value=("/tmp/report", "/tmp/report/raw")),
         patch("main.verify_credentials", return_value=(True, "ok")),
         patch(
@@ -107,7 +105,6 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
         with self.assertRaises(SystemExit) as ctx:
             with (
                 patch("main.validate_config", side_effect=ValueError("bad config")),
-                patch("main.resolve_mode"),
                 patch("main.create_directory"),
                 patch("main.verify_credentials"),
                 patch("main.print_step"),
@@ -120,7 +117,6 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
         with self.assertRaises(SystemExit) as ctx:
             with (
                 patch("main.validate_config"),
-                patch("main.resolve_mode", return_value=("offline", None)),
                 patch("main.create_directory", side_effect=RuntimeError("disk full")),
                 patch("main.verify_credentials"),
                 patch("main.print_step"),
@@ -133,7 +129,6 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
         with self.assertRaises(SystemExit) as ctx:
             with (
                 patch("main.validate_config"),
-                patch("main.resolve_mode", return_value=("offline", None)),
                 patch("main.create_directory", return_value=("/tmp/r", "/tmp/r/raw")),
                 patch("main.verify_credentials", return_value=(False, "bad creds")),
                 patch("main.print_step"),
@@ -146,7 +141,6 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
         with self.assertRaises(SystemExit) as ctx:
             with (
                 patch("main.validate_config"),
-                patch("main.resolve_mode", return_value=("offline", None)),
                 patch("main.create_directory", return_value=("/tmp/r", "/tmp/r/raw")),
                 patch("main.verify_credentials", return_value=(True, "ok")),
                 patch(
@@ -163,7 +157,6 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
         with self.assertRaises(SystemExit) as ctx:
             with (
                 patch("main.validate_config"),
-                patch("main.resolve_mode", return_value=("offline", None)),
                 patch("main.create_directory", return_value=("/tmp/r", "/tmp/r/raw")),
                 patch("main.verify_credentials", return_value=(True, "ok")),
                 patch("main.test_permissions", return_value=(True, True, True, "ok")),
@@ -181,7 +174,6 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
         with self.assertRaises(SystemExit) as ctx:
             with (
                 patch("main.validate_config"),
-                patch("main.resolve_mode", return_value=("offline", None)),
                 patch("main.create_directory", return_value=("/tmp/r", "/tmp/r/raw")),
                 patch("main.verify_credentials", return_value=(True, "ok")),
                 patch("main.test_permissions", return_value=(True, True, True, "ok")),
@@ -203,7 +195,6 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
         with self.assertRaises(SystemExit) as ctx:
             with (
                 patch("main.validate_config"),
-                patch("main.resolve_mode", return_value=("offline", None)),
                 patch("main.create_directory", return_value=("/tmp/r", "/tmp/r/raw")),
                 patch("main.verify_credentials", return_value=(True, "ok")),
                 patch("main.test_permissions", return_value=(True, True, True, "ok")),
@@ -229,7 +220,6 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
         with self.assertRaises(SystemExit) as ctx:
             with (
                 patch("main.validate_config"),
-                patch("main.resolve_mode", return_value=("offline", None)),
                 patch("main.create_directory", return_value=("/tmp/r", "/tmp/r/raw")),
                 patch("main.verify_credentials", return_value=(True, "ok")),
                 patch("main.test_permissions", return_value=(True, True, True, "ok")),
@@ -272,7 +262,6 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
             with self.assertRaises(SystemExit) as ctx:
                 with (
                     patch("main.validate_config"),
-                    patch("main.resolve_mode", return_value=("offline", None)),
                     patch(
                         "main.create_directory",
                         return_value=(tmp_dir, raw_data_path),
@@ -296,7 +285,6 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
     def test_full_success_exits_0(self):
         with (
             patch("main.validate_config"),
-            patch("main.resolve_mode", return_value=("offline", None)),
             patch("main.create_directory", return_value=("/tmp/r", "/tmp/r/raw")),
             patch("main.verify_credentials", return_value=(True, "ok")),
             patch("main.test_permissions", return_value=(True, True, True, "ok")),
@@ -333,7 +321,6 @@ class RunAssessmentExitCodeTests(unittest.TestCase):
 
             with (
                 patch("main.validate_config"),
-                patch("main.resolve_mode", return_value=("online", "jwt-token")),
                 patch(
                     "main.create_directory",
                     return_value=(tmp_dir, raw_data_path),
@@ -907,50 +894,6 @@ class MainExitCodeTests(unittest.TestCase):
         mock_run.assert_not_called()
 
 
-class ResolveModeSettingsTests(unittest.TestCase):
-    def test_host_and_key_from_settings_go_online(self):
-        settings = Settings(
-            host=Setting("https://platform.test", "env CLOUDEXIT_HOST"),
-            api_key=Setting("k" * 16, "env CLOUDEXIT_API_KEY"),
-            timeout=Setting(30.0, "flag --timeout"),
-            ca_bundle=Setting("/etc/ca.pem", "flag --ca-bundle"),
-        )
-        with patch(
-            "utils.connection.get_jwt_token", return_value="tok123"
-        ) as mock_token:
-            mode, token = resolve_mode(settings)
-
-        self.assertEqual(mode, "online")
-        self.assertEqual(token, "tok123")
-        mock_token.assert_called_once_with(
-            host="https://platform.test",
-            key="k" * 16,
-            timeout=30.0,
-            verify="/etc/ca.pem",
-        )
-
-    def test_no_host_or_key_stays_offline_without_a_request(self):
-        for settings in (
-            Settings(),
-            Settings(host=Setting("https://platform.test", "flag --host")),
-            Settings(api_key=Setting("k" * 16, "env CLOUDEXIT_API_KEY")),
-        ):
-            with patch("utils.connection.get_jwt_token") as mock_token:
-                mode, token = resolve_mode(settings)
-
-            self.assertEqual(mode, "offline")
-            self.assertIsNone(token)
-            mock_token.assert_not_called()
-
-    def test_failed_authentication_falls_back_to_offline(self):
-        settings = Settings(
-            host=Setting("https://platform.test", "flag --host"),
-            api_key=Setting("k" * 16, "env CLOUDEXIT_API_KEY"),
-        )
-        with patch("utils.connection.get_jwt_token", return_value=None):
-            self.assertEqual(resolve_mode(settings), ("offline", None))
-
-
 TFSTATE_CONFIG = {
     "name": "Tfstate Assessment",
     "cloudServiceProvider": 2,
@@ -1077,7 +1020,6 @@ class TfstateCliTests(unittest.TestCase):
 
             with (
                 patch("main.validate_config"),
-                patch("main.resolve_mode", return_value=("offline", None)),
                 patch("main.create_directory", return_value=(tmp_dir, raw_data_path)),
                 patch("main.verify_credentials") as mock_creds,
                 patch("main.test_permissions") as mock_perms,
@@ -1115,7 +1057,6 @@ class TfstateCliTests(unittest.TestCase):
 
             with (
                 patch("main.validate_config"),
-                patch("main.resolve_mode", return_value=("offline", None)),
                 patch("main.create_directory", return_value=(tmp_dir, raw_data_path)),
                 patch("main.create_resource_inventory", return_value=inventory_result),
                 patch(
@@ -1183,7 +1124,6 @@ class TfstateCliTests(unittest.TestCase):
     def test_run_assessment_rejects_egress_from_tfstate_config_file(self):
         with (
             patch("main.validate_config"),
-            patch("main.resolve_mode", return_value=("offline", None)),
             patch("main.create_directory") as mock_dir,
             patch("main.print_step"),
             patch("main.console.print"),
