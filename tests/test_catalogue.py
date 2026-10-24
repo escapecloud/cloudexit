@@ -780,7 +780,7 @@ class DatabaseContractTests(CatalogueTestCase):
         catalogue_info(path)
         active_resource_type_ids("aws", path)
         self.assertEqual(path.read_bytes(), before)
-        with sqlite3.connect(path) as conn:
+        with contextlib.closing(sqlite3.connect(path)) as conn:
             self.assertEqual(conn.execute("PRAGMA integrity_check").fetchone()[0], "ok")
 
 

@@ -58,6 +58,14 @@ class TlsResult:
     expires: str | None = None
 
 
+def status_budget(settings: Any) -> float:
+    # A budget the user set (--upload-budget) applies here too
+    budget = getattr(settings, "upload_budget", None)
+    if budget is not None and budget.source != "default":
+        return float(budget.value)
+    return STATUS_BUDGET
+
+
 def ca_bundle_choice(
     settings: Any, environ: Mapping[str, str] | None = None
 ) -> tuple[str, str]:
@@ -301,7 +309,7 @@ def host_catalogue_lines(
         return []
     make_client = make_client or ApiClient.from_settings
     try:
-        client = make_client(settings, budget=STATUS_BUDGET)
+        client = make_client(settings, budget=status_budget(settings))
         host = ((client.meta(fresh=True).get("catalogue") or {}).get("version")) or None
     except ApiError as error:
         return [f"platform:  unavailable ({error.message})"]
@@ -365,7 +373,7 @@ def run_status(
 
     make_client = make_client or ApiClient.from_settings
     try:
-        client = make_client(settings, budget=STATUS_BUDGET, environ=environ)
+        client = make_client(settings, budget=status_budget(settings), environ=environ)
     except ApiError as error:
         report.problem(error.exit_code, error.message)
         return report

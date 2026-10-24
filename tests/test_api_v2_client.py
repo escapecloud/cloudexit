@@ -1183,7 +1183,7 @@ def load_examples():
     }
 
 
-class ExampleReplayTests(ClientTestCase):
+class ExampleSupport(ClientTestCase):
     maxDiff = None
 
     @classmethod
@@ -1228,7 +1228,7 @@ class ExampleReplayTests(ClientTestCase):
             body = merged(sync_body(), subset)
         return make_response(expect["status"], json_body=body, headers=headers)
 
-    def run_example(self, number):
+    def run_example(self, number, attempts=1, **options):
         example = self.examples[number]
         keys = self.keys_for(example)
         request = self.replay.fill(example["request"], keys)
@@ -1241,11 +1241,10 @@ class ExampleReplayTests(ClientTestCase):
             create.get("exit_strategy", "repatriation")
         ]
         document = {k: v for k, v in body.items() if k != "target"}
-        client = self.client(key=key, cache_path=self.tmp / number)
-        replies = [
-            meta_reply(),
-            self.whoami_for(example, key_name),
-            self.response_for(example, keys),
+        options.setdefault("cache_path", self.tmp / number)
+        client = self.last_client = self.client(key=key, **options)
+        replies = [meta_reply(), self.whoami_for(example, key_name)] + [
+            self.response_for(example, keys) for _ in range(attempts)
         ]
         with fake_http(*replies) as fake:
             try:
@@ -1260,6 +1259,8 @@ class ExampleReplayTests(ClientTestCase):
                 result, error = None, exc
         return example, request, fake, result, error
 
+
+class ExampleReplayTests(ExampleSupport):
     def test_every_example_is_accounted_for(self):
         sent = {
             number

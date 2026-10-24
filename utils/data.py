@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import atexit
-import gzip
 import hashlib
 import json
 import logging
@@ -16,7 +15,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import unquote, urljoin, urlsplit
 
 import requests
 
@@ -35,6 +34,12 @@ LEGACY_DATABASE = Path("datasets") / "data.db"
 MISSING_STATUSES = (403, 404, 410)
 PROVIDER_IDS = {"azure": 1, "aws": 2}
 GZIP_MAGIC = b"\x1f\x8b"
+# A dataset unpacks to a few times its download size. The limit is that ratio
+# of the download (or of the size the manifest announces), never below the
+# floor and never above the ceiling.
+UNPACK_RATIO = 10
+UNPACK_FLOOR = 16 * 1024 * 1024
+UNPACK_CEILING = 512 * 1024 * 1024
 
 
 class CatalogueError(Exception):
@@ -292,13 +297,41 @@ def _is_gzip(data: bytes) -> bool:
     return data[:2] == GZIP_MAGIC
 
 
-def _decompress(data: bytes) -> bytes:
+def unpack_limit(download_size: int | None) -> int:
+    size = download_size if isinstance(download_size, int) and download_size > 0 else 0
+    return min(UNPACK_CEILING, max(UNPACK_FLOOR, UNPACK_RATIO * size))
+
+
+def _decompress(data: bytes, limit: int | None = None) -> bytes:
     if not _is_gzip(data):
         return data
-    try:
-        return gzip.decompress(data)
-    except (OSError, EOFError, zlib.error) as exc:
-        raise CatalogueError(f"the file is not a valid gzip archive: {exc}") from exc
+    limit = unpack_limit(len(data)) if limit is None else limit
+    chunks: list[bytes] = []
+    total = 0
+    rest = data
+    # Member by member, so a small archive cannot expand past the limit in memory
+    while rest:
+        inflater = zlib.decompressobj(zlib.MAX_WBITS | 16)
+        try:
+            part = inflater.decompress(rest, limit + 1 - total)
+        except zlib.error as exc:
+            raise CatalogueError(
+                f"the file is not a valid gzip archive: {exc}"
+            ) from exc
+        total += len(part)
+        if total > limit or inflater.unconsumed_tail:
+            raise CatalogueError(
+                f"the file unpacks to more than {limit // (1024 * 1024)} MB, "
+                "which no catalogue does; it was not installed"
+            )
+        if not inflater.eof:
+            raise CatalogueError(
+                "the file is not a valid gzip archive: it ends before the "
+                "end-of-stream marker"
+            )
+        chunks.append(part)
+        rest = inflater.unused_data
+    return b"".join(chunks)
 
 
 def _sha256(data: bytes) -> str:
@@ -312,13 +345,14 @@ def _install(
     sha256: str | None,
     expect_version: str | None = None,
     require_meta: bool = False,
+    unpack_size: int | None = None,
 ) -> CatalogueInfo | None:
     directory.mkdir(parents=True, exist_ok=True)
     fd, temp_name = tempfile.mkstemp(dir=directory, prefix="data.db.", suffix=".tmp")
     temp = Path(temp_name)
     try:
         with os.fdopen(fd, "wb") as handle:
-            handle.write(_decompress(data))
+            handle.write(_decompress(data, unpack_limit(unpack_size or len(data))))
         info = validate_database(
             temp, expect_version=expect_version, require_meta=require_meta
         )
@@ -342,9 +376,21 @@ def _install(
         temp.unlink(missing_ok=True)
 
 
+class _AnonymousSession(requests.Session):
+    # Catalogue requests carry no credentials. Requests would otherwise attach a
+    # ~/.netrc login for the host, and for the host of a redirect.
+    def __init__(self) -> None:
+        super().__init__()
+        self.auth = lambda request: request
+
+    def rebuild_auth(self, prepared_request: Any, response: Any) -> None:
+        prepared_request.headers.pop("Authorization", None)
+
+
 def _get(url: str, *, timeout: float, verify: str | bool) -> requests.Response:
     try:
-        return requests.get(url, timeout=timeout, verify=verify)
+        with _AnonymousSession() as session:
+            return session.get(url, timeout=timeout, verify=verify)
     except requests.RequestException as exc:
         logger.debug("Catalogue request to %s failed: %s", url, exc)
         reason = str(exc) if len(str(exc)) <= 80 else type(exc).__name__
@@ -407,10 +453,12 @@ def resolve_file_url(manifest_url: str, file: str) -> str:
     url = urljoin(manifest_url, file)
     base, target = urlsplit(manifest_url), urlsplit(url)
     folder = base.path.rsplit("/", 1)[0] + "/"
+    # Percent-encoded and backslash forms count as the same climb
+    parts = unquote(target.path).replace("\\", "/").split("/")
     if (
         (target.scheme, target.netloc) != (base.scheme, base.netloc)
         or not target.path.startswith(folder)
-        or ".." in target.path.split("/")
+        or ".." in parts
     ):
         raise CatalogueError(
             f"the manifest file {file!r} points outside the catalogue location"
@@ -487,7 +535,12 @@ def update_catalogue(
     data = _download(resolve_file_url(manifest_url, entry["file"]), verify=verify)
     digest = _check_checksum(data, entry["file_sha256"], entry["file"])
     info = _install(
-        data, directory, sha256=digest, expect_version=target, require_meta=True
+        data,
+        directory,
+        sha256=digest,
+        expect_version=target,
+        require_meta=True,
+        unpack_size=entry.get("size_bytes"),
     )
     return UpdateResult("updated", info)
 

@@ -2,6 +2,7 @@
 import json
 import os
 import sqlite3
+from contextlib import closing
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -205,11 +206,12 @@ class EstimateEgressDispatchTests(unittest.TestCase):
                     result["json_path"],
                     os.path.join(tmp_dir, "egress_inventory_raw_data.json"),
                 )
-                stored = (
+                with closing(
                     sqlite3.connect(os.path.join(tmp_dir, "data", "assessment.db"))
-                    .execute("SELECT COUNT(*) FROM egress_inventory")
-                    .fetchone()[0]
-                )
+                ) as conn:
+                    stored = conn.execute(
+                        "SELECT COUNT(*) FROM egress_inventory"
+                    ).fetchone()[0]
                 self.assertEqual(stored, len(payload["data"]["resources"]))
         return result, payload
 

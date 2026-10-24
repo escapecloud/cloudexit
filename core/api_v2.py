@@ -379,16 +379,21 @@ def _billing(value: Any) -> dict[str, int] | None:
 
 
 def _warning_items(items: Any) -> list[dict[str, str | None]]:
+    # A warning is never dropped, even one without a message: --strict counts it
     found = []
     for item in items if isinstance(items, list) else []:
-        if isinstance(item, dict) and item.get("message"):
-            code = item.get("code")
-            found.append(
-                {
-                    "code": str(code) if code else None,
-                    "message": _one_line(item["message"]),
-                }
-            )
+        if not isinstance(item, dict):
+            continue
+        code = item.get("code")
+        message = item.get("message") or code
+        if not message:
+            continue
+        found.append(
+            {
+                "code": str(code) if code else None,
+                "message": _one_line(message),
+            }
+        )
     return found
 
 

@@ -19,7 +19,7 @@ console = Console()
 def load_config(file_path: str) -> dict[str, Any] | None:
     try:
         # logger.info(f"Attempting to load config file from {file_path}")
-        with open(file_path, "r") as f:
+        with open(file_path, "r", encoding="utf-8-sig") as f:
             config = json.load(f)
         # logger.info("Config file loaded successfully.")
         return config

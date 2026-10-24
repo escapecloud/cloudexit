@@ -449,7 +449,7 @@ def generate_egress_html_report(report_path: str, json_path: str) -> dict[str, A
         )
 
         html_path = os.path.join(report_path, "egress.html")
-        with open(html_path, "w") as report_file:
+        with open(html_path, "w", encoding="utf-8") as report_file:
             report_file.write(html_content)
 
         return {

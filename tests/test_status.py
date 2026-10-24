@@ -19,6 +19,8 @@ from core.status import (
     check_tls,
     host_catalogue_lines,
     run_status,
+    status_budget,
+    STATUS_BUDGET,
 )
 from tests.api_fixtures import (
     EU_KEY,
@@ -467,6 +469,13 @@ class ReportContentTests(StatusTestCase):
         self.assertEqual(data["exit_code"], codes.UPLOAD_UNAVAILABLE)
         self.assertEqual(data["problems"][0]["exit_code"], codes.UPLOAD_UNAVAILABLE)
         self.assertTrue(data["configured"])
+
+
+class StatusBudgetTests(unittest.TestCase):
+    def test_a_budget_the_user_set_applies_and_otherwise_the_default_does(self):
+        self.assertEqual(status_budget(Settings()), STATUS_BUDGET)
+        chosen = Settings(upload_budget=Setting(2.5, "flag --upload-budget"))
+        self.assertEqual(status_budget(chosen), 2.5)
 
 
 class CatalogueComparisonTests(unittest.TestCase):

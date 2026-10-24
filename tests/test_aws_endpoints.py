@@ -2,6 +2,7 @@ import logging
 import os
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import boto3
@@ -378,7 +379,7 @@ class ClientFactoryTests(unittest.TestCase):
         )
 
     def test_the_cost_explorer_stays_pinned_to_us_east_1(self):
-        source = open(utils_aws.__file__, encoding="utf-8").read()
+        source = Path(utils_aws.__file__).read_text(encoding="utf-8")
         self.assertIn('create_client(session, "ce", "us-east-1")', source)
 
 
