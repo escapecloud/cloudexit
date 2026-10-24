@@ -3,7 +3,7 @@ import logging
 import shutil
 import subprocess
 
-logger = logging.getLogger("main.utils.aws")
+logger = logging.getLogger(__name__)
 
 
 def is_aws_cli_installed() -> bool:

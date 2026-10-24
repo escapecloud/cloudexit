@@ -16,7 +16,7 @@ from .fonts import FONT, FONT_BOLD, FONT_MONO
 from .helpers import strategy_name
 from .palette import INK, MUTED, RULE, SUBTITLE
 
-logger = logging.getLogger("core.engine.report")
+logger = logging.getLogger(__name__)
 
 BAND_WIDTH = 0.9 * cm
 MARGIN = 2.5 * cm

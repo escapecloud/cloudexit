@@ -10,7 +10,7 @@ from collections import defaultdict
 
 from cloudexit.catalogue.db import connect, load_data
 
-logger = logging.getLogger("core.engine.tfstate")
+logger = logging.getLogger(__name__)
 
 # Terraform >= 0.12 and every OpenTofu release write state format version 4.
 SUPPORTED_STATE_VERSION = 4

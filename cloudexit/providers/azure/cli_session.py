@@ -8,7 +8,7 @@ from rich.console import Console
 from cloudexit.terminal import ask
 from cloudexit.providers.azure.sdk import azure_import
 
-logger = logging.getLogger("main.utils.azure")
+logger = logging.getLogger(__name__)
 
 
 console = Console()

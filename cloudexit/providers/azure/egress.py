@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from cloudexit.providers.azure.clients import create_credential, create_resource_client
 from cloudexit.egress.model import GIB, format_bytes, load_egress_registry, new_row
 
-logger = logging.getLogger("core.engine.egress.azure")
+logger = logging.getLogger(__name__)
 
 VAULT_FINDING = (
     "Recovery Services vault detected: backup recovery points cannot be "

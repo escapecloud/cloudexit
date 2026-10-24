@@ -7,7 +7,7 @@ from cloudexit.catalogue.store import active_catalogue_path
 
 from cloudexit.resources import asset_path
 
-logger = logging.getLogger("core.engine.utils")
+logger = logging.getLogger(__name__)
 
 # Icon folder per cloud service provider id
 PROVIDER_ICON_DIRS = {1: "azure", 2: "aws"}

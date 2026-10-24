@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Mapping
 from urllib.parse import urlsplit
 
-logger = logging.getLogger("main.utils.settings")
+logger = logging.getLogger(__name__)
 
 try:
     import config as legacy_config

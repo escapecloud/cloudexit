@@ -4,7 +4,7 @@ import logging
 from importlib.metadata import PackageNotFoundError, requires
 from typing import Any
 
-logger = logging.getLogger("main.utils.azure")
+logger = logging.getLogger(__name__)
 
 
 # The SDK classes the Azure paths use, and the distribution that provides each

@@ -167,7 +167,7 @@ CREATE TABLE resourcetype_data (
     def test_row_without_a_catalogue_entry_warns_and_is_skipped(self):
         orphan = new_row("/x", "x", "unmapped/type", "Nope", "object")
 
-        with self.assertLogs("core.engine.egress", level="WARNING") as captured:
+        with self.assertLogs("cloudexit.egress", level="WARNING") as captured:
             write_egress_inventory([orphan], {"some/type": 7}, set(), self.db_path)
 
         rows, _ = read_egress_inventory(self.db_path)

@@ -9,7 +9,7 @@ from rich.console import Console
 
 from cloudexit import codes
 
-logger = logging.getLogger("main.utils")
+logger = logging.getLogger(__name__)
 console = Console()
 
 

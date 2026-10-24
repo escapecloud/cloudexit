@@ -27,7 +27,7 @@ from cloudexit.version import __version__
 
 from cloudexit.catalogue.db import load_data
 
-logger = logging.getLogger("core.engine.sync_document")
+logger = logging.getLogger(__name__)
 
 SCHEMA_VERSION = "2.0"
 COLLECTOR_NAME = "cloudexit"

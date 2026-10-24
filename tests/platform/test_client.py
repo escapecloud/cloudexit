@@ -1088,7 +1088,7 @@ class LoggingTests(ClientTestCase):
             ],
             [meta_reply(), requests.ConnectionError(f"failed with {KEY}")],
         )
-        with self.assertLogs("core.engine.api_v2", level=logging.DEBUG) as logs:
+        with self.assertLogs("cloudexit.platform.client", level=logging.DEBUG) as logs:
             for index, replies in enumerate(runs):
                 try:
                     with fake_http(*replies):

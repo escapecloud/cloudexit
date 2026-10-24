@@ -15,7 +15,7 @@ from cloudexit.providers.azure.sdk import azure_import
 from cloudexit.providers.azure.clients import create_cost_client, create_credential
 from cloudexit.providers.azure.inventory import plain_json
 
-logger = logging.getLogger("core.engine.azure")
+logger = logging.getLogger(__name__)
 
 
 COST_RETRY_STATUSES = (429, 503)

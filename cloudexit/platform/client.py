@@ -43,7 +43,7 @@ from cloudexit.platform.document import (
     MAX_TIERS,
 )
 
-logger = logging.getLogger("core.engine.api_v2")
+logger = logging.getLogger(__name__)
 
 API_PATH = "/api/v2"
 CLIENT_NAME = "cloudexit"
