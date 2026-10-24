@@ -231,6 +231,22 @@ class ResourceInventoryTests(ShapeTestCase):
         )
         self.assertEqual(len(fake.requests), 2)
 
+    def test_a_resource_without_a_location_is_counted_as_global(self):
+        report, raw = self.report(*self.TABLES)
+        global_resource = {k: v for k, v in VIRTUAL_NETWORK.items() if k != "location"}
+        blank_resource = dict(VIRTUAL_NETWORK, id=NETWORK_ID + "-2", location="  ")
+        resources = [STORAGE_ACCOUNT, global_resource, blank_resource]
+        with fake_http(listing(*resources), listing(*resources)):
+            build_azure_resource_inventory(1, self.details, report, raw)
+
+        self.assertEqual(
+            self.rows(
+                report,
+                "SELECT resource_type, location, count FROM resource_inventory ORDER BY 1, 2",
+            ),
+            [(11, "westeurope", 1), (12, "global", 2)],
+        )
+
     def test_the_raw_file_holds_the_rest_shaped_resources(self):
         report, raw = self.report(*self.TABLES)
         with fake_http(listing(STORAGE_ACCOUNT), listing(STORAGE_ACCOUNT)):

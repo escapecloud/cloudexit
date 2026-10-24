@@ -134,7 +134,8 @@ def build_azure_resource_inventory(
         aggregated_resources = defaultdict(int)
         for resource in resources:
             resource_type_code = resource.type.strip().lower()
-            resource_location = resource.location.strip().lower()
+            # Non-regional resources have no location; Azure calls them "global"
+            resource_location = (resource.location or "").strip().lower() or "global"
             aggregated_resources[(resource_type_code, resource_location)] += 1
 
         # Insert data into SQLite
