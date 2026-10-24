@@ -30,9 +30,19 @@ from core.utils_report_egress import (
     generate_egress_pdf_report,
 )
 from core.api_v2 import ApiError, check_key
+from core.spool import (
+    AUTO_FLUSH_BUDGET,
+    DEFAULT_MAX_AGE_DAYS,
+    Spool,
+    flush,
+    format_age,
+    host_id,
+    parse_age,
+)
 from core.upload import (
     billing_line,
     error_failure,
+    read_sync_files,
     report_info,
     upload,
     write_upload_record,
@@ -42,6 +52,7 @@ from core.sync_document import (
     SyncDocumentError,
     new_uuid7,
     prepare_sync_document,
+    validate_document,
 )
 from utils.azure import (
     AzureSdkError,
@@ -276,6 +287,8 @@ def handle_aws(args):
             settings=getattr(args, "settings", None),
             emit_payload=getattr(args, "emit_payload", None),
             egress_names=getattr(args, "egress_names", "plain"),
+            spool_on_error=getattr(args, "spool_on_error", False),
+            flush_spool=not getattr(args, "no_flush", False),
         )
         return
 
@@ -314,6 +327,8 @@ def handle_aws(args):
         settings=getattr(args, "settings", None),
         emit_payload=getattr(args, "emit_payload", None),
         egress_names=getattr(args, "egress_names", "plain"),
+        spool_on_error=getattr(args, "spool_on_error", False),
+        flush_spool=not getattr(args, "no_flush", False),
     )
 
 
@@ -514,6 +529,8 @@ def handle_azure(args):
             settings=getattr(args, "settings", None),
             emit_payload=getattr(args, "emit_payload", None),
             egress_names=getattr(args, "egress_names", "plain"),
+            spool_on_error=getattr(args, "spool_on_error", False),
+            flush_spool=not getattr(args, "no_flush", False),
         )
         return
 
@@ -550,7 +567,62 @@ def handle_azure(args):
         settings=getattr(args, "settings", None),
         emit_payload=getattr(args, "emit_payload", None),
         egress_names=getattr(args, "egress_names", "plain"),
+        spool_on_error=getattr(args, "spool_on_error", False),
+        flush_spool=not getattr(args, "no_flush", False),
     )
+
+
+def _count(number, noun):
+    return f"{number} {noun}{'' if number == 1 else 's'}"
+
+
+def _report_flush(result):
+    if result.uploaded:
+        print_step(
+            f"Delivered {_count(len(result.uploaded), 'spooled sync')} from earlier runs.",
+            status="ok",
+        )
+    if result.rejected:
+        print_step(
+            f"{_count(len(result.rejected), 'spooled sync')} will be rejected: "
+            "too old for the platform.",
+            status="warning",
+            logs="see `cloudexit spool list`; `cloudexit spool purge` removes them",
+        )
+    if result.failed:
+        print_step(
+            f"{_count(len(result.failed), 'spooled sync')} could not be delivered.",
+            status="warning",
+            logs=", ".join(sorted(set(result.failed.values()))),
+        )
+    if result.pending:
+        print_step(
+            f"{_count(len(result.pending), 'spooled sync')} still waiting.",
+            status="warning",
+            logs=f"{result.stopped or 'unavailable'}; tried again at the next run",
+        )
+
+
+def _flush_earlier_syncs(settings):
+    # Deliver what earlier runs could not, before the new run starts. Whatever
+    # goes wrong here never blocks the new run.
+    try:
+        spool = Spool.from_settings(settings)
+        if not spool.entries(host_id(settings.host.value)):
+            return
+        result = flush(settings, spool, budget=AUTO_FLUSH_BUDGET)
+    except ApiError as e:
+        print_step("Delivering earlier syncs failed.", status="warning", logs=e.message)
+        return
+    except Exception as e:
+        logger.debug("Flushing the spool failed", exc_info=True)
+        print_step(
+            "Delivering earlier syncs failed.",
+            status="warning",
+            logs=f"{type(e).__name__}",
+        )
+        return
+    _report_flush(result)
 
 
 def run_assessment(
@@ -563,6 +635,8 @@ def run_assessment(
     settings=None,
     emit_payload=None,
     egress_names="plain",
+    spool_on_error=False,
+    flush_spool=True,
 ):
     # Record the assessment start time to propagate across stages. The sync id
     # is created here, at collection start, and identifies the whole run.
@@ -609,6 +683,8 @@ def run_assessment(
             try:
                 check_key(settings.api_key.value)
                 print_step("ExitCloud integration configured.", status="ok")
+                if flush_spool:
+                    _flush_earlier_syncs(settings)
             except ApiError as error:
                 signin_failure = error_failure(error)
                 print_step(
@@ -927,6 +1003,7 @@ def run_assessment(
                             "exit_strategy": config["exitStrategy"],
                             "assessment_type": config["assessmentType"],
                         },
+                        spool_on_error=spool_on_error,
                     )
             if upload_result.sync_id is None:
                 upload_result = replace(upload_result, sync_id=sync_id)
@@ -947,6 +1024,12 @@ def run_assessment(
                 if upload_result.request_id:
                     console.print(
                         f"   ↳ request id: {upload_result.request_id}", style="dim"
+                    )
+                if upload_result.spooled:
+                    print_step(
+                        "Sync saved for a later upload.",
+                        status="warning",
+                        logs="spooled; run `cloudexit spool flush`",
                     )
             for warning in upload_result.warnings:
                 print_step("Platform warning", status="warning", logs=warning)
@@ -1092,7 +1175,7 @@ def parse_arguments():
 
     subparsers = parser.add_subparsers(
         dest="cloud_provider",
-        help="Specify the cloud provider (aws or azure), `config` or `catalogue`.",
+        help="Specify the cloud provider (aws or azure), or `upload`, `spool`, `config` or `catalogue`.",
     )
 
     # Shared options available on every subcommand (e.g. `aws --verbose`)
@@ -1129,6 +1212,25 @@ def parse_arguments():
     platform.add_argument(
         "--timeout", type=float, help="Platform request timeout in seconds."
     )
+    platform.add_argument(
+        "--upload-budget",
+        type=float,
+        help="Seconds an upload may spend retrying before it is spooled (default 300).",
+    )
+
+    # What happens to an upload that does not get through
+    delivery = argparse.ArgumentParser(add_help=False)
+    delivery.add_argument(
+        "--spool-on-error",
+        action="store_true",
+        help="Also spool uploads the platform refused, for a later manual retry.",
+    )
+    flushing = argparse.ArgumentParser(add_help=False)
+    flushing.add_argument(
+        "--no-flush",
+        action="store_true",
+        help="Do not deliver spooled syncs of earlier runs before this one.",
+    )
 
     # Run with a catalogue file instead of the installed one (not installed)
     catalogue_flag = argparse.ArgumentParser(add_help=False)
@@ -1156,7 +1258,7 @@ def parse_arguments():
     # Subparser for AWS
     aws_parser = subparsers.add_parser(
         "aws",
-        parents=[common, platform, catalogue_flag, sync_flags],
+        parents=[common, platform, delivery, flushing, catalogue_flag, sync_flags],
         help="Perform an AWS assessment.",
     )
     aws_group = aws_parser.add_mutually_exclusive_group(required=False)
@@ -1207,7 +1309,7 @@ def parse_arguments():
     # Subparser for Azure
     azure_parser = subparsers.add_parser(
         "azure",
-        parents=[common, platform, catalogue_flag, sync_flags],
+        parents=[common, platform, delivery, flushing, catalogue_flag, sync_flags],
         help="Perform an Azure assessment.",
     )
     azure_group = azure_parser.add_mutually_exclusive_group(required=False)
@@ -1254,6 +1356,49 @@ def parse_arguments():
             "Estimate how much data lives in the resource group and "
             "would need to move out."
         ),
+    )
+
+    # Subparsers for uploading sync documents and for the spool
+    upload_parser = subparsers.add_parser(
+        "upload",
+        parents=[common, platform, delivery],
+        help="Upload sync.json files (or folders of them), for example from an air-gapped machine.",
+    )
+    upload_parser.add_argument(
+        "paths", nargs="+", help="Sync documents, or folders that hold them."
+    )
+    upload_parser.add_argument(
+        "--name",
+        type=str,
+        help="Assessment name when an account key creates the assessment.",
+    )
+    upload_parser.add_argument(
+        "--exit-strategy",
+        type=int,
+        choices=(1, 2, 3),
+        help="Exit strategy when an account key creates the assessment (1, 2 or 3).",
+    )
+
+    spool_parser = subparsers.add_parser(
+        "spool", help="Inspect and deliver syncs that could not be uploaded."
+    )
+    spool_commands = spool_parser.add_subparsers(dest="spool_command", required=True)
+    spool_commands.add_parser(
+        "list", parents=[common, platform], help="List the spooled syncs."
+    )
+    spool_commands.add_parser(
+        "flush",
+        parents=[common, platform],
+        help="Upload the spooled syncs, oldest first.",
+    )
+    purge_parser = spool_commands.add_parser(
+        "purge", parents=[common, platform], help="Delete spooled syncs."
+    )
+    purge_parser.add_argument(
+        "--older-than", type=str, help="Only entries older than this, such as 30d."
+    )
+    purge_parser.add_argument(
+        "--yes", action="store_true", help="Delete without asking."
     )
 
     # Subparser for the config helpers
@@ -1371,6 +1516,158 @@ def handle_catalogue(args):
         sys.exit(codes.CONFIG)
 
 
+def _settings_or_exit(args):
+    try:
+        return load_settings(flags_from_args(args))
+    except SettingsError as e:
+        console.print(f"[red]{escape(str(e))}[/red]")
+        sys.exit(codes.CONFIG)
+
+
+def _platform_or_exit(settings):
+    if not (settings.host.value and settings.api_key.value):
+        console.print(
+            "[red]No platform is configured: set a host and an API key "
+            "(see `cloudexit config show`).[/red]"
+        )
+        sys.exit(codes.UPLOAD_AUTH)
+
+
+def handle_upload(args):
+    settings = _settings_or_exit(args)
+    _platform_or_exit(settings)
+    try:
+        check_key(settings.api_key.value)
+    except ApiError as e:
+        console.print(f"[red]{escape(e.message)}[/red]")
+        sys.exit(e.exit_code)
+
+    files, problems = read_sync_files(args.paths)
+    exit_code = codes.SUCCESS
+    for path, message in problems:
+        console.print(f"[red]{escape(str(path))}: {escape(message)}[/red]")
+        exit_code = exit_code or codes.UPLOAD_REJECTED
+    for path, document in files:
+        try:
+            validate_document(document)
+        except SyncDocumentError as e:
+            console.print(f"[red]{escape(str(path))}: {escape(str(e))}[/red]")
+            exit_code = exit_code or codes.UPLOAD_REJECTED
+            continue
+        result = upload(
+            document,
+            settings,
+            name=args.name or f"Exit Assessment {document['sync']['id'][:8]}",
+            meta={"exit_strategy": args.exit_strategy},
+            spool_on_error=args.spool_on_error,
+        )
+        shown = escape(str(path))
+        if result.success:
+            console.print(
+                f"{shown}: {result.message}"
+                + (f" ({result.url})" if result.url else ""),
+                style="cyan",
+            )
+            charge = billing_line(result.billing)
+            if charge:
+                console.print(f"  {charge}", style="cyan")
+            for warning in result.warnings:
+                console.print(f"  warning: {escape(warning)}", style="dim")
+            continue
+        exit_code = exit_code or result.exit_code
+        console.print(
+            f"[red]{shown}: {escape(result.error_code or result.reason or '')}: "
+            f"{escape(result.message)}[/red]"
+        )
+        if result.request_id:
+            console.print(f"  request id: {result.request_id}", style="dim")
+        if result.spooled:
+            console.print("  spooled; run `cloudexit spool flush`", style="dim")
+    if exit_code:
+        sys.exit(exit_code)
+
+
+def handle_spool(args):
+    command = args.spool_command
+    settings = _settings_or_exit(args)
+    spool = Spool.from_settings(settings)
+    flag_host = getattr(args, "host", None)
+    try:
+        only = host_id(flag_host) if flag_host else None
+    except SettingsError as e:
+        console.print(f"[red]{escape(str(e))}[/red]")
+        sys.exit(codes.CONFIG)
+
+    if command == "list":
+        entries = spool.entries(only)
+        if not entries:
+            print("The spool is empty.")
+            return
+        now = time.time()
+        print(f"{'SYNC ID':<38} {'HOST':<17} {'AGE':<8} {'ATTEMPTS':<9} LAST ERROR")
+        for entry in entries:
+            print(
+                f"{entry.sync_id:<38} {entry.host_id:<17} "
+                f"{format_age(now - entry.created):<8} "
+                f"{entry.meta.get('attempts', 0):<9} "
+                f"{entry.meta.get('last_error') or '-'}"
+                + (
+                    "  will be rejected (too old)"
+                    if now - entry.created > DEFAULT_MAX_AGE_DAYS * 86400
+                    else ""
+                )
+            )
+        return
+
+    if command == "flush":
+        _platform_or_exit(settings)
+        try:
+            check_key(settings.api_key.value)
+            result = flush(settings, spool, host=flag_host)
+        except ApiError as e:
+            console.print(f"[red]{escape(e.message)}[/red]")
+            sys.exit(e.exit_code)
+        except SettingsError as e:
+            console.print(f"[red]{escape(str(e))}[/red]")
+            sys.exit(codes.CONFIG)
+        if result.empty:
+            print("Nothing to deliver for this host.")
+            return
+        _report_flush(result)
+        if result.pending or result.failed:
+            sys.exit(codes.UPLOAD_UNAVAILABLE)
+        return
+
+    try:
+        older_than = parse_age(args.older_than) if args.older_than else None
+    except ValueError as e:
+        console.print(f"[red]{escape(str(e))}[/red]")
+        sys.exit(codes.CONFIG)
+    now = time.time()
+    due = [
+        entry
+        for entry in spool.entries(only)
+        if older_than is None or now - entry.created >= older_than
+    ]
+    if not due:
+        print("Nothing to purge.")
+        return
+    if not args.yes:
+        answer = ask(
+            f"Delete {_count(len(due), 'spooled sync')}? [y/N]: ",
+            no_terminal_message=(
+                "Purging asks for confirmation, but no terminal is attached. "
+                "Add --yes."
+            ),
+        )
+        if answer.strip().lower() not in ("y", "yes"):
+            print("Nothing deleted.")
+            return
+    for entry in due:
+        spool.remove(entry)
+    print(f"Deleted {_count(len(due), 'spooled sync')}.")
+
+
 def handle_config(args):
     if args.config_command == "path":
         print(config_file_path())
@@ -1402,6 +1699,12 @@ def main():
             return
         if args.cloud_provider == "catalogue":
             handle_catalogue(args)
+            return
+        if args.cloud_provider == "upload":
+            handle_upload(args)
+            return
+        if args.cloud_provider == "spool":
+            handle_spool(args)
             return
 
         # Print ASCII art

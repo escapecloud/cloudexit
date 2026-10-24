@@ -58,13 +58,15 @@ NO_TERMINAL_MESSAGE = (
 )
 
 
-def ask(prompt: str, *, secret: bool = False) -> str:
+def ask(
+    prompt: str, *, secret: bool = False, no_terminal_message: str | None = None
+) -> str:
     # Every question goes through here, so a run without a terminal (CI, a
     # pipe, < /dev/null) ends with a message instead of an EOFError traceback.
     try:
         return getpass.getpass(prompt) if secret else input(prompt)
     except EOFError:
-        console.print(f"[red]{NO_TERMINAL_MESSAGE}[/red]")
+        console.print(f"[red]{no_terminal_message or NO_TERMINAL_MESSAGE}[/red]")
         sys.exit(codes.CONFIG)
 
 

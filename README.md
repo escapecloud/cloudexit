@@ -168,6 +168,21 @@ The local report is always the Basic report, computed on your machine, whether o
 
 Before anything is sent the key is checked on your machine (prefix, length and checksum), and the platform's own description of itself (`/meta`, which needs no key) must match the key: a regional ExitCloud key is never sent to a platform that reports another region or product. Host names, addresses and ports do not matter. The key never appears in output or logs. On failure the run prints the platform's error code, its message and a request ID to quote when asking for help.
 
+### Retries and the spool
+
+A failed upload is retried when it may pass: connection errors, timeouts, HTTP 408, 425, 429, 500, 502, 503 and 504, and any error the platform marks as retryable. The wait doubles from 1 second up to 60 seconds with random jitter, `Retry-After` is honoured, and every attempt carries the same idempotency key (the sync ID), so a repeat never stores or charges a second time. All attempts together stay within `--upload-budget` seconds (default 300, `CLOUDEXIT_UPLOAD_BUDGET`). Final failures (exit codes 10, 11, 13, 14 and 15) are not retried.
+
+When the budget runs out on retryable failures the sync is saved to a local spool and the run exits 12 ("spooled; run `cloudexit spool flush`"). `--spool-on-error` also spools syncs the platform refused, for a later manual retry. The spool is `$XDG_STATE_HOME/cloudexit/spool/<host id>/` (`~/.local/state/...`, or `CLOUDEXIT_SPOOL_DIR`): the sync document and a small file with the attempts and the last error, readable by you only, never holding the API key. The host id is a hash, so the host name is not in the path.
+
+```bash
+cloudexit spool list                  # id, host id, age, attempts, last error
+cloudexit spool flush [--host URL]    # upload the spooled syncs, oldest first
+cloudexit spool purge [--older-than 30d] [--yes]
+cloudexit upload raw_data/sync.json   # upload sync documents (or folders of them), for example from an air-gapped machine
+```
+
+Every run with a platform first delivers the spooled syncs of the same host (oldest first, within 60 seconds); `--no-flush` skips that, and a failing flush never blocks the new run. A spooled sync older than the platform's `max_collection_age_days` is reported as "will be rejected" and kept until you purge it. For an account key, `upload` needs `--assessment-id`, or `--name` and `--exit-strategy`, to say where the sync goes.
+
 Connections always verify the platform's certificate. For a private certificate authority use `--ca-bundle` or `CLOUDEXIT_CA_BUNDLE`; otherwise `REQUESTS_CA_BUNDLE` and `SSL_CERT_FILE` are honoured. There is no option to turn verification off. `HTTPS_PROXY` and `NO_PROXY` are honoured. Requests give up after 10 seconds to connect and 60 seconds to read (`--timeout` sets both). The platform's capabilities are cached for five minutes in `~/.cache/cloudexit/` (`$XDG_CACHE_HOME/cloudexit/`, or `%LOCALAPPDATA%\cloudexit\cache\` on Windows).
 
 ## Data Landscape & Egress Estimation (alpha)

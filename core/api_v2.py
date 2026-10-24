@@ -4,12 +4,15 @@ import hashlib
 import json
 import logging
 import os
+import random
 import re
 import sys
 import time
 import uuid
 import zlib
 from dataclasses import dataclass
+from datetime import timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any, Callable, Mapping
 from urllib.parse import quote, urlsplit
@@ -17,7 +20,13 @@ from urllib.parse import quote, urlsplit
 import requests
 
 from utils import codes
-from utils.settings import KEY_PREFIXES, Setting, SettingsError, normalize_host
+from utils.settings import (
+    DEFAULT_UPLOAD_BUDGET,
+    KEY_PREFIXES,
+    Setting,
+    SettingsError,
+    normalize_host,
+)
 from utils.version import __version__
 
 from .sync_document import (
@@ -46,6 +55,14 @@ META_TTL_SECONDS = 300
 POLL_DEFAULT_SECONDS = 2.0
 POLL_MAX_SECONDS = 30.0
 PENDING_STATUSES = ("accepted", "processing")
+
+# A request that failed in one of these ways, or that the platform marked
+# retryable, is tried again; every other failure is final.
+RETRY_STATUSES = (408, 425, 429, 500, 502, 503, 504)
+MAX_ATTEMPTS = 6
+BACKOFF_BASE = 1.0
+BACKOFF_FACTOR = 2.0
+BACKOFF_CAP = 60.0
 
 BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 KEY_BODY = re.compile(r"[0-9A-Za-z]{54}")
@@ -133,6 +150,9 @@ class ApiError(Exception):
         self.status = status
         self.request_id = request_id
         self.retryable = retryable
+        self.retry_after: float | None = None
+        self.attempts = 1
+        self.exhausted = False
 
 
 @dataclass(frozen=True)
@@ -170,6 +190,24 @@ def exit_code_for(code: str | None, status: int | None, retryable: bool) -> int:
     if status in (404, 410):
         return codes.UPLOAD_TARGET
     return codes.UPLOAD_REJECTED
+
+
+def parse_retry_after(value: Any, now: float) -> float | None:
+    # Retry-After is a number of seconds or an HTTP date
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return max(0.0, float(text))
+    except ValueError:
+        pass
+    try:
+        when = parsedate_to_datetime(text)
+    except (TypeError, ValueError):
+        return None
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    return max(0.0, when.timestamp() - now)
 
 
 def checksum(text: str) -> str:
@@ -393,6 +431,9 @@ class ApiClient:
         sleep: Callable[[float], None] = time.sleep,
         clock: Callable[[], float] = time.time,
         monotonic: Callable[[], float] = time.monotonic,
+        budget: float = DEFAULT_UPLOAD_BUDGET,
+        max_attempts: int = MAX_ATTEMPTS,
+        rng: random.Random | None = None,
     ):
         environ = os.environ if environ is None else environ
         self.base_url = _base_url(host)
@@ -410,6 +451,10 @@ class ApiClient:
         self._sleep = sleep
         self._clock = clock
         self._monotonic = monotonic
+        self.budget = budget
+        self.max_attempts = max(1, max_attempts)
+        self._random = rng or random.Random()
+        self._deadline: float | None = None
         self._meta: dict[str, Any] | None = None
         self._platform_verified = False
 
@@ -428,6 +473,9 @@ class ApiClient:
                 "no platform host or API key is configured",
                 codes.UPLOAD_AUTH,
             )
+        budget = getattr(settings, "upload_budget", None)
+        if budget is not None:
+            options.setdefault("budget", budget.value)
         return cls(
             host,
             key,
@@ -452,10 +500,17 @@ class ApiClient:
             for detail in error.get("details") or []:
                 if isinstance(detail, dict) and detail.get("expected_host"):
                     message += f" (expected host: {detail['expected_host']})"
+            if "retryable" not in error:
+                retryable = (
+                    ERROR_EXIT_CODES[code] == codes.UPLOAD_UNAVAILABLE
+                    if code in ERROR_EXIT_CODES
+                    else status in RETRY_STATUSES
+                )
         else:
-            code, message, retryable = f"http_{status}", f"HTTP status {status}", False
+            code, message = f"http_{status}", f"HTTP status {status}"
+            retryable = status in RETRY_STATUSES
         message = message.replace(self._key, "[api key]")
-        return ApiError(
+        failure = ApiError(
             code,
             message,
             exit_code_for(code, status, retryable),
@@ -463,6 +518,18 @@ class ApiClient:
             request_id=request_id,
             retryable=retryable,
         )
+        failure.retry_after = parse_retry_after(
+            response.headers.get("Retry-After"), self._clock()
+        )
+        return failure
+
+    def _delay(self, error: ApiError, attempt: int) -> float:
+        # Retry-After is honoured as it is; otherwise exponential backoff with
+        # full jitter, from 1 s, doubling, up to 60 s.
+        if error.retry_after is not None:
+            return error.retry_after
+        ceiling = min(BACKOFF_CAP, BACKOFF_BASE * BACKOFF_FACTOR ** (attempt - 1))
+        return self._random.uniform(0.0, ceiling)
 
     def _call(
         self,
@@ -477,6 +544,50 @@ class ApiClient:
         if auth and not self._platform_verified:
             # The key is only sent to a platform that is what the key is for
             self.meta()
+        deadline = self._deadline
+        if deadline is None:
+            deadline = self._monotonic() + self.budget
+        attempt = 0
+        while True:
+            attempt += 1
+            try:
+                return self._send(
+                    method,
+                    path,
+                    expected=expected,
+                    body=body,
+                    headers=headers,
+                    auth=auth,
+                )
+            except ApiError as error:
+                error.attempts = attempt
+                if not error.retryable:
+                    raise
+                delay = self._delay(error, attempt)
+                if attempt >= self.max_attempts or delay > deadline - self._monotonic():
+                    error.exhausted = True
+                    raise
+                logger.debug(
+                    "%s %s failed (%s); retrying in %.1f s (attempt %d of %d)",
+                    method,
+                    path,
+                    error.code,
+                    delay,
+                    attempt,
+                    self.max_attempts,
+                )
+                self._sleep(delay)
+
+    def _send(
+        self,
+        method: str,
+        path: str,
+        *,
+        expected: tuple[int, ...],
+        body: bytes | None,
+        headers: Mapping[str, str] | None,
+        auth: bool,
+    ) -> tuple[dict[str, Any], requests.Response]:
         request_id = uuid.uuid4().hex
         send = {"Accept": "application/json", "X-Request-ID": request_id}
         send.update(headers or {})
@@ -707,8 +818,28 @@ class ApiClient:
         document: Mapping[str, Any],
         *,
         name: str,
-        exit_strategy: int,
+        exit_strategy: int | None,
         assessment_id: str | None = None,
+    ) -> PushResult:
+        # Every request of this push draws on one budget of time
+        self._deadline = self._monotonic() + self.budget
+        try:
+            return self._push(
+                document,
+                name=name,
+                exit_strategy=exit_strategy,
+                assessment_id=assessment_id,
+            )
+        finally:
+            self._deadline = None
+
+    def _push(
+        self,
+        document: Mapping[str, Any],
+        *,
+        name: str,
+        exit_strategy: int | None,
+        assessment_id: str | None,
     ) -> PushResult:
         sync_id = (document.get("sync") or {}).get("id")
         if not isinstance(sync_id, str) or not sync_id:
