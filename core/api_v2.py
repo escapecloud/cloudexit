@@ -50,7 +50,14 @@ PENDING_STATUSES = ("accepted", "processing")
 BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 KEY_BODY = re.compile(r"[0-9A-Za-z]{54}")
 CHECKSUM_CHARS = 6
-KEY_HOSTS = {"exc_eu_sk_": "eu.exitcloud.io", "exc_us_sk_": "us.exitcloud.io"}
+# What a platform must say about itself in /meta for a key of each kind. An
+# EscapeCloud key works on any host name, address or port and in any region.
+KEY_PLATFORMS = {
+    "esc_sk_": ("escapecloud", None),
+    "exc_eu_sk_": ("exitcloud", "eu"),
+    "exc_us_sk_": ("exitcloud", "us"),
+}
+PRODUCT_NAMES = {"escapecloud": "EscapeCloud", "exitcloud": "ExitCloud"}
 
 EXIT_STRATEGIES = {1: "repatriation", 2: "hybrid_cloud", 3: "alternate_cloud"}
 
@@ -131,7 +138,8 @@ class ApiError(Exception):
 @dataclass(frozen=True)
 class KeyInfo:
     prefix: str
-    host: str | None
+    product: str
+    region: str | None
 
 
 @dataclass(frozen=True)
@@ -146,6 +154,7 @@ class PushResult:
     pending: bool
     warnings: tuple[str, ...]
     request_id: str | None
+    billing: dict[str, int] | None = None
 
 
 def exit_code_for(code: str | None, status: int | None, retryable: bool) -> int:
@@ -179,7 +188,7 @@ def _base_url(host: str) -> str:
         raise ApiError("invalid_host", str(exc), codes.UPLOAD_UNAVAILABLE) from None
 
 
-def check_key(key: str | None, host: str) -> KeyInfo:
+def check_key(key: str | None) -> KeyInfo:
     # Local only: a typo is caught before anything is sent, and the key never
     # appears in a message.
     prefix = next((p for p in KEY_PREFIXES if key and key.startswith(p)), None)
@@ -199,15 +208,34 @@ def check_key(key: str | None, host: str) -> KeyInfo:
             "the API key is not valid (check it for typos)",
             codes.UPLOAD_AUTH,
         )
-    expected = KEY_HOSTS.get(prefix)
-    hostname = urlsplit(_base_url(host)).hostname
-    if expected and hostname != expected:
+    product, region = KEY_PLATFORMS[prefix]
+    return KeyInfo(prefix, product, region)
+
+
+def _describe(product: str, region: str | None) -> str:
+    name = PRODUCT_NAMES.get(product, product)
+    return f"{name} {region.upper()}" if region else name
+
+
+def check_platform(key: KeyInfo, meta: Mapping[str, Any]) -> None:
+    # Catches a configuration mistake (a key for another product or region),
+    # not a hostile host: the trust anchor is HTTPS to the host the user
+    # configured. A platform that does not say what it is is left to decide.
+    host = meta.get("host")
+    if not isinstance(host, dict):
+        return
+    product = host.get("product")
+    if product not in PRODUCT_NAMES:
+        return
+    region = host.get("region")
+    region = region.lower() if isinstance(region, str) and region else None
+    if product != key.product or (key.region and region and region != key.region):
         raise ApiError(
             "wrong_region",
-            f"this API key belongs to {expected}, not {hostname}",
+            f"This is an {_describe(key.product, key.region)} key, but the "
+            f"platform reports {_describe(product, region)}.",
             codes.UPLOAD_AUTH,
         )
-    return KeyInfo(prefix, expected)
 
 
 def resolve_ca_bundle(
@@ -267,6 +295,18 @@ def _version(text: Any) -> tuple[int, ...] | None:
 
 def _one_line(text: Any) -> str:
     return " ".join(str(text).split())
+
+
+def _billing(value: Any) -> dict[str, int] | None:
+    # What the platform charged for this sync, on hosts that charge
+    if not isinstance(value, dict):
+        return None
+    found = {
+        key: value[key]
+        for key in ("charged_credits", "balance")
+        if isinstance(value.get(key), int) and not isinstance(value.get(key), bool)
+    }
+    return found or None
 
 
 def _warning_lines(items: Any) -> list[str]:
@@ -356,7 +396,7 @@ class ApiClient:
     ):
         environ = os.environ if environ is None else environ
         self.base_url = _base_url(host)
-        check_key(api_key, host)
+        self._key_info = check_key(api_key)
         self.verify = resolve_ca_bundle(ca_bundle, environ)
         if isinstance(self.verify, str) and not os.path.exists(self.verify):
             raise ApiError(
@@ -371,6 +411,7 @@ class ApiClient:
         self._clock = clock
         self._monotonic = monotonic
         self._meta: dict[str, Any] | None = None
+        self._platform_verified = False
 
         self.session = requests.Session()
         self.session.headers["User-Agent"] = user_agent(environ)
@@ -433,6 +474,9 @@ class ApiClient:
         headers: Mapping[str, str] | None = None,
         auth: bool = True,
     ) -> tuple[dict[str, Any], requests.Response]:
+        if auth and not self._platform_verified:
+            # The key is only sent to a platform that is what the key is for
+            self.meta()
         request_id = uuid.uuid4().hex
         send = {"Accept": "application/json", "X-Request-ID": request_id}
         send.update(headers or {})
@@ -554,6 +598,9 @@ class ApiClient:
                 )
             self._meta = data
             self._write_meta_cache(data)
+        if not self._platform_verified:
+            check_platform(self._key_info, self._meta)
+            self._platform_verified = True
         return self._meta
 
     def whoami(self) -> dict[str, Any]:
@@ -722,6 +769,8 @@ class ApiClient:
             pending=pending,
             warnings=tuple(warnings + _warning_lines(data.get("warnings"))),
             request_id=response.headers.get("X-Request-ID") or data.get("request_id"),
+            # A replay charges nothing, whatever the stored answer says
+            billing=None if replayed else _billing(data.get("billing")),
         )
 
 

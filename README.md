@@ -166,7 +166,7 @@ The local report is always the Basic report, computed on your machine, whether o
 | 14 | The assessment named by `--assessment-id` is missing, deleted, archived, or does not match the data. |
 | 15 | The platform does not accept this cloudexit version or the sync document version. |
 
-Before anything is sent the key is checked on your machine (prefix, length and checksum), and a regional ExitCloud key is only ever sent to its own region. The key never appears in output or logs. On failure the run prints the platform's error code, its message and a request ID to quote when asking for help.
+Before anything is sent the key is checked on your machine (prefix, length and checksum), and the platform's own description of itself (`/meta`, which needs no key) must match the key: a regional ExitCloud key is never sent to a platform that reports another region or product. Host names, addresses and ports do not matter. The key never appears in output or logs. On failure the run prints the platform's error code, its message and a request ID to quote when asking for help.
 
 Connections always verify the platform's certificate. For a private certificate authority use `--ca-bundle` or `CLOUDEXIT_CA_BUNDLE`; otherwise `REQUESTS_CA_BUNDLE` and `SSL_CERT_FILE` are honoured. There is no option to turn verification off. `HTTPS_PROXY` and `NO_PROXY` are honoured. Requests give up after 10 seconds to connect and 60 seconds to read (`--timeout` sets both). The platform's capabilities are cached for five minutes in `~/.cache/cloudexit/` (`$XDG_CACHE_HOME/cloudexit/`, or `%LOCALAPPDATA%\cloudexit\cache\` on Windows).
 

@@ -5,7 +5,6 @@ import boto3
 import time
 import sys
 import os
-import getpass
 import traceback
 from dataclasses import replace
 from typing import Any
@@ -32,6 +31,7 @@ from core.utils_report_egress import (
 )
 from core.api_v2 import ApiError, check_key
 from core.upload import (
+    billing_line,
     error_failure,
     report_info,
     upload,
@@ -66,6 +66,7 @@ from utils.data import (
     use_catalogue_file,
 )
 from utils.utils import (
+    ask,
     ascii_art,
     build_config,
     create_directory,
@@ -224,12 +225,12 @@ def _aws_provider_from_env() -> dict:
 
 def _aws_provider_from_prompt() -> dict:
     try:
-        access_key = input("Enter AWS Access Key: ").strip()
-        secret_key = getpass.getpass("Enter AWS Secret Key (input hidden): ").strip()
+        access_key = ask("Enter AWS Access Key: ").strip()
+        secret_key = ask("Enter AWS Secret Key (input hidden): ", secret=True).strip()
 
         # Validate AWS region input
         while True:
-            region = input("Enter AWS region: ").strip()
+            region = ask("Enter AWS region: ").strip()
             try:
                 validate_region(region)
                 break
@@ -396,7 +397,7 @@ def _azure_provider_noninteractive(args) -> dict:
 def _azure_provider_from_cli() -> dict:
     credential = _azure_cli_credential()
     try:
-        tenant_id = input("Enter Azure Tenant ID: ").strip()
+        tenant_id = ask("Enter Azure Tenant ID: ").strip()
         subscription_client = create_subscription_client(credential)
         subscriptions = list(subscription_client.subscriptions.list())
         if not subscriptions:
@@ -435,9 +436,9 @@ def _azure_provider_from_cli() -> dict:
 
 
 def _azure_provider_from_prompt() -> dict:
-    tenant_id = input("Enter Azure Tenant ID: ").strip()
-    client_id = input("Enter Service Principal / Client ID: ").strip()
-    client_secret = getpass.getpass("Enter Client Secret (input hidden): ").strip()
+    tenant_id = ask("Enter Azure Tenant ID: ").strip()
+    client_id = ask("Enter Service Principal / Client ID: ").strip()
+    client_secret = ask("Enter Client Secret (input hidden): ", secret=True).strip()
 
     ClientSecretCredential = azure_import("azure.identity", "ClientSecretCredential")
     try:
@@ -606,7 +607,7 @@ def run_assessment(
             # collection starts. It does not drop the run to Basic or discard
             # the local report.
             try:
-                check_key(settings.api_key.value, settings.host.value)
+                check_key(settings.api_key.value)
                 print_step("ExitCloud integration configured.", status="ok")
             except ApiError as error:
                 signin_failure = error_failure(error)
@@ -1002,6 +1003,9 @@ def run_assessment(
                 ),
                 style="cyan",
             )
+            charge = billing_line(upload_result.billing)
+            if charge:
+                console.print(charge, style="cyan")
         if sync_output:
             console.print(f"Sync document: {sync_output.path}", style="cyan")
             if sync_output.emitted:
@@ -1178,7 +1182,11 @@ def parse_arguments():
     aws_parser.add_argument(
         "--non-interactive",
         action="store_true",
-        help="Run without prompts; read all inputs from environment variables (for CI use).",
+        help=(
+            "Run without prompts; read all inputs from environment variables "
+            "(for CI use), for example ESC_EXIT_STRATEGY (1 or 3) and "
+            "ESC_ASSESSMENT_TYPE (1 or 2)."
+        ),
     )
     aws_parser.add_argument(
         "--dry-run",
@@ -1225,7 +1233,11 @@ def parse_arguments():
     azure_parser.add_argument(
         "--non-interactive",
         action="store_true",
-        help="Run without prompts; read all inputs from environment variables (for CI use).",
+        help=(
+            "Run without prompts; read all inputs from environment variables "
+            "(for CI use), for example ESC_EXIT_STRATEGY (1 or 3) and "
+            "ESC_ASSESSMENT_TYPE (1 or 2)."
+        ),
     )
     azure_parser.add_argument(
         "--dry-run",

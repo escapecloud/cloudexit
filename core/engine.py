@@ -10,6 +10,7 @@ from botocore.exceptions import NoCredentialsError
 from .utils import copy_assets
 from .utils_aws import build_aws_resource_inventory, build_aws_cost_inventory
 from .utils_azure import (
+    CostRateLimited,
     build_azure_cost_inventory,
     build_azure_resource_inventory,
     create_credential,
@@ -308,6 +309,9 @@ def create_cost_inventory(
 
         return {"success": True, "logs": "Cost inventory created successfully."}
 
+    except CostRateLimited as e:
+        logger.debug("Cost inventory stopped by rate limiting", exc_info=True)
+        return {"success": False, "logs": str(e)}
     except Exception as e:
         logger.error(f"Error creating cost inventory: {str(e)}", exc_info=True)
         return {"success": False, "logs": str(e)}

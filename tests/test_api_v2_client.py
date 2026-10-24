@@ -100,19 +100,17 @@ class ClientTestCase(unittest.TestCase):
         return json.loads(request.kwargs["data"].decode("utf-8"))
 
 
-class KeyTests(unittest.TestCase):
-    def test_every_issued_prefix_is_accepted(self):
-        for key, host in (
-            (KEY, "https://platform.test"),
-            (KEY, "http://localhost:8000"),
-            (EU_KEY, "https://eu.exitcloud.io"),
-            (US_KEY, "https://us.exitcloud.io/"),
-            (EU_KEY, "eu.exitcloud.io"),
+class KeyTests(ClientTestCase):
+    def test_every_issued_prefix_is_accepted_and_names_its_platform(self):
+        for key, product, region in (
+            (KEY, "escapecloud", None),
+            (EU_KEY, "exitcloud", "eu"),
+            (US_KEY, "exitcloud", "us"),
         ):
-            with self.subTest(key=key[:10], host=host):
-                self.assertEqual(
-                    check_key(key, host).prefix, key[: key.index("sk_") + 3]
-                )
+            with self.subTest(product=product, region=region):
+                info = check_key(key)
+                self.assertEqual((info.product, info.region), (product, region))
+                self.assertEqual(info.prefix, key[: key.index("sk_") + 3])
 
     def test_a_key_that_cannot_be_right_is_refused_with_exit_11(self):
         bad = {
@@ -132,7 +130,7 @@ class KeyTests(unittest.TestCase):
         for label, key in bad.items():
             with self.subTest(label):
                 with self.assertRaises(ApiError) as ctx:
-                    check_key(key, HOST)
+                    check_key(key)
                 self.assertEqual(ctx.exception.exit_code, codes.UPLOAD_AUTH)
                 self.assertEqual(ctx.exception.code, "invalid_api_key")
                 self.assertNotIn(KEY[8:], ctx.exception.message)
@@ -142,27 +140,149 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(len(api_v2.checksum("x")), 6)
         self.assertEqual(api_v2.checksum(""), "000000")
 
-    def test_a_region_key_sent_to_another_host_names_the_right_host(self):
-        for key, host, right in (
-            (EU_KEY, "https://us.exitcloud.io", "eu.exitcloud.io"),
-            (US_KEY, "https://eu.exitcloud.io", "us.exitcloud.io"),
-            (EU_KEY, "https://platform.test", "eu.exitcloud.io"),
-            (US_KEY, "http://localhost:8000", "us.exitcloud.io"),
-        ):
-            with self.subTest(right=right, host=host):
-                with self.assertRaises(ApiError) as ctx:
-                    check_key(key, host)
-                self.assertEqual(ctx.exception.exit_code, codes.UPLOAD_AUTH)
-                self.assertEqual(ctx.exception.code, "wrong_region")
-                self.assertIn(right, ctx.exception.message)
-                self.assertNotIn(key, ctx.exception.message)
-
-    def test_the_client_refuses_before_it_sends_anything(self):
+    def test_a_typo_never_reaches_the_network(self):
         with fake_http() as fake:
-            for key, host in ((corrupt(KEY), HOST), (EU_KEY, HOST)):
+            for key in (corrupt(KEY), corrupt(EU_KEY), "not-a-key"):
                 with self.assertRaises(ApiError):
-                    ApiClient(host, key, environ={})
+                    ApiClient("https://platform.example.com", key, environ={})
         self.assertEqual(fake.requests, [])
+
+    def sent(self, key, url, **meta_changes):
+        client = self.client(key=key, host=url)
+        with fake_http(meta_reply(**meta_changes), whoami_reply()) as fake:
+            client.whoami()
+        return fake
+
+    def refused(self, key, url, **meta_changes):
+        client = self.client(key=key, host=url)
+        with fake_http(meta_reply(**meta_changes)) as fake:
+            with self.assertRaises(ApiError) as ctx:
+                client.whoami()
+        # Only /meta was asked, and the key was not sent anywhere
+        self.assertEqual([r.method for r in fake.requests], ["GET"])
+        for request in fake.requests:
+            self.assertNotIn("Authorization", request.kwargs["headers"])
+        self.assertEqual(ctx.exception.exit_code, codes.UPLOAD_AUTH)
+        self.assertEqual(ctx.exception.code, "wrong_region")
+        self.assertNotIn(key, ctx.exception.message)
+        return ctx.exception
+
+    def test_an_escapecloud_key_works_on_any_host_that_says_it_is_escapecloud(self):
+        hosts = (
+            "https://escape.corp.internal",
+            "https://10.0.4.17:8443",
+            "http://localhost:8000",
+            "https://platform.example.com",
+            "platform.example.com",
+        )
+        for host in hosts:
+            for region in (None, "eu", "us"):
+                with self.subTest(host=host, region=region):
+                    fake = self.sent(
+                        KEY, host, host={"product": "escapecloud", "region": region}
+                    )
+                    self.assertEqual(
+                        fake.requests[1].kwargs["headers"]["Authorization"],
+                        f"Bearer {KEY}",
+                    )
+
+    def test_a_regional_key_works_on_a_host_of_its_region_whatever_its_name(self):
+        for key, region in ((EU_KEY, "eu"), (US_KEY, "us")):
+            for host in (
+                f"https://{region}.platform.example.com",
+                "https://staging.example.net",
+                "https://10.0.4.17:8443",
+                "http://localhost:8000",
+            ):
+                for reported in (region, region.upper()):
+                    with self.subTest(region=region, host=host, reported=reported):
+                        self.sent(
+                            key, host, host={"product": "exitcloud", "region": reported}
+                        )
+
+    def test_a_key_of_another_region_is_refused_naming_what_the_host_reports(self):
+        error = self.refused(
+            EU_KEY,
+            "https://platform.example.com",
+            host={"product": "exitcloud", "region": "us"},
+        )
+        self.assertEqual(
+            error.message,
+            "This is an ExitCloud EU key, but the platform reports ExitCloud US.",
+        )
+        error = self.refused(
+            US_KEY,
+            "https://10.0.4.17:8443",
+            host={"product": "exitcloud", "region": "eu"},
+        )
+        self.assertEqual(
+            error.message,
+            "This is an ExitCloud US key, but the platform reports ExitCloud EU.",
+        )
+
+    def test_a_key_of_the_other_product_is_refused(self):
+        error = self.refused(
+            KEY,
+            "https://platform.example.com",
+            host={"product": "exitcloud", "region": "eu"},
+        )
+        self.assertEqual(
+            error.message,
+            "This is an EscapeCloud key, but the platform reports ExitCloud EU.",
+        )
+        error = self.refused(
+            EU_KEY,
+            "https://escape.corp.internal",
+            host={"product": "escapecloud", "region": None},
+        )
+        self.assertEqual(
+            error.message,
+            "This is an ExitCloud EU key, but the platform reports EscapeCloud.",
+        )
+
+    def test_a_platform_that_does_not_say_what_it_is_decides_for_itself(self):
+        no_host = meta_body()
+        del no_host["host"]
+        cases = {
+            "no host block": reply(200, no_host),
+            "no product": reply(200, meta_body(host={"product": None})),
+            "an unknown product": reply(200, meta_body(host={"product": "other"})),
+            "host is not an object": reply(200, merged(meta_body(), {"host": "x"})),
+        }
+        for label, answer in cases.items():
+            for key in (KEY, EU_KEY, US_KEY):
+                with self.subTest(label, key=key[:6]):
+                    client = self.client(key=key, host="https://platform.example.com")
+                    with fake_http(answer, whoami_reply()):
+                        client.whoami()
+
+    def test_a_regional_key_on_a_host_without_a_region_is_left_to_the_platform(self):
+        self.sent(
+            EU_KEY,
+            "https://platform.example.com",
+            host={"product": "exitcloud", "region": None},
+        )
+
+    def test_the_key_is_not_sent_by_a_push_to_the_wrong_platform_either(self):
+        client = self.client(key=US_KEY, host="https://platform.example.com")
+        error, fake = self.failure(
+            [meta_reply(host={"product": "exitcloud", "region": "eu"})], client=client
+        )
+
+        self.assertEqual((error.exit_code, error.code), (11, "wrong_region"))
+        self.assertEqual(len(fake.requests), 1)
+        self.assertNotIn("Authorization", fake.requests[0].kwargs["headers"])
+
+    def test_the_platform_is_checked_once_per_client(self):
+        client = self.client(key=EU_KEY, host="https://platform.example.com")
+        eu = {"host": {"product": "exitcloud", "region": "eu"}}
+        with fake_http(meta_reply(**eu), whoami_reply(), whoami_reply()) as fake:
+            client.whoami()
+            client.whoami()
+        self.assertEqual(
+            [r.url.rsplit("/", 1)[1] for r in fake.requests],
+            ["meta", "whoami", "whoami"],
+        )
 
     def test_a_missing_host_or_key_is_not_configured(self):
         class Settings:
@@ -280,9 +400,10 @@ class TransportTests(ClientTestCase):
         for configured, env, expected in cases:
             with self.subTest(expected=str(expected)[-10:]):
                 client = self.client(ca_bundle=configured, environ=env)
-                with fake_http(whoami_reply()) as fake:
+                with fake_http(meta_reply(), whoami_reply()) as fake:
                     client.whoami()
-                self.assertEqual(fake.requests[0].kwargs["verify"], expected)
+                for request in fake.requests:
+                    self.assertEqual(request.kwargs["verify"], expected)
 
     def test_verification_cannot_be_switched_off(self):
         for configured, env in (
@@ -331,9 +452,10 @@ class TransportTests(ClientTestCase):
         )
 
         client = self.client(timeout=(2.0, 3.0))
-        with fake_http(whoami_reply()) as fake:
+        with fake_http(meta_reply(), whoami_reply()) as fake:
             client.whoami()
-        self.assertEqual(fake.requests[0].kwargs["timeout"], (2.0, 3.0))
+        for request in fake.requests:
+            self.assertEqual(request.kwargs["timeout"], (2.0, 3.0))
 
     def test_transport_failures_are_exit_12(self):
         cases = (
@@ -920,13 +1042,13 @@ class ErrorMappingTests(ClientTestCase):
                 {
                     "code": "wrong_region",
                     "message": "m",
-                    "expected_host": "https://eu.exitcloud.io",
+                    "expected_host": "https://eu.platform.example.com",
                 }
             ],
         )
         error, _ = self.failure([meta_reply(), whoami_reply(), reply(403, body)])
         self.assertEqual(error.exit_code, codes.UPLOAD_AUTH)
-        self.assertIn("https://eu.exitcloud.io", error.message)
+        self.assertIn("https://eu.platform.example.com", error.message)
 
     def test_messages_are_one_line_and_never_echo_the_key(self):
         body = error_body("validation_failed", f"Bad\nvalue {KEY} here")
@@ -1290,7 +1412,7 @@ class ExampleReplayTests(ClientTestCase):
                 key = request["headers"]["Authorization"].removeprefix("Bearer ")
                 with fake_http() as fake:
                     with self.assertRaises(ApiError) as ctx:
-                        check_key(key, HOST)
+                        check_key(key)
                 self.assertEqual(fake.requests, [])
                 self.assertEqual(ctx.exception.exit_code, codes.UPLOAD_AUTH)
                 self.assertEqual(
@@ -1305,7 +1427,7 @@ class ExampleReplayTests(ClientTestCase):
                 keys = self.keys_for(example)
                 client = self.client(key=next(iter(keys.values())))
                 answer = self.response_for(example, keys)
-                with fake_http(answer):
+                with fake_http(meta_reply(), answer):
                     with self.assertRaises(ApiError) as ctx:
                         client.whoami()
                 self.assertEqual(ctx.exception.exit_code, codes.UPLOAD_AUTH)
@@ -1316,10 +1438,12 @@ class ExampleReplayTests(ClientTestCase):
 
         example = self.examples["02"]
         keys = self.keys_for(example)
-        with fake_http(self.whoami_for(example, "assessment_key")) as fake:
+        with fake_http(
+            meta_reply(), self.whoami_for(example, "assessment_key")
+        ) as fake:
             who = self.client(key=keys["assessment_key"]).whoami()
         self.assertEqual(who["key"]["kind"], "assessment")
-        self.assertEqual(fake.requests[0].url, HOST + example["request"]["path"])
+        self.assertEqual(fake.requests[1].url, HOST + example["request"]["path"])
 
         with fake_http(reply(200, meta_body())) as fake:
             self.client().meta()

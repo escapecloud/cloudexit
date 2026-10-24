@@ -7,6 +7,8 @@ from importlib.metadata import PackageNotFoundError, requires
 from typing import Any
 from rich.console import Console
 
+from utils.utils import ask
+
 logger = logging.getLogger("main.utils.azure")
 console = Console()
 
@@ -121,7 +123,7 @@ def select_subscription(subscriptions: list[Any]) -> Any:
         console.print(f"{idx}. {sub.display_name} ({sub.subscription_id})")
     while True:
         try:
-            selection = int(input("Select a subscription by number: ").strip())
+            selection = int(ask("Select a subscription by number: ").strip())
             if not (1 <= selection <= len(subscriptions)):
                 raise ValueError("Invalid subscription selection.")
             selected_subscription = subscriptions[selection - 1]
@@ -139,7 +141,7 @@ def select_resource_group(resource_groups: list[Any]) -> str:
         console.print(f"{idx}. {rg.name}")
     while True:
         try:
-            selection = int(input("Select a resource group by number: ").strip())
+            selection = int(ask("Select a resource group by number: ").strip())
             if not (1 <= selection <= len(resource_groups)):
                 raise ValueError("Invalid resource group selection.")
             selected_resource_group = resource_groups[selection - 1].name
