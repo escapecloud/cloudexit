@@ -7,7 +7,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Any
 from botocore.exceptions import NoCredentialsError
 
-from .utils import copy_assets
+from cloudexit.report.assets import copy_assets
 from cloudexit.providers.aws.costs import build_aws_cost_inventory
 from cloudexit.providers.aws.inventory import build_aws_resource_inventory
 from cloudexit.providers.azure.clients import (
@@ -22,10 +22,10 @@ from cloudexit.providers.azure.inventory import build_azure_resource_inventory
 from cloudexit.providers.azure.sdk import azure_import
 from cloudexit.catalogue.db import connect, load_data
 from cloudexit.tfstate import build_tfstate_resource_inventory
-from .report.context import build_context, collect_provenance
-from .report.executive_summary import generate_executive_summary
-from .report.html_sections import html_sections
-from .utils_report import (
+from cloudexit.report.context import build_context, collect_provenance
+from cloudexit.report.executive_summary import generate_executive_summary
+from cloudexit.report.html_sections import html_sections
+from cloudexit.report.writers import (
     generate_html_report,
     generate_json_report,
 )

@@ -4,12 +4,12 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.colors import HexColor
 from reportlab.platypus import Paragraph, Table, TableStyle
 
-from core.utils_report import (
-    anonymize_string,
-    _default_table_style,
-    _build_summary_section,
-    _build_scope_section,
+from cloudexit.report.egress import (
+    build_scope_section,
+    build_summary_section,
+    default_table_style,
 )
+from cloudexit.report.writers import anonymize_string
 from tests.support.report import (
     build_report_fixture,
 )
@@ -54,11 +54,11 @@ class AnonymizeStringTests(unittest.TestCase):
 
 class DefaultTableStyleTests(unittest.TestCase):
     def test_returns_table_style_instance(self):
-        style = _default_table_style()
+        style = default_table_style()
         self.assertIsInstance(style, TableStyle)
 
     def test_style_has_expected_commands(self):
-        style = _default_table_style()
+        style = default_table_style()
         commands = style.getCommands()
         command_names = [cmd[0] for cmd in commands]
         self.assertIn("BACKGROUND", command_names)
@@ -73,14 +73,14 @@ class BuildSummarySectionTests(unittest.TestCase):
         self.fixture = build_report_fixture()
 
     def test_returns_non_empty_list(self):
-        content = _build_summary_section(
+        content = build_summary_section(
             self.fixture["metadata"], self.styles, self.content_style
         )
         self.assertIsInstance(content, list)
         self.assertGreater(len(content), 0)
 
     def test_contains_heading_paragraph(self):
-        content = _build_summary_section(
+        content = build_summary_section(
             self.fixture["metadata"], self.styles, self.content_style
         )
         paragraphs = [item for item in content if isinstance(item, Paragraph)]
@@ -88,7 +88,7 @@ class BuildSummarySectionTests(unittest.TestCase):
         self.assertIn("Summary", heading_texts)
 
     def test_contains_table_with_metadata(self):
-        content = _build_summary_section(
+        content = build_summary_section(
             self.fixture["metadata"], self.styles, self.content_style
         )
         tables = [item for item in content if isinstance(item, Table)]
@@ -96,7 +96,7 @@ class BuildSummarySectionTests(unittest.TestCase):
 
     def test_azure_provider_maps_correctly(self):
         metadata = {**self.fixture["metadata"], "cloud_service_provider": 1}
-        content = _build_summary_section(metadata, self.styles, self.content_style)
+        content = build_summary_section(metadata, self.styles, self.content_style)
         tables = [item for item in content if isinstance(item, Table)]
         self.assertEqual(len(tables), 1)
 
@@ -107,7 +107,7 @@ class BuildScopeSectionTests(unittest.TestCase):
         self.fixture = build_report_fixture()
 
     def test_aws_scope_contains_access_key(self):
-        content = _build_scope_section(
+        content = build_scope_section(
             self.fixture["metadata"],
             self.fixture["provider_details"],
             self.styles,
@@ -125,7 +125,7 @@ class BuildScopeSectionTests(unittest.TestCase):
             "subscriptionId": "sub-000",
             "resourceGroupName": "rg-test",
         }
-        content = _build_scope_section(
+        content = build_scope_section(
             metadata, provider_details, self.styles, self.content_style
         )
         tables = [item for item in content if isinstance(item, Table)]
@@ -133,7 +133,7 @@ class BuildScopeSectionTests(unittest.TestCase):
 
     def test_unknown_provider_returns_na(self):
         metadata = {**self.fixture["metadata"], "cloud_service_provider": 99}
-        content = _build_scope_section(metadata, {}, self.styles, self.content_style)
+        content = build_scope_section(metadata, {}, self.styles, self.content_style)
         tables = [item for item in content if isinstance(item, Table)]
         self.assertEqual(len(tables), 1)
 
@@ -147,7 +147,7 @@ class BuildTfstateScopeSectionTests(unittest.TestCase):
         self.fixture = build_report_fixture()
 
     def _rows(self, metadata, provider_details, tfstate_scope=None):
-        content = _build_scope_section(
+        content = build_scope_section(
             metadata,
             provider_details,
             self.styles,

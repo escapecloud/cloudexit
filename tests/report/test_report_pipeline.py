@@ -3,12 +3,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from core.report.executive_summary import generate_executive_summary
-from core.utils_report import (
+from cloudexit.report.executive_summary import generate_executive_summary
+from cloudexit.report.writers import (
     generate_html_report,
     generate_json_report,
 )
-from core.utils_report_json import transform_cost_inventory_for_json
+from cloudexit.report.json_data import transform_cost_inventory_for_json
 from tests.support.report import (
     build_empty_report_fixture,
     build_fixture_context,

@@ -1,4 +1,4 @@
-# core/utils.py
+# cloudexit/report/assets.py
 import os
 import shutil
 import logging

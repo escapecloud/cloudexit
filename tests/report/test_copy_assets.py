@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest import mock
 
 from cloudexit.resources import asset_path
-from core.utils import copy_assets
+from cloudexit.report.assets import copy_assets
 from cloudexit.catalogue.store import active_catalogue_path
 
 SOURCE_ICONS = asset_path("icons")
@@ -17,14 +17,14 @@ SOURCE_ICONS = asset_path("icons")
 def staged(cloud_service_provider):
     # The catalogue is downloaded at runtime and is absent in CI, so the
     # assessment.db copy is stubbed out -- it isn't what these tests cover.
-    # Replace the module binding inside core.utils rather than the attribute
+    # Replace the module binding inside cloudexit.report.assets rather than the attribute
     # on shutil itself: copytree calls copyfile internally, so patching it
     # globally would break the asset copy this module is testing.
     fake_shutil = mock.MagicMock(wraps=shutil)
     fake_shutil.copyfile = mock.MagicMock()
 
     with tempfile.TemporaryDirectory() as report_dir:
-        with mock.patch("core.utils.shutil", fake_shutil):
+        with mock.patch("cloudexit.report.assets.shutil", fake_shutil):
             copy_assets(report_dir, cloud_service_provider)
 
         yield Path(report_dir), fake_shutil.copyfile

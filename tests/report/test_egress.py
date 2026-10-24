@@ -14,7 +14,7 @@ from tests.support.report import stage_report_assets
 from cloudexit.resources import asset_path
 from cloudexit.egress.model import GIB, write_egress_inventory
 from cloudexit.catalogue.store import active_catalogue_path
-from core.utils_report_egress import (
+from cloudexit.report.egress import (
     CATEGORIES,
     _build_allocation,
     _build_coverage_section,
@@ -252,7 +252,7 @@ class LoadPricingTests(unittest.TestCase):
 
     def test_falls_back_to_master_dataset_when_table_missing(self):
         with patch(
-            "core.utils_report_egress.load_data",
+            "cloudexit.report.egress.load_data",
             side_effect=[sqlite3.OperationalError("no such table"), SIMPLE_PRICING],
         ) as mock_load:
             loaded = load_pricing("/tmp/report")
@@ -488,7 +488,7 @@ class GenerateEgressHtmlReportTests(unittest.TestCase):
             )
 
             with patch(
-                "core.utils_report_egress.load_data",
+                "cloudexit.report.egress.load_data",
                 side_effect=_fake_load_data,
             ):
                 result = generate_egress_html_report(tmp_dir, json_path)
@@ -913,7 +913,7 @@ class GenerateEgressPdfReportTests(unittest.TestCase):
             )
 
             with patch(
-                "core.utils_report_egress.load_data",
+                "cloudexit.report.egress.load_data",
                 side_effect=_fake_load_data,
             ):
                 result = generate_egress_pdf_report(

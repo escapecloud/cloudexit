@@ -132,7 +132,7 @@ def build_fixture_context(fixture, report_dir, **overrides):
     # A report context from a fixture, for rendering the Basic report.
     from datetime import datetime, timezone
 
-    from core.report.context import Provenance, build_context
+    from cloudexit.report.context import Provenance, build_context
 
     collected = datetime(2026, 5, 7, 12, 0, tzinfo=timezone.utc)
     provenance = overrides.pop(

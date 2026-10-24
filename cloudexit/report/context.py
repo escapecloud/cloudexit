@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from cloudexit.resources import find_asset
-from core.utils_report_common import summarize_alternative_technologies
+from cloudexit.report.aggregate import summarize_alternative_technologies
 from cloudexit.catalogue.store import CatalogueError, catalogue_info
 from cloudexit.version import __version__
 

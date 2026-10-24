@@ -1,8 +1,8 @@
-# core/utils_report_json.py
+# cloudexit/report/json_data.py
 import logging
 from typing import Any
 
-from core.utils_report_common import (
+from cloudexit.report.aggregate import (
     enrich_resource_inventory,
     sort_cost_data,
     summarize_alternative_technologies,

@@ -12,9 +12,9 @@ from unittest import mock
 
 from cloudexit import resources
 from core.engine import generate_report, perform_risk_assessment
-from core.report import fonts
+from cloudexit.report import fonts
 from cloudexit.resources import asset_path, find_asset
-from core.utils import copy_assets
+from cloudexit.report.assets import copy_assets
 from tests.support.isolation import isolated_environ
 from tests.support.flow import build_flow_run
 from tests.report.test_report_flow import AWS_RESOURCES, CONFIG, COSTS

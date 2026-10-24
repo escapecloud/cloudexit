@@ -13,19 +13,19 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import SimpleDocTemplate, Table
 
-from core.report.executive_summary import generate_executive_summary
-from core.report.helpers import initials
-from core.report.palette import contrast_failures
-from core.report.placeholder import IconPlaceholder, LabelWithPlaceholder
-from core.report.sections import ALT_BODY
+from cloudexit.report.executive_summary import generate_executive_summary
+from cloudexit.report.helpers import initials
+from cloudexit.report.palette import contrast_failures
+from cloudexit.report.placeholder import IconPlaceholder, LabelWithPlaceholder
+from cloudexit.report.sections import ALT_BODY
 from cloudexit.egress.model import GIB
-from core.utils_report import generate_html_report
-from core.utils_report_egress import (
+from cloudexit.report.writers import generate_html_report
+from cloudexit.report.egress import (
     _icon_flowable,
     generate_egress_html_report,
     generate_egress_pdf_report,
 )
-from core.utils_report_common import enrich_resource_inventory
+from cloudexit.report.aggregate import enrich_resource_inventory
 from tests.support.report import (
     build_fixture_context,
     build_report_fixture,
@@ -343,8 +343,8 @@ class EgressReportTests(TempDirTestCase):
     def run_report(self, generate, icons):
         directory, json_path, icons = self.prepare(icons)
         with (
-            patch("core.utils_report_egress.load_data", side_effect=_fake_load_data),
-            patch("core.utils_report_egress._build_icon_lookup", return_value=icons),
+            patch("cloudexit.report.egress.load_data", side_effect=_fake_load_data),
+            patch("cloudexit.report.egress._build_icon_lookup", return_value=icons),
         ):
             result = generate(str(directory), json_path)
         self.assertTrue(result["success"], result.get("logs"))
