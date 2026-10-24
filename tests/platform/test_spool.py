@@ -40,7 +40,7 @@ from tests.support.api import (
 )
 from tests.support.http import fake_http
 from cloudexit import codes
-from utils.settings import Setting, Settings
+from cloudexit.settings import Setting, Settings
 from tests.support.paths import ROOT
 
 NOW = 1_800_000_000.0

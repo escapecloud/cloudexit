@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from cloudexit import codes
-from utils.settings import Settings, SettingsError, load_settings
+from cloudexit.settings import Settings, SettingsError, load_settings
 
 from .api_v2 import ApiClient, ApiError
 from .spool import Spool

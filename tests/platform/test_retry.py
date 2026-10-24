@@ -370,7 +370,7 @@ class BudgetTests(RetryTestCase):
         self.assertTrue(error.exhausted)
 
     def test_the_client_takes_the_budget_from_the_settings(self):
-        from utils.settings import Setting, Settings
+        from cloudexit.settings import Setting, Settings
 
         settings = Settings(
             host=Setting(HOST, "test"),
@@ -380,7 +380,7 @@ class BudgetTests(RetryTestCase):
         self.assertEqual(ApiClient.from_settings(settings, environ={}).budget, 42.0)
 
     def test_the_default_budget_is_five_minutes(self):
-        from utils.settings import Setting, Settings
+        from cloudexit.settings import Setting, Settings
 
         settings = Settings(host=Setting(HOST, "test"), api_key=Setting(KEY, "test"))
         self.assertEqual(ApiClient.from_settings(settings, environ={}).budget, 300.0)

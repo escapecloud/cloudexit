@@ -28,7 +28,7 @@ from tests.support.api import (
 from tests.support.http import fake_http
 from tests.support.sync import DEFINITION, schema_errors
 from cloudexit import codes
-from utils.settings import Setting, Settings
+from cloudexit.settings import Setting, Settings
 from tests.support.paths import ROOT
 
 SPEC = yaml.safe_load((DEFINITION / "openapi.yaml").read_text(encoding="utf-8"))

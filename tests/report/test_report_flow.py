@@ -41,7 +41,7 @@ from tests.support.flow import LOCAL_RISKS, SERVER_SCORES, build_flow_run
 from tests.support.http import fake_http, make_response
 from tests.support.sync import SYNC_ID, egress_row
 from cloudexit import codes
-from utils.settings import Setting, Settings
+from cloudexit.settings import Setting, Settings
 
 AWS_RESOURCES = [(1, "eu-central-1", 8), (4, "eu-central-1", 2)]
 COSTS = [("2026-09-01", 12.5, "USD")]

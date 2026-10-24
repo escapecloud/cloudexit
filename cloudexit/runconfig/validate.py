@@ -1,7 +1,7 @@
-# utils/validate.py
+# cloudexit/runconfig/validate.py
 import os
 from typing import Any
-from .constants import REGION_CHOICES, REQUIRED_FIELDS_AZURE, REQUIRED_FIELDS_AWS
+from .choices import REGION_CHOICES, REQUIRED_FIELDS_AZURE, REQUIRED_FIELDS_AWS
 
 # Fields that only mean something when connecting to a live account. tfstate
 # mode derives all of them from the state file, so accepting them alongside

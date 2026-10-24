@@ -20,7 +20,7 @@ from urllib.parse import quote, urlsplit
 import requests
 
 from cloudexit import codes
-from utils.settings import (
+from cloudexit.settings import (
     DEFAULT_UPLOAD_BUDGET,
     KEY_PREFIXES,
     Setting,

@@ -26,7 +26,7 @@ from tests.support.api import (
     whoami_reply,
 )
 from tests.support.http import fake_http
-from utils.settings import Setting, Settings
+from cloudexit.settings import Setting, Settings
 
 SYNC_ID = "01933b9e-7c2a-7d41-9a51-3c8f0a6e0001"
 BILLING = {

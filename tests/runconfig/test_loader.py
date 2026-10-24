@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from utils.utils import load_config
+from cloudexit.runconfig.loader import load_config
 
 
 class LoadConfigTests(unittest.TestCase):
@@ -21,7 +21,7 @@ class LoadConfigTests(unittest.TestCase):
             self.assertEqual(load_config(str(config_path)), expected)
 
     def test_load_config_returns_none_for_missing_file(self):
-        with patch("utils.utils.console.print") as mock_print:
+        with patch("cloudexit.runconfig.loader.console.print") as mock_print:
             result = load_config("/tmp/does-not-exist-config.json")
 
         self.assertIsNone(result)
@@ -32,7 +32,7 @@ class LoadConfigTests(unittest.TestCase):
             config_path = Path(tmp_dir) / "config.json"
             config_path.write_text("{invalid json", encoding="utf-8")
 
-            with patch("utils.utils.console.print") as mock_print:
+            with patch("cloudexit.runconfig.loader.console.print") as mock_print:
                 result = load_config(str(config_path))
 
         self.assertIsNone(result)

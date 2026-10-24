@@ -46,7 +46,7 @@ from utils.data import (
     update_catalogue,
     use_catalogue_file,
 )
-from utils.settings import Setting, Settings, SettingsError
+from cloudexit.settings import Setting, Settings, SettingsError
 
 BASE = "https://catalogue.example.test/mirror"
 MANIFEST_URL = f"{BASE}/cloudexit-manifest.json"
