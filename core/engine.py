@@ -6,14 +6,17 @@ import boto3
 from datetime import datetime, timezone, timedelta
 from typing import Any
 from azure.identity import ClientSecretCredential
-from azure.mgmt.resource import ResourceManagementClient
 from azure.core.exceptions import ClientAuthenticationError
 from azure.mgmt.authorization import AuthorizationManagementClient
 from botocore.exceptions import NoCredentialsError
 
 from .utils import copy_assets
 from .utils_aws import build_aws_resource_inventory, build_aws_cost_inventory
-from .utils_azure import build_azure_resource_inventory, build_azure_cost_inventory
+from .utils_azure import (
+    build_azure_cost_inventory,
+    build_azure_resource_inventory,
+    create_resource_client,
+)
 from .utils_db import connect, load_data
 from .utils_tfstate import build_tfstate_resource_inventory
 from .report.context import build_context, collect_provenance
@@ -43,7 +46,7 @@ def verify_credentials(
                 client_id=provider_details["clientId"],
                 client_secret=provider_details["clientSecret"],
             )
-            resource_client = ResourceManagementClient(
+            resource_client = create_resource_client(
                 credential, provider_details["subscriptionId"]
             )
             list(

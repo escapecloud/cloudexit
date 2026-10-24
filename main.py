@@ -14,7 +14,6 @@ from rich.markup import escape
 from datetime import datetime
 from botocore.exceptions import NoCredentialsError, ProfileNotFound
 from azure.identity import DefaultAzureCredential, ClientSecretCredential
-from azure.mgmt.resource import SubscriptionClient, ResourceManagementClient
 
 # Import the functions
 from core.engine import (
@@ -25,6 +24,7 @@ from core.engine import (
     perform_risk_assessment,
     generate_report,
 )
+from core.utils_azure import create_resource_client, create_subscription_client
 from core.utils_egress import estimate_egress
 from core.utils_report_egress import (
     generate_egress_html_report,
@@ -379,7 +379,7 @@ def _azure_provider_from_cli() -> dict:
     credential = _azure_cli_credential()
     try:
         tenant_id = input("Enter Azure Tenant ID: ").strip()
-        subscription_client = SubscriptionClient(credential)
+        subscription_client = create_subscription_client(credential)
         subscriptions = list(subscription_client.subscriptions.list())
         if not subscriptions:
             logger.error("No subscriptions found for the provided Azure credentials.")
@@ -391,7 +391,7 @@ def _azure_provider_from_cli() -> dict:
         selected_subscription = select_subscription(subscriptions)
         subscription_id = selected_subscription.subscription_id
 
-        resource_client = ResourceManagementClient(credential, subscription_id)
+        resource_client = create_resource_client(credential, subscription_id)
         resource_groups = list(resource_client.resource_groups.list())
         if not resource_groups:
             logger.error("No resource groups found in the selected subscription.")
@@ -425,7 +425,7 @@ def _azure_provider_from_prompt() -> dict:
         credential = ClientSecretCredential(
             tenant_id=tenant_id, client_id=client_id, client_secret=client_secret
         )
-        subscription_client = SubscriptionClient(credential)
+        subscription_client = create_subscription_client(credential)
 
         subscriptions = list(subscription_client.subscriptions.list())
         if not subscriptions:
@@ -437,7 +437,7 @@ def _azure_provider_from_prompt() -> dict:
         selected_subscription = select_subscription(subscriptions)
         subscription_id = selected_subscription.subscription_id
 
-        resource_client = ResourceManagementClient(credential, subscription_id)
+        resource_client = create_resource_client(credential, subscription_id)
         resource_groups = list(resource_client.resource_groups.list())
         if not resource_groups:
             console.print(
