@@ -16,6 +16,7 @@ from tests import test_catalogue as cat
 from tests.catalogue_fixtures import catalogue_gz, manifest, manifest_entry, sha256
 from tests.dataset_shapes import VERSION, build_shape
 from tests.http_fixtures import fake_http, make_response
+from tests.isolation import isolated_environ
 from tests.sync_fixtures import schema_errors
 from utils import codes
 from utils.data import (
@@ -69,10 +70,7 @@ class ShapeTestCase(unittest.TestCase):
         }
         self.env.update(
             {
-                "XDG_DATA_HOME": str(self.tmp / "data"),
-                "XDG_CONFIG_HOME": str(self.tmp / "config"),
-                "XDG_CACHE_HOME": str(self.tmp / "cache"),
-                "XDG_STATE_HOME": str(self.tmp / "state"),
+                **isolated_environ(self.tmp),
                 "ESC_EXIT_STRATEGY": "1",
                 "ESC_ASSESSMENT_TYPE": "1",
                 "COLUMNS": "200",

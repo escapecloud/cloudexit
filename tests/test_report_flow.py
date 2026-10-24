@@ -2,7 +2,6 @@ import copy
 import inspect
 import json
 import os
-import shutil
 import sqlite3
 import tempfile
 import unittest
@@ -24,6 +23,7 @@ from core.upload import (
     upload,
     write_upload_record,
 )
+from tests.isolation import forget_cache, isolated_environ
 from tests.api_fixtures import (
     ASSESSMENT_ID,
     KEY,
@@ -78,18 +78,14 @@ class FlowTestCase(unittest.TestCase):
         self.tmp = Path(tmp.name)
         patcher = patch.dict(
             os.environ,
-            {
-                "XDG_DATA_HOME": str(self.tmp / "data"),
-                "XDG_CACHE_HOME": str(self.tmp / "cache"),
-                "XDG_STATE_HOME": str(self.tmp / "state"),
-            },
+            isolated_environ(self.tmp),
         )
         patcher.start()
         self.addCleanup(patcher.stop)
         self.counter = 0
 
     def forget_meta(self):
-        shutil.rmtree(self.tmp / "cache", ignore_errors=True)
+        forget_cache(self.tmp)
 
     def report(self, **kwargs):
         self.counter += 1

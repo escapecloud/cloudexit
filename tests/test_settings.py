@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import main
+from tests.isolation import isolated_environ
 from utils import codes
 from utils.settings import (
     DEFAULT_TIMEOUT,
@@ -36,7 +37,7 @@ class SettingsTestCase(unittest.TestCase):
 
     @property
     def config_path(self):
-        return self.tmp / "cloudexit" / "config.toml"
+        return self.tmp / "config" / "cloudexit" / "config.toml"
 
     def write_config(self, text, mode=0o600):
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -51,7 +52,7 @@ class SettingsTestCase(unittest.TestCase):
         return str(path)
 
     def load(self, flags=None, env=None):
-        environ = {"XDG_CONFIG_HOME": str(self.tmp), **(env or {})}
+        environ = {**isolated_environ(self.tmp), **(env or {})}
         return load_settings(flags, environ=environ)
 
     def legacy(self, **values):
@@ -59,6 +60,7 @@ class SettingsTestCase(unittest.TestCase):
 
 
 class ConfigFilePathTests(unittest.TestCase):
+    @unittest.skipIf(os.name == "nt", "absolute /xdg paths are POSIX paths")
     def test_uses_xdg_config_home_when_absolute(self):
         path = config_file_path({"XDG_CONFIG_HOME": "/xdg"}, platform="linux")
         self.assertEqual(path, Path("/xdg/cloudexit/config.toml"))
@@ -67,6 +69,7 @@ class ConfigFilePathTests(unittest.TestCase):
         expected = Path.home() / ".config" / "cloudexit" / "config.toml"
         self.assertEqual(config_file_path({}, platform="linux"), expected)
 
+    @unittest.skipIf(os.name == "nt", "absolute /xdg paths are POSIX paths")
     def test_ignores_a_relative_xdg_config_home(self):
         expected = Path.home() / ".config" / "cloudexit" / "config.toml"
         path = config_file_path({"XDG_CONFIG_HOME": "relative"}, platform="linux")
@@ -343,7 +346,7 @@ class KeyFileTests(SettingsTestCase):
 
     def test_relative_key_file_in_the_config_is_relative_to_the_config(self):
         self.write_key("keys-api", key="relative-key-123456")
-        self.write_config('[default]\napi_key_file = "../keys-api"\n')
+        self.write_config('[default]\napi_key_file = "../../keys-api"\n')
 
         settings = self.load()
 
@@ -485,7 +488,7 @@ class DescribeTests(SettingsTestCase):
 
 class ConfigCommandTests(SettingsTestCase):
     def run_main(self, argv, env=None):
-        environ = {"XDG_CONFIG_HOME": str(self.tmp), **(env or {})}
+        environ = {**isolated_environ(self.tmp), **(env or {})}
         out = io.StringIO()
         with (
             patch("sys.argv", ["cloudexit", *argv]),

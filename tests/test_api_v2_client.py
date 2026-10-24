@@ -553,6 +553,7 @@ class MetaTests(ClientTestCase):
                 self.client(cache_path=self.cache).meta()
         self.assertEqual(ctx.exception.exit_code, codes.UPLOAD_UNAVAILABLE)
 
+    @unittest.skipIf(os.name == "nt", "absolute /xdg paths are POSIX paths")
     def test_the_cache_directory_follows_the_platform_conventions(self):
         self.assertEqual(
             api_v2.cache_dir({"XDG_CACHE_HOME": "/xdg"}, platform="linux"),
@@ -567,6 +568,7 @@ class MetaTests(ClientTestCase):
             Path("C:/L") / "cloudexit" / "cache",
         )
 
+    @unittest.skipIf(os.name == "nt", "Windows keeps the cache under LOCALAPPDATA")
     def test_the_default_cache_is_in_the_users_cache_directory(self):
         with patch.dict(os.environ, {"XDG_CACHE_HOME": str(self.tmp / "xdg")}):
             client = ApiClient(HOST, KEY)

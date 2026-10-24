@@ -16,6 +16,7 @@ from tests.api_fixtures import (
     sync_body,
     whoami_body,
 )
+from tests.isolation import isolated_environ
 from tests.make_smoke_dataset import main as make_smoke_dataset
 from utils import codes
 
@@ -101,10 +102,7 @@ class PlatformCliTestCase(unittest.TestCase):
         }
         self.env.update(
             {
-                "XDG_DATA_HOME": str(self.tmp / "data"),
-                "XDG_CONFIG_HOME": str(self.tmp / "config"),
-                "XDG_CACHE_HOME": str(self.tmp / "cache"),
-                "XDG_STATE_HOME": str(self.tmp / "state"),
+                **isolated_environ(self.tmp),
                 "NO_PROXY": "*",
                 "COLUMNS": "200",
                 "ESC_EXIT_STRATEGY": "1",

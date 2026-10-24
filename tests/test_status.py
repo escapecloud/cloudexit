@@ -32,6 +32,7 @@ from tests.api_fixtures import (
     whoami_reply,
 )
 from tests.http_fixtures import fake_http
+from tests.isolation import isolated_environ
 from tests.sync_fixtures import SYNC_ID
 from utils import codes
 from utils.data import compare_catalogue_versions, parse_catalogue_version
@@ -100,11 +101,7 @@ class StatusTestCase(unittest.TestCase):
         self.other.write_text("other")
         patcher = patch.dict(
             "os.environ",
-            {
-                "XDG_DATA_HOME": str(self.tmp / "data"),
-                "XDG_CACHE_HOME": str(self.tmp / "cache"),
-                "XDG_STATE_HOME": str(self.tmp / "state"),
-            },
+            isolated_environ(self.tmp),
         )
         patcher.start()
         self.addCleanup(patcher.stop)

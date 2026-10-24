@@ -1,12 +1,20 @@
 import ast
+import io
+import logging
 import os
+import subprocess
+import sys
 import sqlite3
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
+import main
 import tests
 from core import utils_db
+from tests.isolation import isolated_environ
+from tests.make_smoke_dataset import main as make_smoke_dataset
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCES = [
@@ -105,3 +113,82 @@ class OpenFileTests(unittest.TestCase):
         self.assertEqual(len(opened), 5)
         for conn in opened:
             self.assert_closed(conn)
+
+
+class OutputEncodingTests(unittest.TestCase):
+    def test_a_stream_that_cannot_hold_the_arrows_is_switched_to_utf8(self):
+        raw = io.BytesIO()
+        stream = io.TextIOWrapper(raw, encoding="cp1252", write_through=True)
+        with unittest.mock.patch.object(sys, "stdout", stream):
+            main._use_utf8_output()
+            sys.stdout.write("\u21b3 done")
+        self.assertEqual(raw.getvalue().decode("utf-8"), "\u21b3 done")
+
+    def test_a_stream_without_an_encoding_is_left_alone(self):
+        with unittest.mock.patch.object(sys, "stdout", io.StringIO()):
+            main._use_utf8_output()
+
+    def test_a_run_into_a_cp1252_pipe_still_completes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            dataset = tmp / "smoke.db"
+            make_smoke_dataset(str(dataset))
+            env = {**os.environ, **isolated_environ(tmp)}
+            env.update(
+                PYTHONIOENCODING="cp1252",
+                ESC_EXIT_STRATEGY="1",
+                ESC_ASSESSMENT_TYPE="1",
+            )
+            state = ROOT / "tests" / "fixtures" / "smoke" / "aws.tfstate"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "main.py"),
+                    "aws",
+                    "--tfstate",
+                    str(state),
+                    "--catalogue",
+                    str(dataset),
+                    "--non-interactive",
+                    "--dry-run",
+                ],
+                cwd=tmp,
+                env=env,
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                timeout=120,
+            )
+        output = (result.stdout + result.stderr).decode("utf-8", "replace")
+        self.assertEqual(result.returncode, 0, output)
+        self.assertNotIn("UnicodeEncodeError", output)
+
+
+class RunLogTests(unittest.TestCase):
+    def test_the_run_log_is_closed_when_the_run_ends(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            main.add_run_log_handler(tmp)
+            handler = main._run_log_handler
+            self.assertIn(handler, logging.getLogger().handlers)
+            main.close_run_log_handler()
+            self.assertNotIn(handler, logging.getLogger().handlers)
+            self.assertIsNone(handler.stream)
+            self.assertIsNone(main._run_log_handler)
+            (Path(tmp) / "run.log").unlink()
+
+    def test_a_second_run_log_replaces_the_first(self):
+        with (
+            tempfile.TemporaryDirectory() as first,
+            tempfile.TemporaryDirectory() as second,
+        ):
+            main.add_run_log_handler(first)
+            opened = main._run_log_handler
+            main.add_run_log_handler(second)
+            self.assertIsNone(opened.stream)
+            self.assertNotIn(opened, logging.getLogger().handlers)
+            main.close_run_log_handler()
+
+
+class LineEndingTests(unittest.TestCase):
+    def test_the_definition_copy_is_checked_out_with_unix_line_endings(self):
+        attributes = (ROOT / ".gitattributes").read_text(encoding="utf-8")
+        self.assertIn("docs/api-v2/** text eol=lf", attributes)
