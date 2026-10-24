@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from cloudexit.cli import app
+from cloudexit.cli.parser import parse_arguments
 from tests.support.isolation import isolated_environ
 from cloudexit import codes
 from cloudexit.settings import (
@@ -541,13 +542,13 @@ class ConfigCommandTests(SettingsTestCase):
             contextlib.redirect_stderr(io.StringIO()),
             self.assertRaises(SystemExit),
         ):
-            app.parse_arguments()
+            parse_arguments()
 
 
 class ArgumentTests(unittest.TestCase):
     def parse(self, *argv):
         with patch("sys.argv", ["cloudexit", *argv]):
-            return app.parse_arguments()
+            return parse_arguments()
 
     def test_platform_flags_on_aws_and_azure(self):
         for provider in ("aws", "azure"):

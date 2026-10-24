@@ -13,6 +13,7 @@ from unittest.mock import patch
 import requests
 
 from cloudexit.cli import app
+from cloudexit.cli.parser import parse_arguments
 from cloudexit.catalogue import db as catalogue_db
 from tests.support.isolation import isolated_environ
 from tests.support.catalogue import (
@@ -765,12 +766,12 @@ class CatalogueCommandTests(CatalogueTestCase):
             contextlib.redirect_stderr(io.StringIO()),
             self.assertRaises(SystemExit),
         ):
-            app.parse_arguments()
+            parse_arguments()
 
     def test_the_run_flag_is_accepted_on_aws_and_azure(self):
         for provider in ("aws", "azure"):
             with patch("sys.argv", ["cloudexit", provider, "--catalogue", "f.db.gz"]):
-                self.assertEqual(app.parse_arguments().catalogue, "f.db.gz")
+                self.assertEqual(parse_arguments().catalogue, "f.db.gz")
 
 
 class DatabaseContractTests(CatalogueTestCase):
