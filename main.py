@@ -1,6 +1,8 @@
 # main.py
 import logging
 import argparse
+import contextlib
+import json
 import boto3
 import time
 import sys
@@ -30,6 +32,8 @@ from core.utils_report_egress import (
     generate_egress_pdf_report,
 )
 from core.api_v2 import ApiError, check_key
+from core.run_output import build_run_json, exit_code_of
+from core.status import host_catalogue_lines, run_status
 from core.spool import (
     AUTO_FLUSH_BUDGET,
     DEFAULT_MAX_AGE_DAYS,
@@ -69,8 +73,10 @@ from utils.data import (
     CatalogueError,
     CatalogueUnavailable,
     catalogue_base_url,
+    catalogue_info,
     ensure_catalogue,
     import_catalogue,
+    installed_catalogue,
     set_active_catalogue,
     status_lines,
     update_catalogue,
@@ -289,6 +295,7 @@ def handle_aws(args):
             egress_names=getattr(args, "egress_names", "plain"),
             spool_on_error=getattr(args, "spool_on_error", False),
             flush_spool=not getattr(args, "no_flush", False),
+            strict=getattr(args, "strict", False),
         )
         return
 
@@ -329,6 +336,7 @@ def handle_aws(args):
         egress_names=getattr(args, "egress_names", "plain"),
         spool_on_error=getattr(args, "spool_on_error", False),
         flush_spool=not getattr(args, "no_flush", False),
+        strict=getattr(args, "strict", False),
     )
 
 
@@ -531,6 +539,7 @@ def handle_azure(args):
             egress_names=getattr(args, "egress_names", "plain"),
             spool_on_error=getattr(args, "spool_on_error", False),
             flush_spool=not getattr(args, "no_flush", False),
+            strict=getattr(args, "strict", False),
         )
         return
 
@@ -569,7 +578,34 @@ def handle_azure(args):
         egress_names=getattr(args, "egress_names", "plain"),
         spool_on_error=getattr(args, "spool_on_error", False),
         flush_spool=not getattr(args, "no_flush", False),
+        strict=getattr(args, "strict", False),
     )
+
+
+RUN = {}
+
+
+def _missing_platform(host, key):
+    if host and not key:
+        return "A host is configured, but no API key."
+    if key and not host:
+        return "An API key is configured, but no host."
+    return "No host and no API key are configured."
+
+
+def _upload_mode(settings, dry_run):
+    mode = settings.upload.value if settings else "auto"
+    if not dry_run:
+        return mode
+    # --dry-run is --upload=off; only an explicit flag can contradict it
+    if mode != "off" and settings and settings.upload.source.startswith("flag"):
+        print_step(
+            "Configuration validation failed.",
+            status="error",
+            logs=f"--dry-run cannot be combined with --upload={mode}.",
+        )
+        sys.exit(codes.CONFIG)
+    return "off"
 
 
 def _count(number, noun):
@@ -637,11 +673,13 @@ def run_assessment(
     egress_names="plain",
     spool_on_error=False,
     flush_spool=True,
+    strict=False,
 ):
     # Record the assessment start time to propagate across stages. The sync id
     # is created here, at collection start, and identifies the whole run.
     started_at = int(time.time())
     sync_id = new_uuid7()
+    RUN.clear()
 
     # Bound up front so the error handler can reference it even if the crash
     # happens before the report directory is created.
@@ -672,10 +710,40 @@ def run_assessment(
             sys.exit(codes.CONFIG)
 
         # Detect ExitCloud Integration
-        configured = bool(settings and settings.host.value and settings.api_key.value)
+        mode = _upload_mode(settings, dry_run)
+        host = settings.host.value if settings else None
+        key = settings.api_key.value if settings else None
+        configured = bool(host and key)
+        if mode == "required" and not configured:
+            print_step(
+                "Upload is required, but no platform is configured.",
+                status="error",
+                logs=f"{_missing_platform(host, key)} Set both, or use --upload=auto or --upload=off.",
+            )
+            sys.exit(codes.CONFIG)
+        if mode == "auto" and bool(host) != bool(key):
+            # Half a configuration is a mistake, not a reason to run offline
+            print_step(
+                "The platform configuration is incomplete.",
+                status="error",
+                logs=f"{_missing_platform(host, key)} Set both, or use --upload=off to run without a platform.",
+            )
+            sys.exit(codes.CONFIG)
+        uploading = configured and mode != "off"
         signin_failure = None
         if dry_run:
             print_step("Dry run mode – no remote sync.", status="ok")
+            console.print(
+                "   ↳ --dry-run is --upload=off plus the sync document", style="dim"
+            )
+        elif mode == "off":
+            print_step("Upload is off – nothing is sent to a platform.", status="ok")
+            # Without an upload only the Basic assessment is possible
+            if config["assessmentType"] != 1:
+                print_step(
+                    "Forcing Basic Assessment: uploads are off.", status="warning"
+                )
+                config["assessmentType"] = 1
         elif configured:
             # A key that cannot be right is a failed upload, found before the
             # collection starts. It does not drop the run to Basic or discard
@@ -697,13 +765,18 @@ def run_assessment(
             # Without a platform only the Basic assessment is possible
             if config["assessmentType"] != 1:
                 print_step(
-                    "Forcing Basic Assessment due to offline mode.", status="warning"
+                    "Forcing Basic Assessment: no platform is configured.",
+                    status="warning",
                 )
                 config["assessmentType"] = 1
+        RUN["skipped_reason"] = (
+            "dry_run" if dry_run else "off" if mode == "off" else "offline"
+        )
 
         # Create directories
         try:
             report_path, raw_data_path = create_directory()
+            RUN["report_dir"] = report_path
             add_run_log_handler(report_path)
             print_step("Directory successfully created.", status="ok")
         except RuntimeError as e:
@@ -987,10 +1060,12 @@ def run_assessment(
                 console.print(f"   ↳ {problem}", style="dim")
             sync_failed = wanted
 
+        RUN["sync_json"] = str(sync_output.path) if sync_output else None
+
         # Stage 7: Upload, only when a platform is configured. A failure never
         # discards the local report: it is written next, with a banner.
         upload_result = signin_failure
-        if signin_failure or (configured and not dry_run):
+        if signin_failure or (uploading and not dry_run):
             console.print("Stage #7 – Upload", style="bold")
             if upload_result is None:
                 with console.status("Uploading to the platform...", spinner="dots"):
@@ -1034,6 +1109,7 @@ def run_assessment(
             for warning in upload_result.warnings:
                 print_step("Platform warning", status="warning", logs=warning)
             write_upload_record(raw_data_path, upload_result)
+            RUN["upload"] = upload_result
             console.print("-------------------------------------------")
 
         # Stage 8: Generate the local report (always Basic, connected or not)
@@ -1108,6 +1184,13 @@ def run_assessment(
             console.print(f"Egress PDF: {egress_pdf_path}", style="cyan")
         console.print("-------------------------------------------")
 
+        try:
+            RUN["catalogue_version"] = catalogue_info(
+                os.path.join(report_path, "data", "assessment.db")
+            ).version
+        except (CatalogueError, AttributeError):
+            RUN["catalogue_version"] = None
+
         # Collection problems win over upload codes
         if sync_failed:
             sys.exit(codes.REPORT)
@@ -1115,6 +1198,16 @@ def run_assessment(
             sys.exit(codes.EGRESS)
         if upload_result and upload_result.failed:
             sys.exit(upload_result.exit_code)
+        if strict and upload_result and upload_result.warning_items:
+            print_step(
+                "Strict mode: the platform reported warnings.",
+                status="error",
+                logs="; ".join(
+                    str(item.get("code") or item.get("message"))
+                    for item in upload_result.warning_items
+                ),
+            )
+            sys.exit(codes.UPLOAD_REJECTED)
 
     except Exception as e:
         console.print(f"[red]Unexpected error: {e}[/red]")
@@ -1156,6 +1249,7 @@ def parse_arguments():
             "  python3 main.py azure --tfstate infra.tfstate --dry-run\n"
             "  python3 main.py config path                # Print the config file location\n"
             "  python3 main.py config show                # Show resolved settings and their sources\n"
+            "  python3 main.py status                     # Check the platform settings, TLS and key\n"
             "  python3 main.py catalogue status           # Show the installed and latest catalogue\n"
             "  python3 main.py catalogue update           # Download the latest catalogue\n"
             "  python3 main.py catalogue import FILE.db.gz  # Install a catalogue offline\n"
@@ -1175,7 +1269,7 @@ def parse_arguments():
 
     subparsers = parser.add_subparsers(
         dest="cloud_provider",
-        help="Specify the cloud provider (aws or azure), or `upload`, `spool`, `config` or `catalogue`.",
+        help="Specify the cloud provider (aws or azure), or `upload`, `spool`, `status`, `config` or `catalogue`.",
     )
 
     # Shared options available on every subcommand (e.g. `aws --verbose`)
@@ -1225,6 +1319,27 @@ def parse_arguments():
         action="store_true",
         help="Also spool uploads the platform refused, for a later manual retry.",
     )
+    modes = argparse.ArgumentParser(add_help=False)
+    modes.add_argument(
+        "--upload",
+        choices=("auto", "required", "off"),
+        help=(
+            "auto uploads when a platform is configured (the default), required "
+            "fails before collecting when none is, off never uploads."
+        ),
+    )
+    modes.add_argument(
+        "--strict",
+        action="store_true",
+        help="Fail with exit code 10 when the platform reports warnings.",
+    )
+    output = argparse.ArgumentParser(add_help=False)
+    output.add_argument(
+        "--output",
+        choices=("text", "json"),
+        default="text",
+        help="json prints one JSON object on stdout at the end; the step output goes to stderr.",
+    )
     flushing = argparse.ArgumentParser(add_help=False)
     flushing.add_argument(
         "--no-flush",
@@ -1258,7 +1373,16 @@ def parse_arguments():
     # Subparser for AWS
     aws_parser = subparsers.add_parser(
         "aws",
-        parents=[common, platform, delivery, flushing, catalogue_flag, sync_flags],
+        parents=[
+            common,
+            platform,
+            delivery,
+            flushing,
+            modes,
+            output,
+            catalogue_flag,
+            sync_flags,
+        ],
         help="Perform an AWS assessment.",
     )
     aws_group = aws_parser.add_mutually_exclusive_group(required=False)
@@ -1309,7 +1433,16 @@ def parse_arguments():
     # Subparser for Azure
     azure_parser = subparsers.add_parser(
         "azure",
-        parents=[common, platform, delivery, flushing, catalogue_flag, sync_flags],
+        parents=[
+            common,
+            platform,
+            delivery,
+            flushing,
+            modes,
+            output,
+            catalogue_flag,
+            sync_flags,
+        ],
         help="Perform an Azure assessment.",
     )
     azure_group = azure_parser.add_mutually_exclusive_group(required=False)
@@ -1401,6 +1534,18 @@ def parse_arguments():
         "--yes", action="store_true", help="Delete without asking."
     )
 
+    status_parser = subparsers.add_parser(
+        "status",
+        parents=[common, platform],
+        help="Check the settings, the TLS chain, the key and the platform.",
+    )
+    status_parser.add_argument(
+        "--output",
+        choices=("text", "json"),
+        default="text",
+        help="json prints one JSON object on stdout.",
+    )
+
     # Subparser for the config helpers
     config_parser = subparsers.add_parser(
         "config", help="Inspect where settings come from."
@@ -1423,7 +1568,9 @@ def parse_arguments():
         dest="catalogue_command", required=True
     )
     catalogue_commands.add_parser(
-        "status", parents=[common], help="Show the installed and the latest catalogue."
+        "status",
+        parents=[common, platform],
+        help="Show the installed and the latest catalogue.",
     )
     update_parser = catalogue_commands.add_parser(
         "update", parents=[common], help="Download the latest (or a given) catalogue."
@@ -1442,10 +1589,14 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def _catalogue_settings():
+def _catalogue_settings(args=None):
     try:
-        settings = load_settings()
-        return catalogue_base_url(settings), settings.ca_bundle.value or True
+        settings = load_settings(flags_from_args(args) if args else None)
+        return (
+            catalogue_base_url(settings),
+            settings.ca_bundle.value or True,
+            settings,
+        )
     except SettingsError as e:
         console.print(f"[red]{escape(str(e))}[/red]")
         sys.exit(codes.CONFIG)
@@ -1496,10 +1647,15 @@ def prepare_catalogue(args):
 
 
 def handle_catalogue(args):
-    base_url, verify = _catalogue_settings()
+    base_url, verify, settings = _catalogue_settings(args)
     try:
         if args.catalogue_command == "status":
             for line in status_lines(base_url, verify=verify):
+                print(line)
+            installed = installed_catalogue()
+            for line in host_catalogue_lines(
+                settings, installed.version if installed else None
+            ):
                 print(line)
         elif args.catalogue_command == "update":
             result = update_catalogue(base_url, version=args.version, verify=verify)
@@ -1668,6 +1824,18 @@ def handle_spool(args):
     print(f"Deleted {_count(len(due), 'spooled sync')}.")
 
 
+def handle_status(args):
+    settings = _settings_or_exit(args)
+    report = run_status(settings)
+    if args.output == "json":
+        print(json.dumps(report.as_json(), indent=2))
+    else:
+        for line in report.lines():
+            print(line)
+    if report.exit_code:
+        sys.exit(report.exit_code)
+
+
 def handle_config(args):
     if args.config_command == "path":
         print(config_file_path())
@@ -1682,14 +1850,7 @@ def handle_config(args):
         print(line)
 
 
-def main():
-    # Parse arguments first so --version/--help exit before any side effects
-    # (ASCII art, dataset download).
-    args = parse_arguments()
-
-    # Configure logging before any side effects so verbosity applies everywhere.
-    configure_logging(getattr(args, "verbose", 0))
-
+def _dispatch(args):
     # Ctrl+C anywhere below exits with a distinct code, whether the CLI is run
     # as `python3 main.py` or through the `cloudexit` console script.
     try:
@@ -1705,6 +1866,9 @@ def main():
             return
         if args.cloud_provider == "spool":
             handle_spool(args)
+            return
+        if args.cloud_provider == "status":
+            handle_status(args)
             return
 
         # Print ASCII art
@@ -1746,6 +1910,61 @@ def main():
             "\n[bold yellow]Operation cancelled by user (Ctrl+C). Exiting gracefully.[/bold yellow]"
         )
         sys.exit(codes.INTERRUPTED)
+
+
+def _absolute(path):
+    return os.path.abspath(path) if path else None
+
+
+def _emit_run_json(stream, exit_code):
+    # Absolute, so a script can use them from any directory
+    summary = build_run_json(
+        exit_code=exit_code,
+        report_dir=_absolute(RUN.get("report_dir")),
+        sync_json=_absolute(RUN.get("sync_json")),
+        upload=RUN.get("upload"),
+        skipped_reason=RUN.get("skipped_reason"),
+        catalogue_version=RUN.get("catalogue_version"),
+    )
+    stream.write(json.dumps(summary, indent=2) + "\n")
+    stream.flush()
+
+
+def _dispatch_json(args):
+    # stdout carries the summary and nothing else: the step output, the banner
+    # and every message go to stderr while the run lasts.
+    stdout = sys.stdout
+    exit_code = codes.UNEXPECTED
+    try:
+        with contextlib.redirect_stdout(sys.stderr):
+            try:
+                _dispatch(args)
+                exit_code = codes.SUCCESS
+            except SystemExit as e:
+                exit_code = exit_code_of(e.code)
+                raise
+            except Exception as e:
+                console.print(f"[red]Unexpected error: {escape(str(e))}[/red]")
+                sys.exit(codes.UNEXPECTED)
+    finally:
+        _emit_run_json(stdout, exit_code)
+
+
+def main():
+    # Parse arguments first so --version/--help exit before any side effects
+    # (ASCII art, dataset download).
+    args = parse_arguments()
+
+    # Configure logging before any side effects so verbosity applies everywhere.
+    configure_logging(getattr(args, "verbose", 0))
+
+    if (
+        args.cloud_provider in ("aws", "azure")
+        and getattr(args, "output", "") == "json"
+    ):
+        _dispatch_json(args)
+    else:
+        _dispatch(args)
 
 
 if __name__ == "__main__":

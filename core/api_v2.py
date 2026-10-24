@@ -175,6 +175,9 @@ class PushResult:
     warnings: tuple[str, ...]
     request_id: str | None
     billing: dict[str, int] | None = None
+    warning_items: tuple[dict[str, str | None], ...] = ()
+    results: dict[str, Any] | None = None
+    catalogue: dict[str, Any] | None = None
 
 
 def exit_code_for(code: str | None, status: int | None, retryable: bool) -> int:
@@ -335,6 +338,34 @@ def _one_line(text: Any) -> str:
     return " ".join(str(text).split())
 
 
+def client_policy(meta: Mapping[str, Any]) -> tuple[str, str]:
+    # What the platform says about this version of cloudexit: accepted,
+    # deprecated or unsupported, and why.
+    policy = (meta.get("clients") or {}).get(CLIENT_NAME)
+    current = _version(__version__)
+    if not isinstance(policy, dict) or not current:
+        return "accepted", f"cloudexit {__version__} is accepted"
+    advice = (
+        f"; upgrade to {policy['recommended']}" if policy.get("recommended") else ""
+    )
+    minimum = _version(policy.get("min_supported"))
+    blocked = [_version(v) for v in policy.get("blocked") or []]
+    if current in blocked or (minimum and current < minimum):
+        return (
+            "unsupported",
+            f"cloudexit {__version__} is not accepted by the platform"
+            + (
+                f"; use {policy['recommended']} or newer"
+                if policy.get("recommended")
+                else ""
+            ),
+        )
+    deprecated = _version(policy.get("deprecated_below"))
+    if deprecated and current < deprecated:
+        return "deprecated", f"cloudexit {__version__} is deprecated{advice}"
+    return "accepted", f"cloudexit {__version__} is accepted"
+
+
 def _billing(value: Any) -> dict[str, int] | None:
     # What the platform charged for this sync, on hosts that charge
     if not isinstance(value, dict):
@@ -347,14 +378,24 @@ def _billing(value: Any) -> dict[str, int] | None:
     return found or None
 
 
-def _warning_lines(items: Any) -> list[str]:
-    lines = []
+def _warning_items(items: Any) -> list[dict[str, str | None]]:
+    found = []
     for item in items if isinstance(items, list) else []:
         if isinstance(item, dict) and item.get("message"):
             code = item.get("code")
-            line = _one_line(item["message"])
-            lines.append(f"{line} ({code})" if code else line)
-    return lines
+            found.append(
+                {
+                    "code": str(code) if code else None,
+                    "message": _one_line(item["message"]),
+                }
+            )
+    return found
+
+
+def warning_line(item: Mapping[str, Any]) -> str:
+    return (
+        f"{item['message']} ({item['code']})" if item.get("code") else item["message"]
+    )
 
 
 def limit_problems(
@@ -696,8 +737,10 @@ class ApiClient:
         digest = hashlib.sha256(self.base_url.encode("utf-8")).hexdigest()[:16]
         return self._cache_dir / f"meta-{digest}.json"
 
-    def meta(self) -> dict[str, Any]:
-        if self._meta is None:
+    def meta(self, *, fresh: bool = False) -> dict[str, Any]:
+        if fresh:
+            self._meta = None
+        elif self._meta is None:
             self._meta = self._read_meta_cache()
         if self._meta is None:
             data, _ = self._call("GET", "/meta", expected=(200,), auth=False)
@@ -720,8 +763,7 @@ class ApiClient:
 
     def _check_meta(
         self, meta: Mapping[str, Any], document: Mapping[str, Any]
-    ) -> list[str]:
-        warnings: list[str] = []
+    ) -> list[dict[str, str | None]]:
         versions = (meta.get("contract") or {}).get("schema_versions")
         schema_version = document.get("schema_version")
         if isinstance(versions, list) and schema_version not in versions:
@@ -731,33 +773,14 @@ class ApiClient:
                 f", not {schema_version}",
                 codes.UPLOAD_UNSUPPORTED,
             )
-        policy = (meta.get("clients") or {}).get(CLIENT_NAME)
-        current = _version(__version__)
-        if isinstance(policy, dict) and current:
-            minimum = _version(policy.get("min_supported"))
-            blocked = [_version(v) for v in policy.get("blocked") or []]
-            if current in blocked or (minimum and current < minimum):
-                raise ApiError(
-                    "client_version_unsupported",
-                    f"cloudexit {__version__} is not accepted by the platform"
-                    + (
-                        f"; use {policy['recommended']} or newer"
-                        if policy.get("recommended")
-                        else ""
-                    ),
-                    codes.UPLOAD_UNSUPPORTED,
-                )
-            deprecated = _version(policy.get("deprecated_below"))
-            if deprecated and current < deprecated:
-                warnings.append(
-                    f"cloudexit {__version__} is deprecated"
-                    + (
-                        f"; upgrade to {policy['recommended']}"
-                        if policy.get("recommended")
-                        else ""
-                    )
-                )
-        return warnings
+        state, message = client_policy(meta)
+        if state == "unsupported":
+            raise ApiError(
+                "client_version_unsupported", message, codes.UPLOAD_UNSUPPORTED
+            )
+        if state == "deprecated":
+            return [{"code": "client_deprecated", "message": message}]
+        return []
 
     def _target(
         self,
@@ -849,9 +872,9 @@ class ApiClient:
                 codes.UPLOAD_REJECTED,
             )
         meta = self.meta()
-        warnings = self._check_meta(meta, document)
+        items = self._check_meta(meta, document)
         whoami = self.whoami()
-        warnings += _warning_lines(whoami.get("warnings"))
+        items += _warning_items(whoami.get("warnings"))
 
         outgoing = {key: value for key, value in document.items() if key != "target"}
         target = self._target(whoami, name, exit_strategy, assessment_id)
@@ -882,6 +905,7 @@ class ApiClient:
         replayed = response.headers.get("Idempotent-Replayed", "").lower() == "true"
         data, pending = self._settle(data, response)
 
+        items += _warning_items(data.get("warnings"))
         assessment = data.get("assessment")
         assessment = assessment if isinstance(assessment, dict) else {}
         url = assessment.get("url")
@@ -898,10 +922,19 @@ class ApiClient:
             ),
             replayed=replayed,
             pending=pending,
-            warnings=tuple(warnings + _warning_lines(data.get("warnings"))),
+            warnings=tuple(warning_line(item) for item in items),
             request_id=response.headers.get("X-Request-ID") or data.get("request_id"),
             # A replay charges nothing, whatever the stored answer says
             billing=None if replayed else _billing(data.get("billing")),
+            warning_items=tuple(items),
+            results=(
+                data.get("results") if isinstance(data.get("results"), dict) else None
+            ),
+            catalogue=(
+                data.get("catalogue")
+                if isinstance(data.get("catalogue"), dict)
+                else None
+            ),
         )
 
 

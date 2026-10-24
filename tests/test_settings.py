@@ -180,15 +180,37 @@ class PrecedenceTests(SettingsTestCase):
         with self.assertRaises(SettingsError):
             self.load({"timeout": 0.0})
 
-    def test_upload_is_a_boolean_from_env_or_file(self):
-        self.assertIs(self.load(None, {"CLOUDEXIT_UPLOAD": "Yes"}).upload.value, True)
-        self.assertIs(self.load(None, {"CLOUDEXIT_UPLOAD": "off"}).upload.value, False)
-        self.write_config("[default]\nupload = true\n")
+    def test_upload_is_a_mode_from_a_flag_env_or_file(self):
+        self.assertEqual(self.load(None).upload.value, "auto")
+        self.assertEqual(self.load(None).upload.source, "default")
+        self.assertEqual(self.load({"upload": "required"}).upload.value, "required")
+        self.assertEqual(
+            self.load(None, {"CLOUDEXIT_UPLOAD": "OFF"}).upload.value, "off"
+        )
+        self.write_config('[default]\nupload = "required"\n')
         settings = self.load()
-        self.assertIs(settings.upload.value, True)
+        self.assertEqual(settings.upload.value, "required")
         self.assertEqual(settings.upload.source, "config file [default]")
-        with self.assertRaises(SettingsError):
+        self.assertEqual(
+            self.load({"upload": "off"}, {"CLOUDEXIT_UPLOAD": "required"}).upload.value,
+            "off",
+        )
+
+    def test_the_old_boolean_upload_values_still_map_to_a_mode(self):
+        self.assertEqual(
+            self.load(None, {"CLOUDEXIT_UPLOAD": "Yes"}).upload.value, "auto"
+        )
+        self.assertEqual(
+            self.load(None, {"CLOUDEXIT_UPLOAD": "false"}).upload.value, "off"
+        )
+        self.write_config("[default]\nupload = false\n")
+        self.assertEqual(self.load().upload.value, "off")
+
+    def test_an_unknown_upload_mode_names_its_source(self):
+        with self.assertRaises(SettingsError) as ctx:
             self.load(None, {"CLOUDEXIT_UPLOAD": "maybe"})
+        self.assertIn("env CLOUDEXIT_UPLOAD", str(ctx.exception))
+        self.assertIn("auto, required or off", str(ctx.exception))
 
     def test_http_host_is_rejected_with_its_source(self):
         with self.assertRaises(SettingsError) as ctx:

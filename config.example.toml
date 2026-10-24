@@ -31,8 +31,9 @@
 # CA bundle for platforms that use a private certificate authority.
 # ca_bundle = "/etc/ssl/certs/company-ca.pem"
 
-# Whether to upload results to the platform.
-# upload = true
+# What a run does with the platform: "auto" (upload when a host and key are
+# set), "required" (fail before collecting when they are not) or "off" (never).
+# upload = "auto"
 
 # Select a profile with --config-profile NAME or CLOUDEXIT_PROFILE=NAME.
 # Values in a profile override [default].

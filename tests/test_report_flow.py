@@ -471,7 +471,7 @@ class RunFlowTests(FlowTestCase):
             LOCAL_RISKS,
         )
         messages = [args[0] for args, _ in self.steps]
-        self.assertIn("Forcing Basic Assessment due to offline mode.", messages)
+        self.assertIn("Forcing Basic Assessment: no platform is configured.", messages)
 
     def test_the_local_results_are_computed_when_connected_too(self):
         report = self.report()
@@ -518,7 +518,7 @@ class RunFlowTests(FlowTestCase):
         # The local report is always the Basic report
         self.assertEqual(self.json_report(report)["meta"]["assessment_type"], 1)
         messages = [args[0] for args, _ in self.steps]
-        self.assertNotIn("Forcing Basic Assessment due to offline mode.", messages)
+        self.assertEqual([m for m in messages if m.startswith("Forcing Basic")], [])
 
     def test_a_failed_upload_still_writes_the_report_and_exits_with_an_upload_code(
         self,
@@ -647,11 +647,10 @@ class RunFlowTests(FlowTestCase):
         # A configured platform keeps the requested depth: nothing forces Basic
         self.assertEqual(self.sync(report)["assessment_type"], 2)
         messages = [args[0] for args, _ in self.steps]
-        self.assertNotIn("Forcing Basic Assessment due to offline mode.", messages)
+        self.assertEqual([m for m in messages if m.startswith("Forcing Basic")], [])
 
     def test_basic_is_forced_only_without_platform_configuration(self):
-        half = Settings(host=Setting("https://platform.test", "env X"))
-        for settings in (None, Settings(), half):
+        for settings in (None, Settings()):
             with self.subTest(settings=settings):
                 report = self.report()
                 self.run_assessment(report, settings=settings)
