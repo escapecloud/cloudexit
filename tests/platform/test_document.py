@@ -12,6 +12,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from cloudexit.cli import app
+from cloudexit.cli.parser import parse_arguments
 from cloudexit.platform import document as platform_document
 from cloudexit.platform.document import (
     SCHEMA_VERSION,
@@ -954,7 +955,7 @@ class RunAssessmentTests(SyncDocumentTestCase):
 class ArgumentTests(unittest.TestCase):
     def parse(self, *argv):
         with patch("sys.argv", ["cloudexit", *argv]):
-            return app.parse_arguments()
+            return parse_arguments()
 
     def test_defaults(self):
         for provider in ("aws", "azure"):

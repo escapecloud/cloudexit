@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import ANY, MagicMock, patch
 
 from cloudexit.cli import app
+from cloudexit.cli.parser import parse_arguments
 from cloudexit.platform.document import SyncOutput
 from cloudexit import codes
 from cloudexit.settings import Settings
@@ -1063,13 +1064,13 @@ class TfstateCliTests(unittest.TestCase):
 
     def test_tfstate_parses_from_both_subcommands(self):
         with patch("sys.argv", ["main.py", "aws", "--tfstate", "infra.tfstate"]):
-            args = app.parse_arguments()
+            args = parse_arguments()
         self.assertEqual(args.tfstate, "infra.tfstate")
 
         with patch(
             "sys.argv", ["main.py", "azure", "--tfstate", "infra.tfstate", "--dry-run"]
         ):
-            args = app.parse_arguments()
+            args = parse_arguments()
         self.assertEqual(args.tfstate, "infra.tfstate")
         self.assertTrue(args.dry_run)
 
@@ -1078,7 +1079,7 @@ class TfstateCliTests(unittest.TestCase):
             "sys.argv", ["main.py", "aws", "--config", "c.json", "--tfstate", "s"]
         ):
             with self.assertRaises(SystemExit):
-                app.parse_arguments()
+                parse_arguments()
 
     def test_run_assessment_skips_credential_permission_and_cost_stages(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
