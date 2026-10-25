@@ -38,11 +38,13 @@ It is the open-source foundation of the [EscapeCloud](https://escapecloud.io) ec
 **Prerequisites:** Python 3.12+, and either an AWS CLI profile or an Azure CLI session.
 
 ```bash
-git clone git@github.com:escapecloud/cloudexit.git
+git clone --branch v2.0.0 https://github.com/escapecloud/cloudexit.git
 cd cloudexit
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+python3 -m venv .venv && source .venv/bin/activate
+pip install .
 ```
+
+That installs the `cloudexit` command. To run from the checkout instead, use `pip install -r requirements.txt` and `python3 main.py`. cloudexit is not published on PyPI.
 
 Upgrading from 1.x? Install into a new virtual environment, not over the old one.
 
@@ -50,11 +52,11 @@ Run your first assessment:
 
 ```bash
 # AWS — using your existing CLI profile
-python main.py aws --profile default
+python3 main.py aws --profile default
 
 # Azure — using your Azure CLI session
 az login
-python main.py azure --cli
+python3 main.py azure --cli
 ```
 
 Reports are written locally as HTML, PDF, and JSON. Full credential and permissions setup is covered in the [documentation](https://cloudexit.escapecloud.io).
@@ -68,7 +70,7 @@ cloudexit produces a structured exit readiness report covering:
 - **Risk Assessment** — rule-based evaluation of exit feasibility across each identified service
 - **Alternative Technologies** — open-source and portable replacements for each identified cloud service, with additional details such as company ownership and location
 
-![Report](./docs/images/Report.png)
+The [documentation](https://cloudexit.escapecloud.io/reports/overview.html) shows an example report.
 
 ## Cloud Providers
 
@@ -89,170 +91,61 @@ The CLI supports multiple input modes for both AWS and Azure.
 
 | Mode | Command |
 |---|---|
-| Interactive (manual credentials) | `python main.py aws` |
-| AWS CLI profile | `python main.py aws --profile PROFILE` |
-| JSON config file | `python main.py aws --config config.json` |
-| Terraform/OpenTofu state file | `python main.py aws --tfstate infra.tfstate` |
-| Non-interactive (env vars, CI) | `python main.py aws --non-interactive` |
+| Interactive (manual credentials) | `python3 main.py aws` |
+| AWS CLI profile | `python3 main.py aws --profile PROFILE` |
+| JSON config file | `python3 main.py aws --config config.json` |
+| Terraform/OpenTofu state file | `python3 main.py aws --tfstate infra.tfstate` |
+| Non-interactive (env vars, CI) | `python3 main.py aws --non-interactive` |
 
 **Azure**
 
 | Mode | Command |
 |---|---|
-| Interactive (service principal) | `python main.py azure` |
-| Azure CLI session | `python main.py azure --cli` |
-| JSON config file | `python main.py azure --config config.json` |
-| Terraform/OpenTofu state file | `python main.py azure --tfstate infra.tfstate` |
-| Non-interactive (env vars, CI) | `python main.py azure --non-interactive` |
+| Interactive (service principal) | `python3 main.py azure` |
+| Azure CLI session | `python3 main.py azure --cli` |
+| JSON config file | `python3 main.py azure --config config.json` |
+| Terraform/OpenTofu state file | `python3 main.py azure --tfstate infra.tfstate` |
+| Non-interactive (env vars, CI) | `python3 main.py azure --non-interactive` |
 
 See the [configuration reference](https://cloudexit.escapecloud.io/config/config-schema.html) for required permissions and config file format.
 
-Want to see how a regulatory-aligned report looks (DORA / FINMA / UK PRA)? Run with `--dry-run` and send the output `raw_data/sync.json` to request_report@escapecloud.io — we'll generate a sample you can share with your risk or compliance team.
+## Connecting to a platform
 
-## Platform settings
+Connecting to a platform is optional; without a host and an API key cloudexit runs fully offline. Create an **assessment key** on the assessment's page, then set `CLOUDEXIT_HOST` and `CLOUDEXIT_API_KEY_FILE` — a key file readable by you only, rather than a key in plain text. In CI add `--upload required`, so a missing key fails the job before anything is collected instead of quietly producing an offline report. `cloudexit status` checks the settings, the TLS chain and the key; `cloudexit config show` says where each setting came from.
 
-Connecting to a platform is optional. Without a host and an API key cloudexit runs fully offline. Each value is resolved separately, highest precedence first:
+> **Changed in 2.0:** `config.py` and the `HOST` / `KEY` environment variables are no longer read. See [Migrating from 1.x](./docs/migration-2.0.md).
 
-1. **Flags**: `--host`, `--api-key-file`, `--config-profile`, `--assessment-id`, `--ca-bundle`, `--timeout`, `--upload`
-2. **Environment**: `CLOUDEXIT_HOST`, `CLOUDEXIT_API_KEY_FILE`, `CLOUDEXIT_API_KEY`, `CLOUDEXIT_PROFILE`, `CLOUDEXIT_ASSESSMENT_ID`, `CLOUDEXIT_UPLOAD`, `CLOUDEXIT_CA_BUNDLE`, `CLOUDEXIT_TIMEOUT`
-3. **Config file**: `~/.config/cloudexit/config.toml` (`$XDG_CONFIG_HOME/cloudexit/config.toml`, or `%APPDATA%\cloudexit\config.toml` on Windows), with a `[default]` table and optional `[profiles.<name>]` tables. See [`config.example.toml`](./config.example.toml).
-4. **Deprecated**: the `HOST` and `KEY` environment variables (only when both are set) and `config.py`. Both still work and print a warning.
+## Documentation
 
-Prefer a key file (`--api-key-file`, `CLOUDEXIT_API_KEY_FILE` or `api_key_file`) over a key in plain text, and keep it readable by you only. The CLI warns when the config file or a key file is readable by group or others. `http://` hosts are rejected, except `localhost` and `127.0.0.1`.
+| Topic | Page |
+|---|---|
+| Settings, precedence, config file, key files | [Platform settings →](https://cloudexit.escapecloud.io/config/platform-settings.html) |
+| Keys, upload modes, the spool, what gets uploaded | [Connected Mode →](https://cloudexit.escapecloud.io/connected-mode/upload-modes.html) |
+| Running in CI/CD | [Non-Interactive Mode →](https://cloudexit.escapecloud.io/non-interactive/overview.html) |
+| The catalogue dataset | [Catalogue →](https://cloudexit.escapecloud.io/catalogue/overview.html) |
+| Exit codes | [Exit codes →](https://cloudexit.escapecloud.io/reference/exit-codes.html) |
+| Troubleshooting | [Troubleshooting →](https://cloudexit.escapecloud.io/troubleshooting/common-errors.html) |
+| Migrating from 1.x | [docs/migration-2.0.md](./docs/migration-2.0.md) |
+| Release history | [CHANGELOG.md](./CHANGELOG.md) |
 
-```bash
-cloudexit config path   # where the config file is looked up
-cloudexit config show   # every resolved value and its source (keys are masked)
-cloudexit status        # check the settings, the TLS chain, the key and the platform
-```
-
-### Upload modes
-
-`--upload` (also `CLOUDEXIT_UPLOAD` and `upload` in the config file) decides what a run does with a configured platform:
-
-| Mode | What happens |
-| --- | --- |
-| `auto` (default) | Uploads when a host and an API key are configured, and runs offline when neither is. If the upload fails, the report is still written and the run exits with the upload code. A host without a key, or a key without a host, is a configuration error (exit 2), never a quiet offline run. |
-| `required` | Exits 2 before anything is collected when no host and key are configured. |
-| `off` | Never contacts the platform, even with a key configured. The run is the local Basic report ("Forcing Basic Assessment: uploads are off."). |
-
-`--dry-run` is `--upload=off` plus the sync document in `raw_data/sync.json`; it keeps the assessment depth you asked for, so the document can be uploaded later with `cloudexit upload`. It cannot be combined with `--upload=auto` or `--upload=required` on the command line. "Forcing Basic Assessment" appears only with `--upload=off` or when nothing is configured; a configured platform keeps the depth you asked for.
-
-`cloudexit status` shows where each setting comes from (keys masked), checks the TLS connection (which CA bundle was used and, on failure, which certificate was not trusted), and asks the platform for its `/meta` (versions, limits, catalogue version, whether this cloudexit version is accepted) and `/whoami` (organisation, key kind, assessment, scopes, expiry, with a warning from 14 days before it). It also lists the spooled syncs and compares the installed catalogue with the platform's. `--output json` prints the same as one JSON object.
-
-| Exit code | Meaning |
-| --- | --- |
-| 0 | Everything checked is fine, or no platform is configured. |
-| 11 | A host without a key (or the reverse), or a key the platform does not accept. |
-| 12 | The TLS check failed or the platform is unreachable. |
-| 15 | The platform does not accept this cloudexit version or the sync document version. |
-
-## Catalogue dataset
-
-cloudexit assesses against a catalogue dataset that it keeps up to date. It is stored in your data directory (`~/.local/share/cloudexit/catalogue/`, `$XDG_DATA_HOME/cloudexit/catalogue/`, or `%LOCALAPPDATA%\cloudexit\catalogue\` on Windows) together with the previous version. Each run checks for a newer catalogue first. If that check fails, the run continues with the installed catalogue and says so; without any catalogue it stops.
-
-```bash
-cloudexit catalogue status                # installed and latest catalogue (and the platform's, when a key is configured)
-cloudexit catalogue update                # download the latest (or --version V)
-cloudexit catalogue import FILE.db.gz     # install a file on an air-gapped machine (--sha256 to verify)
-cloudexit aws --tfstate infra.tfstate --catalogue FILE.db.gz   # use a file for one run, without installing it
-```
-
-Set `CLOUDEXIT_CATALOGUE_URL` to download from a mirror instead of the default location. A `./datasets/data.db` from an earlier version is not picked up on its own; install it on purpose with `cloudexit catalogue import datasets/data.db`. A catalogue that holds a trigger or a view is refused, wherever it comes from.
-
-## Sync document
-
-Every run writes `raw_data/sync.json` next to the report: the run's result in the shape defined by the API v2 definition in [`docs/api-v2/`](./docs/api-v2/) (a vendored copy; do not edit it here). It holds the scope (an AWS account and region, an Azure subscription, or a Terraform state), the resource inventory, the monthly costs and, when `--egress` ran, the egress estimate. It never contains credentials and is built without a network connection.
-
-```bash
-cloudexit aws --config config.json --emit-payload out/        # also write out/<sync id>.json
-cloudexit aws --config config.json --egress --egress-names hashed   # send egress names as salted hashes
-```
-
-With `--egress-names hashed` each egress resource name is replaced by an HMAC-SHA256 with a random per-scope salt that stays on your machine (`~/.local/share/cloudexit/salts/`), so the same name hashes the same way in later runs of the same scope.
-
-## The report
-
-Every run writes the same three files: `report.pdf`, `index.html` and `raw_data/assessment_result.json`. The PDF is the Basic Executive Summary, set in IBM Plex (SIL Open Font License, in `cloudexit/assets/fonts/`). It opens with a cover and a document information page that record where the data came from: the cloudexit version, the run ID, the data catalogue version and hash, and either a link to the platform's reports or the statement that the data was self-collected. The same facts are in the PDF metadata and in a `provenance` object in the JSON report. The last page says what the full assessment on a platform adds.
-
-## Reports and uploads
-
-The local report is always the Basic report, computed on your machine, whether or not a platform is configured. Anything the platform computes stays on the platform: after an upload the local report only records the link (also stored in `raw_data/upload.json`). If an upload fails, the report is still written, with a short "Not uploaded: <reason>" banner, and the run exits with an upload code after everything else has finished. Problems in the collection stages take precedence over upload codes.
-
-`--strict` also fails the run when the platform reports warnings (an outdated catalogue, unknown resource types, a downgraded assessment tier, a deprecated cloudexit version, and so on). The report is written first, then the run exits 10; an upload failure keeps its own code.
-
-`--output json` makes stdout carry exactly one JSON object when the run ends, and sends the banner and the step output to stderr:
-
-```json
-{
-  "exit_code": 0,
-  "report_dir": "/work/reports/20261102_101500",
-  "sync_json": "/work/reports/20261102_101500/raw_data/sync.json",
-  "upload": {
-    "status": "uploaded",
-    "reason": null,
-    "assessment_id": "…",
-    "sync_id": "…",
-    "platform_sync_id": "…",
-    "url": "https://…",
-    "warnings": [{"code": "collector_catalogue_outdated", "message": "…"}],
-    "error": null
-  },
-  "results": {"…": "what the platform returned, never shown in the local report"},
-  "catalogue": {"version": "2026-11-02", "outdated": false}
-}
-```
-
-`upload.status` is `uploaded`, `spooled`, `skipped` (`reason` is `offline`, `off` or `dry_run`) or `failed`; `error` holds `code`, `message` and `request_id`. `results` is `null` unless the platform answered. The summary never contains the API key.
-
-| Exit code | Meaning |
-| --- | --- |
-| 10 | The platform rejected the data, or it is beyond a limit the platform announces. Retrying the same data will not help. |
-| 11 | The API key is missing, mistyped, expired, revoked, not allowed to do this, or belongs to another region. |
-| 12 | The platform is unreachable, busy or in maintenance. A spooled sync is delivered on the next run, and that run then makes a new assessment of its own: see [Retries and the spool](#retries-and-the-spool). |
-| 13 | Credits or a quota ran out. |
-| 14 | The assessment named by `--assessment-id` is missing, deleted, archived, or does not match the data. |
-| 15 | The platform does not accept this cloudexit version or the sync document version. |
-
-Before anything is sent the key is checked on your machine (prefix, length and checksum), and the platform's own description of itself (`/meta`, which needs no key) must match the key: a regional ExitCloud key is never sent to a platform that reports another region or product. Host names, addresses and ports do not matter. The key never appears in output or logs. On failure the run prints the platform's error code, its message and a request ID to quote when asking for help.
-
-### Retries and the spool
-
-A failed upload is retried when it may pass: connection errors, timeouts, HTTP 408, 425, 429, 500, 502, 503 and 504, and any error the platform marks as retryable. The wait doubles from 1 second up to 60 seconds with random jitter, `Retry-After` is honoured, and every attempt carries the same idempotency key (the sync ID), so a repeat never stores or charges a second time. All attempts together stay within `--upload-budget` seconds (default 300, `CLOUDEXIT_UPLOAD_BUDGET`). Final failures (exit codes 10, 11, 13, 14 and 15) are not retried.
-
-When the budget runs out on retryable failures the sync is saved to a local spool and the run exits 12 ("spooled; run `cloudexit spool flush`"). `--spool-on-error` also spools syncs the platform refused, for a later manual retry. The spool is `$XDG_STATE_HOME/cloudexit/spool/<host id>/` (`~/.local/state/...`, or `CLOUDEXIT_SPOOL_DIR`): the sync document and a small file with the attempts and the last error, readable by you only, never holding the API key. The host id is a hash, so the host name is not in the path. Each spooled sync also records a fingerprint of the API key in use when it was spooled (a hash, never the key).
-
-```bash
-cloudexit spool list                  # id, host id, age, attempts, last error
-cloudexit spool flush [--host URL]    # upload the spooled syncs, oldest first
-cloudexit spool purge [--older-than 30d] [--yes]
-cloudexit upload raw_data/sync.json   # upload sync documents (or folders of them), for example from an air-gapped machine
-```
-
-Every run with a platform first delivers the spooled syncs of the same host and the same API key (oldest first, within 60 seconds); `--no-flush` skips that, and a failing flush never blocks the new run. Syncs spooled with another API key are never delivered with this one: they stay in the spool, the run says so, and `cloudexit spool list` marks them (`cloudexit spool purge` removes them). A spooled sync with no recorded key is treated the same way.
-
-Running again after exit 12 does two things: it delivers the spooled sync under its own sync ID, which the platform stores and charges once however often it is sent, and it then makes a new assessment, which is a new sync with a new sync ID and is charged like any other. Use `--no-flush` to leave the spool alone, or `cloudexit spool flush` to deliver it without a new assessment. A spooled sync older than the platform's `max_collection_age_days` is reported as "will be rejected" and kept until you purge it. For an account key, `upload` needs `--assessment-id`, or `--name` and `--exit-strategy`, to say where the sync goes.
-
-Connections always verify the platform's certificate. For a private certificate authority use `--ca-bundle` or `CLOUDEXIT_CA_BUNDLE`; otherwise `REQUESTS_CA_BUNDLE` and `SSL_CERT_FILE` are honoured. There is no option to turn verification off. `HTTPS_PROXY` and `NO_PROXY` are honoured. Requests give up after 10 seconds to connect and 60 seconds to read (`--timeout` sets both). The platform's capabilities are cached for five minutes in `~/.cache/cloudexit/` (`$XDG_CACHE_HOME/cloudexit/`, or `%LOCALAPPDATA%\cloudexit\cache\` on Windows).
-
-## Data Landscape & Egress Estimation (alpha)
+## Data Landscape & Egress Estimation
 
 Add `--egress` to any assessment to measure how much data lives in the assessed scope and estimate the one-time internet egress fee for moving it out — based on the provider's tiered list prices, with no additional permissions required.
 
 ```bash
-python main.py azure --cli --egress
-python main.py aws --profile PROFILE --egress
+python3 main.py azure --cli --egress
+python3 main.py aws --profile PROFILE --egress
 ```
 
 See the [egress reference](https://cloudexit.escapecloud.io/egress/overview.html) for details.
 
-## Infrastructure-as-Code State Scan (alpha)
+## Infrastructure-as-Code State Scan
 
 Instead of connecting to a cloud account, cloudexit can build the assessment from a local **Terraform / OpenTofu state file** — no credentials, no API calls, nothing leaves your machine.
 
 ```bash
-python main.py aws --tfstate infra.tfstate
-python main.py azure --tfstate infra.tfstate
+python3 main.py aws --tfstate infra.tfstate
+python3 main.py azure --tfstate infra.tfstate
 ```
 
 If your state lives in a remote backend (S3, Azure Storage, Terraform Cloud, …), export it first:
@@ -281,6 +174,8 @@ cloudexit runs headlessly in CI pipelines via `--non-interactive` and environmen
 
 [View on GitHub Marketplace →](https://github.com/marketplace/actions/github-action-for-cloudexit)
 
+The Action is at `v1`; a 2.0 version is coming. Until then, pass the 2.0 flags to the CLI directly, as below.
+
 In a pipeline that must upload, add `--upload=required` so a missing key fails the job before anything is collected, `--strict` to fail on platform warnings, and `--output json` to read the result from stdout.
 
 ## Ecosystem
@@ -307,5 +202,7 @@ The public contract is the `cloudexit` command, `python -m cloudexit` and `cloud
 
 © 2024–2026 EscapeCloud. cloudexit is licensed under the **GNU Affero General Public License v3 (AGPL-3.0)**.  
 See [LICENSE](./LICENSE) for details.
+
+A commercial licence is available through the EscapeCloud enterprise package for organizations that cannot use AGPL-licensed software; see [escapecloud.io](https://escapecloud.io).
 
 EscapeCloud, cloudexit and the EscapeCloud logo are trademarks. The AGPL-3.0 licence does not grant any right to use them; modified versions must not use them in a way that suggests they are official.
