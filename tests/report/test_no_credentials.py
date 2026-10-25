@@ -202,7 +202,7 @@ class OutputGuardTests(FlowTestCase):
         report = self.run_with_egress(1, AZURE_DETAILS)
 
         text = folder_text(report)["egress.pdf"]
-        self.assertIn("Scope of Assessment", text)
+        self.assertIn("Assessment Scope", text)
         self.assertIn("Subscription ID", text)
         self.assertIn(AZURE_DETAILS["subscriptionId"], text)
         self.assertNotIn("Client", text)

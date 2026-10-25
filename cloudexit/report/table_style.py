@@ -1,5 +1,6 @@
 from xml.sax.saxutils import escape
 
+from reportlab.graphics.shapes import Drawing, Rect, String
 from reportlab.lib.colors import HexColor
 from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.styles import ParagraphStyle
@@ -7,6 +8,7 @@ from reportlab.lib.units import cm
 from reportlab.platypus import Paragraph, Table, TableStyle
 
 from .fonts import FONT, FONT_BOLD, FONT_ITALIC, FONT_MONO
+from .helpers import share_label
 from .palette import HAIRLINE, INK, MUTED, SUBTITLE, tint
 
 SECONDARY = SUBTITLE
@@ -165,3 +167,32 @@ def summary_strip(stats, widths=None):
         )
     )
     return strip
+
+
+def share_bar(share, appearance, width=5.0 * cm):
+    # A share of 0-100 as a bar with its label; the track is the full width
+    track = width - 34
+    drawing = Drawing(width, 9)
+    drawing.add(Rect(0, 1, track, 7, fillColor=HexColor(HAIRLINE), strokeColor=None))
+    if share:
+        drawing.add(
+            Rect(
+                0,
+                1,
+                track * share / 100,
+                7,
+                fillColor=HexColor(appearance.header_row_color),
+                strokeColor=None,
+            )
+        )
+    drawing.add(
+        String(
+            track + 4,
+            1.5,
+            share_label(share),
+            fontName=FONT,
+            fontSize=7.8,
+            fillColor=HexColor(INK),
+        )
+    )
+    return drawing

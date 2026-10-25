@@ -426,9 +426,10 @@ class RunFlowTests(FlowTestCase):
                     "cloudexit.cli.app.generate_egress_html_report",
                     return_value={"success": True, "html_path": "h"},
                 ),
+                # The PDF is written by generate_report, from the estimate file
                 patch(
-                    "cloudexit.cli.app.generate_egress_pdf_report",
-                    return_value={"success": True, "pdf_path": "p"},
+                    "cloudexit.engine.generate_egress_report",
+                    return_value="egress.pdf",
                 ),
             ]
         for item in patches:
@@ -740,10 +741,7 @@ class RunFlowTests(FlowTestCase):
                 "cloudexit.cli.app.generate_egress_html_report",
                 return_value={"success": True},
             ),
-            patch(
-                "cloudexit.cli.app.generate_egress_pdf_report",
-                return_value={"success": True},
-            ),
+            patch("cloudexit.engine.generate_egress_report", return_value="egress.pdf"),
         ):
             self.run_assessment(
                 report,

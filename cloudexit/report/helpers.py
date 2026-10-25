@@ -19,6 +19,25 @@ def format_money(value, currency):
     return f"{symbol}{amount}" if symbol else f"{currency} {amount}"
 
 
+def gib_number(size_bytes):
+    # One decimal; a size that is not zero never reads as 0.0
+    gib = size_bytes / 2**30
+    return "<0.1" if 0 < gib < 0.1 else f"{gib:,.1f}"
+
+
+def format_gib(size_bytes):
+    if size_bytes is None:
+        return "n/a"
+    return f"{gib_number(size_bytes)} GiB"
+
+
+def share_label(share):
+    # A share that is not zero never reads as "0 %"
+    if 0 < share < 0.5:
+        return "<1 %"
+    return f"{share:.0f} %"
+
+
 def format_change(previous, current):
     if not previous or current is None:
         return "–"

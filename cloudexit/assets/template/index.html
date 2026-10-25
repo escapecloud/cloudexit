@@ -294,6 +294,9 @@
                   </div>
                 </div>
                 {% endif %}
+                {% if summary.costs_egress_note %}
+                <p class="small text-muted mt-3 mb-0">{{ summary.costs_egress_note }}</p>
+                {% endif %}
               </div>
             </div>
           </div>

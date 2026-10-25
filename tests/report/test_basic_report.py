@@ -600,9 +600,13 @@ class BasicOnlyTests(BasicReportTestCase):
             "Exit Readiness Grade",
             "Vendor Lock-in Score",
             "Scored Alternatives",
-            "Egress & Data Landscape",
         ):
             self.assertIn(name, closing)
+        # The Community Edition produces it itself, so the platforms do not add it
+        self.assertNotIn("Egress & Data Landscape", closing)
+        self.assertFalse(
+            any("Egress" in term for term, _text in BLOCKS["fa_items"]),
+        )
         self.assertNotRegex(closing, r"\d+ / (100|5)")
 
     def test_the_html_report_has_no_scores_before_the_closing_section(self):
@@ -979,6 +983,21 @@ class WordingGuardTests(unittest.TestCase):
         ):
             self.assertIn(key, TITLE_CASE_KEYS)
 
+    def test_the_egress_labels_are_in_the_title_case_list(self):
+        for key in (
+            "cover_title_egress",
+            "ev_egress_report",
+            "ev_companion_document",
+            "eg_heading_coverage",
+            "eg_heading_landscape",
+            "eg_heading_costs",
+            "eg_heading_pricing",
+            "eg_heading_next_steps",
+            "eg_th_size_gib",
+            "eg_st_largest",
+        ):
+            self.assertIn(key, TITLE_CASE_KEYS)
+
     def test_the_retired_classification_is_gone(self):
         self.assertNotIn("cover_classification", BLOCKS)
         self.assertNotIn("cover_classification_value", BLOCKS)
@@ -1021,7 +1040,8 @@ class WordingTests(unittest.TestCase):
 
     def test_no_wording_carries_regulatory_words_or_scores(self):
         for key, text in self.strings():
-            if key.startswith("fa_"):
+            # The pages that point to the platforms name what they add
+            if key.startswith(("fa_", "eg_next_")):
                 continue
             with self.subTest(key):
                 self.assertEqual(find_terms(text), [])

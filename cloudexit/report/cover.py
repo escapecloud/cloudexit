@@ -88,10 +88,10 @@ def _paragraph(value, style):
 
 
 class RecordCover:
-    def __init__(self, title, context, b):
+    def __init__(self, title, context, b, document_id=None):
         self.title = title
         self.project_name = context.name
-        self.document_id = context.document_id
+        self.document_id = document_id or context.document_id
         self.appearance = context.appearance
         self.report_path = context.report_path
         self.provenance = context.provenance
