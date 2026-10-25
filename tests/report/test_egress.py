@@ -6,11 +6,13 @@ import unittest
 from unittest.mock import patch
 
 
-from cloudexit.egress.model import GIB, write_egress_inventory
+from cloudexit.egress.model import GIB, compute_totals, write_egress_inventory
 from cloudexit.report.helpers import format_gib, gib_number, percent
 from cloudexit.catalogue.store import active_catalogue_path
+from cloudexit.report.wording import BLOCKS
 from cloudexit.report.egress import (
     _build_type_groups,
+    _summarize_totals,
     _resolve_icon,
     build_fee_estimate,
     calculate_tiered_cost,
@@ -457,3 +459,55 @@ class FreeTierHeadroomTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SummaryDisplayTests(unittest.TestCase):
+    DASH = BLOCKS["ev_dash"]
+
+    def rows(self, *sizes, flagged=True):
+        return [
+            {
+                "size_bytes": size,
+                "size_unknown": size is None and flagged,
+                "tier_bytes": None,
+            }
+            for size in sizes
+        ]
+
+    def summary(self, rows, total_fee=0.0):
+        return _summarize_totals(compute_totals(rows, set()), rows, total_fee, [], 1)
+
+    def test_nothing_sized_shows_a_dash_rather_than_a_zero_with_a_plus(self):
+        summary = self.summary(self.rows(None, None, None))
+
+        self.assertTrue(summary["nothing_sized"])
+        self.assertEqual(summary["total_data_display"], self.DASH)
+        self.assertEqual(summary["total_fee_display"], self.DASH)
+
+    def test_a_row_with_no_size_and_no_unknown_flag_is_still_not_sized(self):
+        # One resource type of the egress_unsized sample is shaped this way
+        rows = self.rows(None, None) + self.rows(None, flagged=False)
+        summary = self.summary(rows)
+
+        self.assertTrue(summary["nothing_sized"])
+        self.assertEqual(summary["total_data_display"], self.DASH)
+
+    def test_partial_sizing_keeps_the_lower_bound_plus(self):
+        summary = self.summary(self.rows(10 * GIB, None), total_fee=1.5)
+
+        self.assertFalse(summary["nothing_sized"])
+        self.assertEqual(summary["total_data_display"], "10.0 GiB+")
+        self.assertEqual(summary["total_fee_display"], "$1.50+")
+
+    def test_sized_at_exactly_zero_bytes_is_a_figure_not_a_dash(self):
+        summary = self.summary(self.rows(0))
+
+        self.assertFalse(summary["nothing_sized"])
+        self.assertEqual(summary["total_data_display"], "0.0 GiB")
+        self.assertEqual(summary["total_fee_display"], "$0.00")
+
+    def test_without_any_data_bearing_resource_nothing_is_claimed_either_way(self):
+        summary = self.summary([])
+
+        self.assertFalse(summary["nothing_sized"])
+        self.assertEqual(summary["total_data_display"], "0.0 GiB")

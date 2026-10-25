@@ -357,7 +357,6 @@ BLOCKS = {
             "definition": "One completed assessment of the defined scope, identified by the run ID on page 2.",
         },
     ],
-    "fa_uploaded_link": "Open the reports: {link}",
     "fa_uploaded_id": "Assessment ID: {assessment_id}",
     "eg_heading_introduction": "Introduction",
     "eg_heading_purpose": "Purpose",
@@ -576,19 +575,6 @@ BLOCKS = {
             "definition": "Fees a provider charges for moving data or workloads to another provider, including data egress.",
         },
     ],
-    "eg_heading_next_steps": "Next Steps",
-    "eg_next_lead": (
-        "Use this estimate together with the Executive Summary of the same "
-        "run ({executive_id}) when planning an exit."
-    ),
-    "eg_next_platforms": (
-        "Connected ({exitcloud_url}) and Enterprise ({book_demo_url}) combine "
-        "this estimate with the Exit Readiness Report and version history."
-    ),
-    "eg_next_uploaded": (
-        "This run was uploaded. The platform combines this estimate with the "
-        "Exit Readiness Report and version history."
-    ),
     "notices_egress": (
         "Egress figures are estimates based on the provider's public list "
         "prices at the time of the run. Actual invoices can differ: "
@@ -1046,7 +1032,6 @@ TITLE_CASE_KEYS = (
     "eg_heading_costs",
     "eg_heading_pricing",
     "eg_heading_glossary",
-    "eg_heading_next_steps",
     "eg_th_resource_type",
     "eg_th_measured",
     "eg_th_resources",

@@ -526,7 +526,7 @@ class RunFlowTests(FlowTestCase):
             LOCAL_RISKS,
         )
         messages = [args[0] for args, _ in self.steps]
-        self.assertIn("Forcing Basic Assessment: no platform is configured.", messages)
+        self.assertIn("Basic assessment: Standard needs an upload.", messages)
 
     def test_the_local_results_are_computed_when_connected_too(self):
         report = self.report()
@@ -573,7 +573,7 @@ class RunFlowTests(FlowTestCase):
         # The local report is always the Basic report
         self.assertEqual(self.json_report(report)["meta"]["assessment_type"], 1)
         messages = [args[0] for args, _ in self.steps]
-        self.assertEqual([m for m in messages if m.startswith("Forcing Basic")], [])
+        self.assertEqual([m for m in messages if m.startswith("Basic assessment")], [])
 
     def test_platform_text_with_brackets_is_shown_literally_and_the_run_goes_on(self):
         message = "rejected [/bold] [red]x[/red] :warning: [1, 2]"
@@ -770,7 +770,7 @@ class RunFlowTests(FlowTestCase):
         # A configured platform keeps the requested depth: nothing forces Basic
         self.assertEqual(self.sync(report)["assessment_type"], 2)
         messages = [args[0] for args, _ in self.steps]
-        self.assertEqual([m for m in messages if m.startswith("Forcing Basic")], [])
+        self.assertEqual([m for m in messages if m.startswith("Basic assessment")], [])
 
     def test_basic_is_forced_only_without_platform_configuration(self):
         for settings in (None, Settings()):

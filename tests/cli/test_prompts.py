@@ -212,3 +212,19 @@ class WithoutATerminalTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AssessmentTypePromptTests(unittest.TestCase):
+    def test_the_type_is_asked_when_an_upload_will_happen(self):
+        with patch("cloudexit.cli.prompts.ask", side_effect=["1", "2"]) as asked:
+            self.assertEqual(prompt_required_inputs(True), (1, 2))
+
+        self.assertEqual(len(asked.call_args_list), 2)
+        self.assertIn("Assessment Type", str(asked.call_args_list))
+
+    def test_without_an_upload_the_type_is_basic_and_never_asked(self):
+        with patch("cloudexit.cli.prompts.ask", side_effect=["3"]) as asked:
+            self.assertEqual(prompt_required_inputs(False), (3, 1))
+
+        self.assertEqual(len(asked.call_args_list), 1)
+        self.assertNotIn("Assessment Type", str(asked.call_args_list))

@@ -2,6 +2,7 @@ import io
 import json
 import sys
 import unittest
+from argparse import Namespace
 from contextlib import redirect_stderr
 from pathlib import Path
 from unittest.mock import patch
@@ -24,7 +25,8 @@ from tests.support.api import (
 )
 from tests.report import test_report_flow as flow
 from cloudexit import codes
-from cloudexit.settings import Setting, Settings
+from cloudexit.settings import Setting, Settings, load_settings
+from tests.support.isolation import isolated_environ
 
 OUTDATED = {
     "code": "collector_catalogue_outdated",
@@ -51,7 +53,7 @@ class ModeTestCase(flow.FlowTestCase):
         return [args[0] for args, _ in self.steps]
 
     def forced(self):
-        return [m for m in self.messages() if m.startswith("Forcing Basic")]
+        return [m for m in self.messages() if m.startswith("Basic assessment")]
 
     def summary(self, exit_code=0):
         out = io.StringIO()
@@ -67,9 +69,28 @@ class UploadModeMatrixTests(ModeTestCase):
 
         mock_upload.assert_not_called()
         self.assert_local_report(report)
-        self.assertEqual(
-            self.forced(), ["Forcing Basic Assessment: no platform is configured."]
-        )
+        self.assertEqual(self.forced(), ["Basic assessment: Standard needs an upload."])
+
+    def test_the_legacy_host_and_key_environment_variables_upload_nothing(self):
+        report = self.report()
+        environ = {
+            **isolated_environ(self.tmp),
+            "HOST": "platform.test",
+            "KEY": "fixture-key-0123456789",
+        }
+        with self.assertLogs("cloudexit.settings", level="WARNING") as logs:
+            settings = load_settings(None, environ=environ)
+
+        self.assertIsNone(settings.host.value)
+        self.assertIsNone(settings.api_key.value)
+        self.assertNotIn("fixture-key-0123456789", logs.output[0])
+
+        with patch("cloudexit.cli.app.upload") as mock_upload:
+            self.run_assessment(report, settings=settings, assessment_type=2)
+
+        mock_upload.assert_not_called()
+        self.assert_local_report(report)
+        self.assertEqual(self.sync(report)["assessment_type"], 1)
 
     def test_auto_with_a_platform_uploads(self):
         report = self.report()
@@ -129,7 +150,7 @@ class UploadModeMatrixTests(ModeTestCase):
         mock_upload.assert_not_called()
         self.assert_local_report(report)
         self.assertEqual(self.sync(report)["assessment_type"], 1)
-        self.assertEqual(self.forced(), ["Forcing Basic Assessment: uploads are off."])
+        self.assertEqual(self.forced(), ["Basic assessment: Standard needs an upload."])
         self.assertFalse(self.raw(report, "upload.json").exists())
 
     def test_off_does_not_even_check_a_key_that_cannot_be_right(self):
@@ -586,3 +607,91 @@ class StdoutSeparationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TerminalOutputTests(ModeTestCase):
+    # Nothing in the terminal sells an edition, a contact or a framework
+    MARKETING = (
+        "regulatory-aligned",
+        "DORA",
+        "FINMA",
+        "PRA",
+        "request_report",
+        "ExitCloud",
+        "Light",
+        "Enterprise",
+    )
+
+    def steps_starting(self, prefix):
+        return [(a, k) for a, k in self.steps if a and a[0].startswith(prefix)]
+
+    def test_an_offline_run_says_what_it_did_and_sells_nothing(self):
+        report = self.report()
+        self.run_assessment(report, settings=Settings(), real_terminal=True)
+        text = self.output.getvalue()
+
+        self.assertIn("Offline run: no platform configured", text)
+        self.assertIn("Outputs:", text)
+        for banned in self.MARKETING:
+            with self.subTest(banned):
+                self.assertNotIn(banned, text)
+
+    def test_an_offline_run_is_not_a_warning(self):
+        report = self.report()
+        self.run_assessment(report, settings=Settings(), assessment_type=1)
+
+        offline = self.steps_starting("Offline run:")
+        self.assertEqual(len(offline), 1)
+        self.assertEqual(offline[0][1]["status"], "ok")
+        self.assertEqual(
+            [k for _a, k in self.steps if k.get("status") == "warning"], []
+        )
+
+    def test_an_explicit_standard_type_offline_is_reduced_without_a_warning(self):
+        report = self.report()
+        self.run_assessment(report, settings=Settings(), assessment_type=2)
+
+        reduced = self.steps_starting("Basic assessment")
+        self.assertEqual(len(reduced), 1)
+        self.assertEqual(
+            reduced[0][0][0], "Basic assessment: Standard needs an upload."
+        )
+        self.assertEqual(reduced[0][1]["status"], "ok")
+
+    def test_a_configured_run_names_the_platform_by_host(self):
+        report = self.report()
+        self.run_assessment(report, settings=flow.CONFIGURED, replies=success_replies())
+
+        self.assertEqual(
+            [a[0] for a, _k in self.steps_starting("Platform configured")],
+            ["Platform configured: https://platform.test."],
+        )
+
+    def test_the_host_line_carries_no_path_query_or_credentials(self):
+        for raw, shown in (
+            ("https://platform.test", "https://platform.test"),
+            ("https://platform.test/api/v2?token=abc", "https://platform.test"),
+            ("https://user:pw@platform.test:8443/x", "https://platform.test:8443"),
+            ("http://127.0.0.1:8000/path", "http://127.0.0.1:8000"),
+        ):
+            with self.subTest(raw):
+                self.assertEqual(app._host_display(raw), shown)
+
+
+class AssessmentTypeQuestionTests(unittest.TestCase):
+    def args(self, settings, dry_run=False):
+        return Namespace(settings=settings, dry_run=dry_run)
+
+    def test_a_configured_platform_that_will_upload_gets_the_question(self):
+        self.assertTrue(app._asks_assessment_type(self.args(flow.CONFIGURED)))
+
+    def test_an_offline_run_does_not_get_the_question(self):
+        for settings in (None, Settings(), Settings(host=flow.CONFIGURED.host)):
+            with self.subTest(settings=settings):
+                self.assertFalse(app._asks_assessment_type(self.args(settings)))
+
+    def test_upload_off_or_a_dry_run_does_not_get_the_question(self):
+        self.assertFalse(app._asks_assessment_type(self.args(with_mode("off"))))
+        self.assertFalse(
+            app._asks_assessment_type(self.args(flow.CONFIGURED, dry_run=True))
+        )

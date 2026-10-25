@@ -58,7 +58,7 @@ def parse_arguments():
         help="Increase log verbosity (-v for INFO, -vv for DEBUG + third-party).",
     )
 
-    # Platform options: flags > CLOUDEXIT_* environment > config file > legacy
+    # Platform options: flags > CLOUDEXIT_* environment > config file
     platform = argparse.ArgumentParser(add_help=False)
     platform.add_argument(
         "--host", type=str, help="Platform host (https://, or http:// for localhost)."

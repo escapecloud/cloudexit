@@ -40,8 +40,13 @@ def _kpis(estimate, sized, unsized, groups, b):
     summary = estimate["summary"]
     csp = estimate["meta"]["cloud_service_provider"]
     total = estimate["totals"]["known_size_bytes"]
-    headroom = free_tier_headroom(estimate["pricing"], csp, total)
+    nothing_sized = summary["nothing_sized"]
+    # Nothing was measured: no volume to show, and no headroom to claim against
+    headroom = (
+        None if nothing_sized else free_tier_headroom(estimate["pricing"], csp, total)
+    )
     plus = "+" if summary["unknown_count"] > 0 else ""
+    volume = b["ev_dash"] if nothing_sized else gib_number(total)
 
     kpis = [
         {
@@ -55,8 +60,8 @@ def _kpis(estimate, sized, unsized, groups, b):
         },
         {
             "label": b["eg_st_volume"],
-            "figure": gib_number(total),
-            "unit": f"GiB{plus}",
+            "figure": volume,
+            "unit": "" if nothing_sized else f"GiB{plus}",
             "caption": (
                 b["html_eg_types_sized"].format(sized=len(sized), types=len(groups))
                 if groups
@@ -83,9 +88,11 @@ def _kpis(estimate, sized, unsized, groups, b):
         kpis.append(
             {
                 "label": b["eg_st_billable"],
-                "figure": gib_number(total),
-                "unit": "GiB",
-                "caption": b["html_eg_billable_caption"],
+                "figure": volume,
+                "unit": "" if nothing_sized else "GiB",
+                # With nothing sized the prices were never applied, so the
+                # caption would claim something the run did not establish
+                "caption": "" if nothing_sized else b["html_eg_billable_caption"],
             }
         )
     kpis.append(
@@ -142,7 +149,8 @@ def _volume(sized, unsized, total, b):
 
 
 def _table(context, estimate, sized, unsized, total, b):
-    plus = "+" if estimate["summary"]["unknown_count"] > 0 else ""
+    summary = estimate["summary"]
+    plus = "+" if summary["unknown_count"] > 0 else ""
 
     def row(group):
         icon = group["icon"].lstrip("/") if group["icon"] else ""
@@ -177,8 +185,16 @@ def _table(context, estimate, sized, unsized, total, b):
         "not_sized": b["html_eg_not_sized"],
         "total": (
             b["eg_total"],
-            f"{gib_number(total, 2)}{plus}",
-            fee_number(estimate["total_fee"]),
+            (
+                b["ev_dash"]
+                if summary["nothing_sized"]
+                else f"{gib_number(total, 2)}{plus}"
+            ),
+            (
+                b["ev_dash"]
+                if summary["nothing_sized"]
+                else fee_number(estimate["total_fee"])
+            ),
         ),
     }
 

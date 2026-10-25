@@ -43,5 +43,5 @@ def empty_estimate(csp=2):
         "pricing": pricing,
         "total_fee": 0.0,
         "type_groups": [],
-        "summary": _summarize_totals(totals, 0.0, pricing, csp),
+        "summary": _summarize_totals(totals, [], 0.0, pricing, csp),
     }

@@ -1,8 +1,10 @@
+import ast
 import contextlib
 import io
 import os
+import subprocess
+import sys
 import tempfile
-import types
 import unittest
 from argparse import Namespace
 from pathlib import Path
@@ -25,6 +27,8 @@ from cloudexit.settings import (
 
 LOGGER = "cloudexit.settings"
 KEY = "sk_live_0123456789abcdef"
+LEGACY_HOST = "platform.test"
+LEGACY_KEY = "fixture-key-0123456789"
 
 
 class SettingsTestCase(unittest.TestCase):
@@ -32,9 +36,6 @@ class SettingsTestCase(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.tmp = Path(tmp.name)
-        patcher = patch("cloudexit.settings.legacy_config", None)
-        patcher.start()
-        self.addCleanup(patcher.stop)
 
     @property
     def config_path(self):
@@ -56,10 +57,16 @@ class SettingsTestCase(unittest.TestCase):
         environ = {**isolated_environ(self.tmp), **(env or {})}
         return load_settings(flags, environ=environ)
 
-    def legacy(self, **values):
-        return patch(
-            "cloudexit.settings.legacy_config", types.SimpleNamespace(**values)
+    @contextlib.contextmanager
+    def directory_with_config_py(self):
+        # A real config.py next to the run, to prove it is never read
+        legacy = self.tmp / "legacy"
+        legacy.mkdir(exist_ok=True)
+        (legacy / "config.py").write_text(
+            f"HOST = 'old.test'\nKEY = '{LEGACY_KEY}'\n", encoding="utf-8"
         )
+        with contextlib.chdir(legacy):
+            yield legacy
 
 
 class ConfigFilePathTests(unittest.TestCase):
@@ -119,36 +126,18 @@ class PrecedenceTests(SettingsTestCase):
         self.assertEqual(settings.timeout.source, "default")
         self.assertFalse(settings.config_found)
 
-    def test_host_flag_over_env_over_file_over_legacy(self):
+    def test_host_flag_over_env_over_file(self):
         self.write_config('[default]\nhost = "file.test"\n')
-        env = {
-            "CLOUDEXIT_HOST": "env.test",
-            "HOST": "legacy-env.test",
-            "KEY": "legacy-key",
-        }
-        with self.legacy(HOST="legacy-config.test", KEY="legacy-key"):
-            steps = [
-                (
-                    self.load({"host": "flag.test"}, env),
-                    "https://flag.test",
-                    "flag --host",
-                ),
-                (self.load(None, env), "https://env.test", "env CLOUDEXIT_HOST"),
-                (
-                    self.load(None, {"HOST": "legacy-env.test", "KEY": "k"}),
-                    "https://file.test",
-                    "config file [default]",
-                ),
-            ]
-            self.config_path.unlink()
-            steps += [
-                (
-                    self.load(None, {"HOST": "legacy-env.test", "KEY": "k"}),
-                    "https://legacy-env.test",
-                    "legacy env HOST",
-                ),
-                (self.load(), "https://legacy-config.test", "legacy config.py"),
-            ]
+        env = {"CLOUDEXIT_HOST": "env.test"}
+        steps = [
+            (
+                self.load({"host": "flag.test"}, env),
+                "https://flag.test",
+                "flag --host",
+            ),
+            (self.load(None, env), "https://env.test", "env CLOUDEXIT_HOST"),
+            (self.load(), "https://file.test", "config file [default]"),
+        ]
 
         for settings, value, source in steps:
             self.assertEqual(settings.host.value, value)
@@ -401,60 +390,123 @@ class PermissionWarningTests(SettingsTestCase):
 
 
 class LegacySourceTests(SettingsTestCase):
-    def test_host_and_key_env_vars_are_used_together_with_a_warning(self):
-        env = {"HOST": "legacy.test", "KEY": "legacy-key-0123456"}
+    def test_host_and_key_env_vars_are_no_longer_read(self):
+        env = {"HOST": LEGACY_HOST, "KEY": LEGACY_KEY}
         with self.assertLogs(LOGGER, level="WARNING") as logs:
             settings = self.load(None, env)
 
-        self.assertEqual(settings.host.value, "https://legacy.test")
-        self.assertEqual(settings.host.source, "legacy env HOST")
-        self.assertEqual(settings.api_key.value, "legacy-key-0123456")
-        self.assertEqual(settings.api_key.source, "legacy env KEY")
+        self.assertIsNone(settings.host.value)
+        self.assertIsNone(settings.api_key.value)
         self.assertEqual(len(logs.output), 1)
-        self.assertIn("deprecated", logs.output[0])
-        self.assertNotIn("legacy-key-0123456", logs.output[0])
+        self.assertIn("HOST and KEY are no longer read", logs.output[0])
+        self.assertNotIn(LEGACY_HOST, logs.output[0])
+        self.assertNotIn(LEGACY_KEY, logs.output[0])
 
-    def test_host_alone_or_key_alone_is_ignored(self):
-        for env in ({"HOST": "legacy.test"}, {"KEY": "legacy-key-0123456"}):
+    def test_host_alone_or_key_alone_does_not_warn(self):
+        for env in ({"HOST": LEGACY_HOST}, {"KEY": LEGACY_KEY}):
             with self.assertNoLogs(LOGGER, level="WARNING"):
                 settings = self.load(None, env)
             self.assertIsNone(settings.host.value)
             self.assertIsNone(settings.api_key.value)
 
-    def test_config_py_is_used_with_a_warning(self):
-        with (
-            self.legacy(HOST="old.test", KEY="old-key-0123456789"),
-            self.assertLogs(LOGGER, level="WARNING") as logs,
-        ):
-            settings = self.load()
+    def test_cloudexit_env_vars_are_used_and_do_not_warn(self):
+        env = {
+            "HOST": LEGACY_HOST,
+            "KEY": LEGACY_KEY,
+            "CLOUDEXIT_HOST": "env.test",
+            "CLOUDEXIT_API_KEY": "inline-key-123456",
+        }
+        with self.assertNoLogs(LOGGER, level="WARNING"):
+            settings = self.load(None, env)
 
-        self.assertEqual(settings.host.value, "https://old.test")
-        self.assertEqual(settings.host.source, "legacy config.py")
-        self.assertEqual(settings.api_key.source, "legacy config.py")
-        self.assertEqual(len(logs.output), 1)
-        self.assertIn("config.py is deprecated", logs.output[0])
-        self.assertNotIn("old-key-0123456789", logs.output[0])
+        self.assertEqual(settings.host.value, "https://env.test")
+        self.assertEqual(settings.host.source, "env CLOUDEXIT_HOST")
+        self.assertEqual(settings.api_key.source, "env CLOUDEXIT_API_KEY")
 
-    def test_env_pair_beats_config_py(self):
-        env = {"HOST": "legacy.test", "KEY": "legacy-key-0123456"}
-        with self.legacy(HOST="old.test", KEY="old-key"):
-            with self.assertLogs(LOGGER, level="WARNING"):
-                settings = self.load(None, env)
-        self.assertEqual(settings.host.source, "legacy env HOST")
-
-    def test_no_warning_when_a_higher_source_covers_everything(self):
-        with self.legacy(HOST="old.test", KEY="old-key-0123456789"):
-            with self.assertNoLogs(LOGGER, level="WARNING"):
-                settings = self.load(
-                    {"host": "flag.test"}, {"CLOUDEXIT_API_KEY": "inline-key-123456"}
-                )
-        self.assertEqual(settings.host.source, "flag --host")
-
-    def test_an_empty_config_py_or_a_namespace_package_is_ignored(self):
-        for legacy in (types.SimpleNamespace(), types.SimpleNamespace(HOST="", KEY="")):
-            with self.legacy(**vars(legacy)):
+    def test_a_config_py_in_the_working_directory_is_no_longer_read(self):
+        with self.directory_with_config_py():
+            with self.assertLogs(LOGGER, level="WARNING") as logs:
                 settings = self.load()
-            self.assertIsNone(settings.host.value)
+
+        self.assertIsNone(settings.host.value)
+        self.assertIsNone(settings.api_key.value)
+        self.assertEqual(len(logs.output), 1)
+        self.assertIn("config.py is no longer read", logs.output[0])
+        self.assertNotIn(LEGACY_KEY, logs.output[0])
+
+    def test_a_host_from_another_source_silences_the_config_py_warning(self):
+        with self.directory_with_config_py():
+            with self.assertNoLogs(LOGGER, level="WARNING"):
+                settings = self.load(None, {"CLOUDEXIT_HOST": "env.test"})
+        self.assertEqual(settings.host.source, "env CLOUDEXIT_HOST")
+
+    def test_both_legacy_sources_give_a_single_warning(self):
+        env = {"HOST": LEGACY_HOST, "KEY": LEGACY_KEY}
+        with self.directory_with_config_py():
+            with self.assertLogs(LOGGER, level="WARNING") as logs:
+                self.load(None, env)
+
+        self.assertEqual(len(logs.output), 1)
+        self.assertIn("HOST and KEY are no longer read", logs.output[0])
+        self.assertIn("config.py is no longer read", logs.output[0])
+
+    def test_no_module_in_the_package_imports_config(self):
+        offenders = []
+        for path in Path("cloudexit").rglob("*.py"):
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                names = []
+                if isinstance(node, ast.Import):
+                    names = [alias.name for alias in node.names]
+                elif isinstance(node, ast.ImportFrom) and node.level == 0:
+                    names = [node.module or ""]
+                if any(name.split(".")[0] == "config" for name in names):
+                    offenders.append(str(path))
+        self.assertEqual(offenders, [])
+
+
+class LegacyConfigPySubprocessTests(unittest.TestCase):
+    # `python -m cloudexit` puts the current directory first on sys.path, so a
+    # config.py there used to be executed at start-up
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.tmp = Path(tmp.name)
+        self.marker = self.tmp / "config-py-was-executed"
+        (self.tmp / "config.py").write_text(
+            "from pathlib import Path\n"
+            f"Path({str(self.marker)!r}).write_text('executed')\n"
+            "HOST = 'old.test'\n"
+            f"KEY = {LEGACY_KEY!r}\n",
+            encoding="utf-8",
+        )
+
+    def run_cloudexit(self, *args):
+        root = Path(__file__).resolve().parent.parent
+        env = {**os.environ, "PYTHONPATH": str(root)}
+        for name in ("HOST", "KEY", "CLOUDEXIT_HOST", "CLOUDEXIT_API_KEY"):
+            env.pop(name, None)
+        return subprocess.run(
+            [sys.executable, "-m", "cloudexit", *args],
+            cwd=self.tmp,
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+
+    def test_version_does_not_execute_config_py(self):
+        result = self.run_cloudexit("--version")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(self.marker.exists())
+
+    def test_config_show_lists_no_legacy_source(self):
+        result = self.run_cloudexit("config", "show")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(self.marker.exists())
+        out = result.stdout + result.stderr
+        self.assertNotIn("legacy", out)
+        self.assertNotIn("old.test", out)
+        self.assertNotIn(LEGACY_KEY, out)
 
 
 class DescribeTests(SettingsTestCase):

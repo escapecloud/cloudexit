@@ -193,7 +193,7 @@ class RunModeCliTests(PlatformCliTestCase):
         self.assertEqual(platform.requests, [])
         self.assertEqual(summary["upload"]["status"], "skipped")
         self.assertEqual(summary["upload"]["reason"], "off")
-        self.assertIn("Forcing Basic Assessment: uploads are off.", result.stderr)
+        self.assertIn("Basic assessment: Standard needs an upload.", result.stderr)
         self.assertEqual(len(self.reports()), 1)
 
     def test_the_mode_can_come_from_the_environment(self):
@@ -222,7 +222,7 @@ class RunModeCliTests(PlatformCliTestCase):
         self.assertEqual(summary["upload"]["status"], "skipped")
         self.assertEqual(summary["upload"]["reason"], "offline")
         self.assertIn(
-            "Forcing Basic Assessment: no platform is configured.",
+            "Basic assessment: Standard needs an upload.",
             " ".join(result.stderr.split()),
         )
 

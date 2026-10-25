@@ -12,13 +12,11 @@ from .egress import (
     cost_facts,
     introduction_facts,
     landscape_facts,
-    next_steps_facts,
     pricing_facts,
 )
 from .evidence import link_markup
 from .flow import section
-from .notices import parts_markup
-from .palette import HAIRLINE, HOTSPOT_COUNT, INK, MUTED, PROVENANCE_BACKGROUND, RULE
+from .palette import HAIRLINE, HOTSPOT_COUNT, INK, MUTED
 from .placeholder import LabelWithPlaceholder
 from .sections import GLOSSARY_TERM_WIDTH
 from .table_style import data_table, header_cell, share_bar, summary_strip, text_style
@@ -285,40 +283,3 @@ def appendix(context, estimate, styles, b):
         _glossary_table(facts["glossary"], context.appearance),
     ]
     return content
-
-
-def next_steps(context, styles, b):
-    provenance = context.provenance
-    facts = next_steps_facts(
-        context.document_id,
-        provenance.uploaded,
-        provenance.platform_url,
-        provenance.assessment_id,
-        b,
-    )
-    color = context.appearance.heading2_color
-    box = Table(
-        [
-            [
-                [
-                    Paragraph(parts_markup(parts, color), styles["ContentStyle"])
-                    for parts in facts["paragraphs"]
-                ]
-            ]
-        ],
-        colWidths=[16 * cm],
-        hAlign="LEFT",
-    )
-    box.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, -1), HexColor(PROVENANCE_BACKGROUND)),
-                ("BOX", (0, 0), (-1, -1), 0.6, HexColor(RULE)),
-                ("LEFTPADDING", (0, 0), (-1, -1), 10),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
-                ("TOPPADDING", (0, 0), (-1, -1), 4),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ]
-        )
-    )
-    return [_heading(facts, styles), Spacer(1, 4), box]

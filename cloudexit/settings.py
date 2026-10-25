@@ -12,11 +12,6 @@ from urllib.parse import urlsplit
 
 logger = logging.getLogger(__name__)
 
-try:
-    import config as legacy_config
-except ModuleNotFoundError:
-    legacy_config = None
-
 DEFAULT_TIMEOUT = 10.0
 DEFAULT_UPLOAD_BUDGET = 300.0
 LOCAL_HTTP_HOSTS = ("localhost", "127.0.0.1")
@@ -50,6 +45,16 @@ FLAGS = {
 
 FILE_KEYS = ("host", "api_key", "api_key_file", "assessment_id", "ca_bundle", "upload")
 PATH_KEYS = ("api_key_file", "ca_bundle", "spool_dir")
+
+LEGACY_ENV_WARNING = (
+    "HOST and KEY are no longer read (removed in 2.0). Use CLOUDEXIT_HOST and "
+    "CLOUDEXIT_API_KEY_FILE (or CLOUDEXIT_API_KEY)."
+)
+LEGACY_CONFIG_WARNING = (
+    "config.py is no longer read (removed in 2.0). Move HOST and KEY to the "
+    "config file (see `cloudexit config path`) or to CLOUDEXIT_* environment "
+    "variables."
+)
 
 TRUE_WORDS = ("1", "true", "yes", "on")
 FALSE_WORDS = ("0", "false", "no", "off")
@@ -193,28 +198,6 @@ def _env_layer(environ: Mapping[str, str]) -> dict[str, Setting]:
         if name in PATH_KEYS:
             value = _expand(value, None)
         layer[name] = Setting(value, f"env {var}")
-    return layer
-
-
-def _legacy_env_layer(environ: Mapping[str, str]) -> dict[str, Setting]:
-    host = environ.get("HOST", "").strip()
-    key = environ.get("KEY", "").strip()
-    if host and key:
-        return {
-            "host": Setting(host, "legacy env HOST"),
-            "api_key": Setting(key, "legacy env KEY"),
-        }
-    if host or key:
-        logger.debug("Ignoring legacy HOST/KEY: they are only used when both are set.")
-    return {}
-
-
-def _legacy_config_layer() -> dict[str, Setting]:
-    layer = {}
-    for name, attr in (("host", "HOST"), ("api_key", "KEY")):
-        value = getattr(legacy_config, attr, "")
-        if isinstance(value, str) and value.strip():
-            layer[name] = Setting(value.strip(), "legacy config.py")
     return layer
 
 
@@ -364,22 +347,20 @@ def _check_ca_bundle(setting: Setting) -> Setting:
     return setting
 
 
-def _warn_deprecated(settings: Settings) -> None:
-    sources = {
-        setting.source
-        for setting in (settings.host, settings.api_key)
-        if setting.source.startswith("legacy")
-    }
-    if "legacy env HOST" in sources or "legacy env KEY" in sources:
-        logger.warning(
-            "The HOST and KEY environment variables are deprecated; use "
-            "CLOUDEXIT_HOST and CLOUDEXIT_API_KEY_FILE (or CLOUDEXIT_API_KEY)."
-        )
-    if "legacy config.py" in sources:
-        logger.warning(
-            "config.py is deprecated; move HOST and KEY to the config file "
-            "(see `cloudexit config path`) or to CLOUDEXIT_* environment variables."
-        )
+def _warn_legacy_sources(settings: Settings, environ: Mapping[str, str]) -> None:
+    # Only for users still relying on the sources 2.0 dropped, so it stays quiet
+    # once anything else supplies a host or a key. Presence is all that is
+    # checked: config.py is never imported, opened or parsed, and the values of
+    # HOST and KEY are never logged or used.
+    if settings.host.value or settings.api_key.value:
+        return
+    notes = []
+    if environ.get("HOST", "").strip() and environ.get("KEY", "").strip():
+        notes.append(LEGACY_ENV_WARNING)
+    if Path("config.py").is_file():
+        notes.append(LEGACY_CONFIG_WARNING)
+    if notes:
+        logger.warning(" ".join(notes))
 
 
 def load_settings(
@@ -404,12 +385,7 @@ def load_settings(
     else:
         file_layers = _file_layers(data, path, profile.value)
 
-    layers = [
-        *top,
-        *file_layers,
-        _legacy_env_layer(environ),
-        _legacy_config_layer(),
-    ]
+    layers = [*top, *file_layers]
 
     api_key, api_key_file = _resolve_key(layers)
     host = _first(layers, "host")
@@ -441,7 +417,7 @@ def load_settings(
         config_path=path,
         config_found=data is not None,
     )
-    _warn_deprecated(settings)
+    _warn_legacy_sources(settings, environ)
     return settings
 
 

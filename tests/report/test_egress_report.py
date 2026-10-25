@@ -53,7 +53,6 @@ OUTLINE = [
     (0, "Estimated Costs"),
     (0, "Appendix – Egress Prices"),
     (1, "Glossary"),
-    (0, "Next Steps"),
     (0, "Legal Notices"),
 ]
 MULTI_TIB = [
@@ -326,15 +325,28 @@ class ContentTests(EgressReportTestCase):
         ):
             self.assertIn(expected, text)
 
-    def test_next_steps_name_the_companion_and_the_platforms(self):
-        text = self.text(MULTI_TIB, prov=provenance())
-        self.assertIn(f"Executive Summary of the same run ({ES_ID})", text)
-        self.assertIn("Connected (https://exitcloud.io)", text)
-        self.assertIn("Enterprise (https://escapecloud.io/book-demo/)", text)
+    def test_nothing_promotes_a_platform_or_an_edition(self):
+        for name, prov in (("offline", provenance()), ("uploaded", uploaded())):
+            with self.subTest(name):
+                text = self.text(MULTI_TIB, prov=prov)
+                for banned in (
+                    "Next Steps",
+                    "exitcloud.io",
+                    "book-demo",
+                    "book a demo",
+                    "Connected",
+                    "Enterprise",
+                ):
+                    self.assertNotIn(banned, text)
 
-        text = self.text(MULTI_TIB, prov=uploaded())
-        self.assertIn(f"Open the reports: {URL}", text)
-        self.assertNotIn("Connected (https://exitcloud.io)", text)
+    def test_page_two_still_carries_the_companion_and_the_platform_link(self):
+        _path, _context, reader = self.render(MULTI_TIB, prov=provenance())
+        self.assertIn(f"Companion Document {ES_ID}", page_texts(reader)[1])
+
+        _path, _context, reader = self.render(MULTI_TIB, prov=uploaded())
+        page_two = page_texts(reader)[1]
+        self.assertIn(f"Companion Document {ES_ID}", page_two)
+        self.assertIn(URL, page_two)
 
     def test_no_date_is_written_month_first(self):
         for name, provider, prov in self.scenarios():

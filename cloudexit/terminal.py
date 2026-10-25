@@ -2,9 +2,7 @@
 import getpass
 import sys
 from rich.console import Console
-from rich.markup import escape
 from rich.style import Style
-from time import sleep
 
 from cloudexit import codes
 
@@ -45,14 +43,8 @@ def print_step(
         "pending": "[ ... ]",
     }
 
-    # Handle the pending status with a spinner
     if status == "pending":
-        with console.status(
-            f"{escape(description):<50} [yellow]{status_map['pending']}[/yellow]",
-            spinner="dots",
-        ):
-            sleep(2)
-            print_step(description, status="ok")
+        print_step(description, status="ok")
     elif status == "ok":
         console.print(
             f"{description:<50} {status_map['ok']}",

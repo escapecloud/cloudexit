@@ -6,7 +6,7 @@ from cloudexit.terminal import ask, console
 logger = logging.getLogger(__name__)
 
 
-def prompt_required_inputs() -> tuple[int, int]:
+def prompt_required_inputs(ask_assessment_type: bool = True) -> tuple[int, int]:
     while True:
         try:
             exit_strategy = int(
@@ -23,6 +23,11 @@ def prompt_required_inputs() -> tuple[int, int]:
             console.print(
                 f"{e} Please enter 1 or 3.", style="red", markup=False, emoji=False
             )
+
+    # Standard only exists on a platform, so without an upload there is
+    # nothing to choose
+    if not ask_assessment_type:
+        return exit_strategy, 1
 
     while True:
         try:
