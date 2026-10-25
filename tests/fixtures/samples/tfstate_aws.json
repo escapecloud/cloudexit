@@ -1,0 +1,15 @@
+{
+  "name": "Sample – Customer Self-Service Portal (Terraform)",
+  "purpose": "A Terraform state: no costs, a resource without a region, never egress.",
+  "provider": "aws",
+  "exit_strategy": 1,
+  "scope": {
+    "tfstate": "sample_aws.tfstate"
+  },
+  "resources": [],
+  "costs": null,
+  "egress": null,
+  "upload": null,
+  "clock": "2026-11-12T09:30:00Z",
+  "run_id": "01939b8e-7c2a-7d41-9a51-3c8f0a6e0006"
+}

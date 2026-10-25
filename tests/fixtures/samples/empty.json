@@ -1,0 +1,26 @@
+{
+  "name": "Sample – Empty Scope",
+  "purpose": "No resources and no costs.",
+  "provider": "aws",
+  "exit_strategy": 1,
+  "scope": {
+    "accountId": "123456789012",
+    "region": "eu-central-1"
+  },
+  "resources": [],
+  "costs": {
+    "currency": "USD",
+    "months": {
+      "2026-06": 0,
+      "2026-07": 0,
+      "2026-08": 0,
+      "2026-09": 0,
+      "2026-10": 0,
+      "2026-11": 0
+    }
+  },
+  "egress": null,
+  "upload": null,
+  "clock": "2026-11-12T09:30:00Z",
+  "run_id": "01939b8e-7c2a-7d41-9a51-3c8f0a6e0009"
+}

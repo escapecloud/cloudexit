@@ -1,0 +1,47 @@
+{
+  "name": "Sample – Static Website",
+  "purpose": "Every type has enough supported alternatives, so the Risk Inventory is empty.",
+  "provider": "aws",
+  "exit_strategy": 2,
+  "scope": {
+    "accountId": "123456789012",
+    "region": "eu-central-1"
+  },
+  "resources": [
+    {
+      "type": "AWS.apigateway.get_rest_apis.items",
+      "region": "eu-central-1",
+      "count": 2
+    },
+    {
+      "type": "AWS.acm.list_certificates.CertificateSummaryList",
+      "region": "eu-central-1",
+      "count": 3
+    },
+    {
+      "type": "AWS.cloudwatch.describe_alarms.MetricAlarms",
+      "region": "eu-central-1",
+      "count": 6
+    },
+    {
+      "type": "AWS.backup.list_backup_plans.BackupPlansList",
+      "region": "eu-central-1",
+      "count": 1
+    }
+  ],
+  "costs": {
+    "currency": "USD",
+    "months": {
+      "2026-06": 42.1,
+      "2026-07": 44.35,
+      "2026-08": 41.9,
+      "2026-09": 45.2,
+      "2026-10": 43.75,
+      "2026-11": 19.1
+    }
+  },
+  "egress": null,
+  "upload": null,
+  "clock": "2026-11-12T09:30:00Z",
+  "run_id": "01939b8e-7c2a-7d41-9a51-3c8f0a6e0008"
+}

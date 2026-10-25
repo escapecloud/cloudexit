@@ -1,0 +1,80 @@
+{
+  "name": "Sample – Media Library",
+  "purpose": "Egress of tens of TiB: several price tiers and a large fee.",
+  "provider": "azure",
+  "exit_strategy": 3,
+  "scope": {
+    "tenantId": "00000000-0000-4000-8000-0000000000a1",
+    "subscriptionId": "00000000-0000-4000-8000-0000000000a2",
+    "resourceGroupName": "rg-sample-media"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "region": "westeurope",
+      "count": 14
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "region": "westeurope",
+      "count": 6
+    },
+    {
+      "type": "Microsoft.Sql/servers/databases",
+      "region": "westeurope",
+      "count": 2
+    }
+  ],
+  "costs": {
+    "currency": "EUR",
+    "months": {
+      "2026-06": 18200.0,
+      "2026-07": 18950.5,
+      "2026-08": 19120.75,
+      "2026-09": 19810.2,
+      "2026-10": 20344.0,
+      "2026-11": 8120.6
+    }
+  },
+  "egress": {
+    "archive_tiers": [
+      "Archive"
+    ],
+    "resources": [
+      {
+        "type": "Microsoft.Storage/storageAccounts",
+        "name": "samplemediaoriginals",
+        "size_gib": 36864,
+        "tiers": {
+          "Hot": 12000,
+          "Cool": 14864,
+          "Archive": 10000
+        }
+      },
+      {
+        "type": "Microsoft.Storage/storageAccounts",
+        "name": "samplemediaproxies",
+        "size_gib": 12288,
+        "tiers": {
+          "Hot": 12288
+        }
+      },
+      {
+        "type": "Microsoft.Compute/disks",
+        "name": "sample-media-render-disk",
+        "size_gib": 8192,
+        "flags": [
+          "allocated (upper bound)"
+        ]
+      },
+      {
+        "type": "Microsoft.Sql/servers/databases",
+        "name": "sample-media-metadata",
+        "size_gib": 1024
+      }
+    ]
+  },
+  "upload": null,
+  "clock": "2026-11-12T09:30:00Z",
+  "run_id": "01939b8e-7c2a-7d41-9a51-3c8f0a6e0011"
+}

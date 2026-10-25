@@ -1,0 +1,97 @@
+{
+  "name": "Sample – Internal Billing Platform",
+  "purpose": "The same estate without egress: no egress document, no egress sentence.",
+  "provider": "aws",
+  "exit_strategy": 3,
+  "scope": {
+    "accountId": "123456789012",
+    "region": "eu-central-1"
+  },
+  "resources": [
+    {
+      "type": "AWS.ec2.describe_instances.Reservations",
+      "region": "eu-central-1",
+      "count": 14
+    },
+    {
+      "type": "AWS.ec2.describe_instances.Reservations",
+      "region": "eu-west-1",
+      "count": 6
+    },
+    {
+      "type": "AWS.s3.list_buckets.Buckets",
+      "region": "eu-central-1",
+      "count": 9
+    },
+    {
+      "type": "AWS.s3.list_buckets.Buckets",
+      "region": "eu-west-1",
+      "count": 3
+    },
+    {
+      "type": "AWS.ec2.describe_volumes.Volumes",
+      "region": "eu-central-1",
+      "count": 22
+    },
+    {
+      "type": "AWS.ec2.describe_volumes.Volumes",
+      "region": "eu-west-1",
+      "count": 8
+    },
+    {
+      "type": "AWS.rds.describe_db_instances.DBInstances",
+      "region": "eu-central-1",
+      "count": 3
+    },
+    {
+      "type": "AWS.rds.describe_db_instances.DBInstances",
+      "region": "eu-west-1",
+      "count": 1
+    },
+    {
+      "type": "AWS.dynamodb.list_tables.TableNames",
+      "region": "eu-central-1",
+      "count": 5
+    },
+    {
+      "type": "AWS.lambda.list_functions.Functions",
+      "region": "eu-central-1",
+      "count": 18
+    },
+    {
+      "type": "AWS.lambda.list_functions.Functions",
+      "region": "eu-west-1",
+      "count": 6
+    },
+    {
+      "type": "AWS.eks.list_clusters.clusters",
+      "region": "eu-central-1",
+      "count": 2
+    },
+    {
+      "type": "AWS.sqs.list_queues.QueueUrls",
+      "region": "eu-central-1",
+      "count": 7
+    },
+    {
+      "type": "AWS.sns.list_topics.Topics",
+      "region": "eu-central-1",
+      "count": 4
+    }
+  ],
+  "costs": {
+    "currency": "USD",
+    "months": {
+      "2026-06": 8420.35,
+      "2026-07": 8791.1,
+      "2026-08": 9054.8,
+      "2026-09": 8632.45,
+      "2026-10": 9310.2,
+      "2026-11": 4120.75
+    }
+  },
+  "egress": null,
+  "upload": null,
+  "clock": "2026-11-12T09:30:00Z",
+  "run_id": "01939b8e-7c2a-7d41-9a51-3c8f0a6e0002"
+}
