@@ -47,10 +47,10 @@ PHRASES = (
     "2022/2554",
 )
 
-# Branding of other products' reports. The platforms are named once, on the
-# closing page, and that page is checked separately.
+# Branding of other products' reports. The platforms are named on the closing
+# page and the legal notices, which are checked separately. "Community
+# Edition" is this product's own edition and is no longer foreign.
 FOREIGN_BRANDS = (
-    "Community Edition",
     "Generated with exitcloud.io",
     "exitcloud.io document",
 )
@@ -87,7 +87,13 @@ AMERICAN = re.compile(
     re.IGNORECASE,
 )
 # Proper names and data from the provider may keep their own spelling.
-AMERICAN_ALLOWED = ("Resource Center", "Azure Monitor")
+AMERICAN_ALLOWED = (
+    "Resource Center",
+    "Azure Monitor",
+    "GNU Affero General Public License",
+    # The path of the licence file in the repository link
+    "blob/main/LICENSE",
+)
 
 # Words that stay lower case inside an English Title Case label.
 TITLE_SMALL_WORDS = {

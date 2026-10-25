@@ -10,6 +10,7 @@ from .brief_summary import build_brief_summary, collect_brief_facts
 from .cover import RecordCover
 from .evidence import build_document_information_page
 from .flow import chapter_break
+from .notices import legal_notices
 from .sections import (
     alternative_technologies,
     costs_overview,
@@ -45,6 +46,8 @@ def build_content(context, styles, b):
     content += glossary(context, styles, b)
     content.append(chapter_break())
     content += full_assessment(context, styles, b)
+    content.append(chapter_break())
+    content += legal_notices(context, styles, b)
     return content
 
 

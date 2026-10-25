@@ -303,5 +303,7 @@ The public contract is the `cloudexit` command, `python -m cloudexit` and `cloud
 
 ## License
 
-cloudexit is licensed under the **GNU Affero General Public License v3 (AGPL-3.0)**.  
+© 2024–2026 EscapeCloud. cloudexit is licensed under the **GNU Affero General Public License v3 (AGPL-3.0)**.  
 See [LICENSE](./LICENSE) for details.
+
+EscapeCloud, cloudexit and the EscapeCloud logo are trademarks. The AGPL-3.0 licence does not grant any right to use them; modified versions must not use them in a way that suggests they are official.

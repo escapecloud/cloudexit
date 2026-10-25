@@ -2,6 +2,7 @@ from xml.sax.saxutils import escape
 
 from .brief_summary import collect_brief_facts, finding_rows, lead_text
 from .helpers import severity_label
+from .notices import notices_html
 from .palette import SEVERITIES
 from .sections import glossary_entries, scope_boundary, scope_strategy
 from .wording import BLOCKS
@@ -118,4 +119,7 @@ def html_sections(context, b=BLOCKS):
             "url": provenance.platform_url,
             "assessment_id": provenance.assessment_id,
         },
+        "notices": notices_html(
+            context.cloud_service_provider, provenance.generated_at, b
+        ),
     }

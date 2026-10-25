@@ -105,7 +105,7 @@ class RecordCover:
         )
         left = [
             CoverCell(b["cover_doc_id"], self.document_id, MONO_VALUE_STYLE),
-            CoverCell(b["cover_classification"], b["cover_classification_value"]),
+            CoverCell(b["cover_edition"], b["cover_edition_value"]),
             CoverCell(
                 b["cover_exit_strategy"], strategy_name(context.strategy_code, b)
             ),

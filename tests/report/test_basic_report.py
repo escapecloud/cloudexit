@@ -7,6 +7,7 @@ import unittest
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
+from unittest.mock import patch
 
 from pypdf import PdfReader
 
@@ -14,6 +15,8 @@ from cloudexit.engine import generate_report, perform_risk_assessment
 from cloudexit.report import fonts
 from cloudexit.report.context import Provenance
 from cloudexit.report.executive_summary import generate_executive_summary
+from cloudexit.report.egress import generate_egress_html_report
+from cloudexit.report.notices import notices_html
 from cloudexit.report.palette import (
     DEFAULT_APPEARANCE,
     Appearance,
@@ -21,7 +24,16 @@ from cloudexit.report.palette import (
     contrast_pairs,
     contrast_ratio,
 )
+from cloudexit.report.sections import (
+    AWS_ICONS_URL,
+    AWS_TRADEMARK_URL,
+    AZURE_ICONS_URL,
+    LICENCE_URL,
+    REPOSITORY_URL,
+)
 from cloudexit.report.wording import BLOCKS, TITLE_CASE_KEYS
+from tests.report import test_egress as egress_helpers
+from tests.report.test_no_credentials import pricing_for_both_clouds
 from tests.support.flow import build_flow_run
 from tests.support.report import (
     build_empty_report_fixture,
@@ -39,6 +51,12 @@ from tests.support.sync import SYNC_ID
 from cloudexit.version import __version__
 
 URL = "https://platform.test/assessments/a-1"
+AWS_NOTICE_LINKS = {
+    AWS_ICONS_URL,
+    AWS_TRADEMARK_URL,
+    REPOSITORY_URL,
+    LICENCE_URL,
+}
 COLLECTED = datetime(2026, 5, 7, 12, 0, tzinfo=timezone.utc)
 BASE_OUTLINE = [
     (0, "Brief Summary"),
@@ -58,8 +76,12 @@ BASE_OUTLINE = [
 OFFLINE_OUTLINE = BASE_OUTLINE + [
     (0, "What the Full Assessment Adds"),
     (1, "How to Get Them"),
+    (0, "Legal Notices"),
 ]
-UPLOADED_OUTLINE = BASE_OUTLINE + [(0, "The Full Assessment")]
+UPLOADED_OUTLINE = BASE_OUTLINE + [
+    (0, "The Full Assessment"),
+    (0, "Legal Notices"),
+]
 SCORE_PATTERNS = (
     r"/ 100",
     r"/ 5\b",
@@ -288,7 +310,7 @@ class StructureTests(BasicReportTestCase):
         numbers = [reader.get_destination_page_number(entry) for entry in chapters]
         # One chapter per page, except the severity levels and the glossary
         self.assertEqual(len(set(numbers)), len(numbers) - 1)
-        self.assertEqual(numbers[-3], numbers[-2])
+        self.assertEqual(numbers[-4], numbers[-3])
 
     def test_running_header_and_footer(self):
         path, context, reader = self.render(key="default")
@@ -297,7 +319,8 @@ class StructureTests(BasicReportTestCase):
         for index, text in enumerate(pages[1:], start=2):
             self.assertIn("Smoke Test Assessment", text)
             self.assertIn(context.document_id, text)
-            self.assertIn("CONFIDENTIAL", text)
+            self.assertIn("COMMUNITY EDITION", text)
+            self.assertNotIn("CONFIDENTIAL", text)
             self.assertIn(f"Page {index} of {len(pages)}", text)
 
     def test_the_fonts_are_plex_and_nothing_else(self):
@@ -439,9 +462,10 @@ class ProvenanceTests(BasicReportTestCase):
         self.assertIn(SYNC_ID, second)
         self.assertIn("2026-11-02 · (sha256 cccccccccccc)", second)
         self.assertIn("Self-collected data: no platform evaluated this report.", second)
-        self.assertIn("What the Full Assessment Adds", pages[-1])
+        self.assertIn("What the Full Assessment Adds", pages[-2])
         self.assertEqual(
-            link_targets(reader), {"https://escapecloud.io", "https://exitcloud.io"}
+            link_targets(reader) - AWS_NOTICE_LINKS,
+            {"https://escapecloud.io", "https://exitcloud.io"},
         )
 
     def test_an_uploaded_report_carries_the_link_instead_of_the_promotion(self):
@@ -451,10 +475,10 @@ class ProvenanceTests(BasicReportTestCase):
         self.assertIn("Uploaded to the platform", pages[1])
         self.assertIn(URL, pages[1])
         self.assertNotIn("Self-collected data", " ".join(pages))
-        self.assertIn("The Full Assessment", pages[-1])
-        self.assertIn(URL, pages[-1])
+        self.assertIn("The Full Assessment", pages[-2])
+        self.assertIn(URL, pages[-2])
         self.assertNotIn("What the Full Assessment Adds", " ".join(pages))
-        self.assertEqual(link_targets(reader), {URL})
+        self.assertEqual(link_targets(reader) - AWS_NOTICE_LINKS, {URL})
 
     def test_an_upload_without_a_link_names_the_assessment(self):
         _path, _context, reader = self.render(
@@ -464,7 +488,7 @@ class ProvenanceTests(BasicReportTestCase):
                 else provenance(uploaded=True, platform_url=None, assessment_id="a-77")
             )
         )
-        self.assertIn("Assessment ID: a-77", page_texts(reader)[-1])
+        self.assertIn("Assessment ID: a-77", page_texts(reader)[-2])
 
     def test_an_unknown_catalogue_version_is_said_so(self):
         _path, _context, reader = self.render(
@@ -563,14 +587,14 @@ class BasicOnlyTests(BasicReportTestCase):
         for name, fixture, overrides in self.scenarios():
             with self.subTest(name):
                 _path, _context, reader = self.render(fixture, key=name, **overrides)
-                body = " ".join(page_texts(reader)[:-1])
+                body = " ".join(page_texts(reader)[:-2])
 
                 for pattern in SCORE_PATTERNS:
                     self.assertIsNone(re.search(pattern, body, re.IGNORECASE), pattern)
 
     def test_the_closing_page_only_names_what_the_full_assessment_adds(self):
         _path, _context, reader = self.render(key="offline", provenance=provenance())
-        closing = page_texts(reader)[-1]
+        closing = page_texts(reader)[-2]
 
         for name in (
             "Exit Readiness Grade",
@@ -637,6 +661,7 @@ class BasicOnlyTests(BasicReportTestCase):
             "Risk Severity Levels",
             "Glossary",
             "What the Full Assessment Adds",
+            "Legal Notices",
         ):
             position = text.index(heading, position)
 
@@ -675,24 +700,288 @@ class TermGuardTests(BasicReportTestCase):
             find_terms("A DORA review of the supervisory rules"),
             ["DORA", "supervisor", "supervisory"],
         )
-        self.assertEqual(
-            find_terms("EscapeCloud Community Edition"), ["Community Edition"]
-        )
+        # The edition is this product's own, so it is not a foreign brand
+        self.assertEqual(find_terms("EscapeCloud Community Edition"), [])
         self.assertEqual(
             find_terms("Generated with exitcloud.io"), ["Generated with exitcloud.io"]
         )
         self.assertEqual(find_terms("an ordinary sentence about cloud exit"), [])
         self.assertEqual(find_terms("ICTs and DORAs"), [])
 
-    def test_the_platforms_are_named_only_on_the_closing_page(self):
+    def test_the_platforms_are_named_only_on_the_last_two_pages(self):
         _path, _context, reader = self.render(key="default")
         pages = page_texts(reader)
 
-        for text in pages[:-1]:
+        for text in pages[:-2]:
             self.assertNotIn("escapecloud", text.lower())
             self.assertNotIn("exitcloud", text.lower())
-        self.assertIn("https://escapecloud.io", pages[-1])
-        self.assertIn("https://exitcloud.io", pages[-1])
+        # The closing page keeps both platform URLs; the notices name EscapeCloud
+        self.assertIn("https://escapecloud.io", pages[-2])
+        self.assertIn("https://exitcloud.io", pages[-2])
+        self.assertIn("EscapeCloud", pages[-1])
+        self.assertNotIn("exitcloud", pages[-1].lower())
+
+
+class LegalNoticesTests(BasicReportTestCase):
+    ICON_MARKERS = {1: "Microsoft group", 2: "Amazon.com"}
+
+    def notices_page(self, key, fixture=None, **overrides):
+        _path, context, reader = self.render(fixture, key=key, **overrides)
+        return context, reader, page_texts(reader)
+
+    def test_the_last_page_is_the_legal_notices_in_every_scenario(self):
+        for name, fixture, overrides in self.scenarios():
+            with self.subTest(name):
+                context, reader, pages = self.notices_page(name, fixture, **overrides)
+                last = pages[-1]
+
+                self.assertIn("Legal Notices", last)
+                self.assertNotIn("Legal Notices", pages[-2])
+                self.assertIn(BLOCKS["notices_disclaimer"], last)
+                self.assertIn("© 2024–2026 EscapeCloud", last)
+                self.assertIn(REPOSITORY_URL, last)
+                self.assertIn(LICENCE_URL, last)
+                self.assertIn(BLOCKS["notices_trademark_own"], last)
+                self.assertIn(BLOCKS["notices_trademark_others"], last)
+                self.assertIn(BLOCKS["notices_purpose"], last)
+                self.assertIn("GNU Affero General Public License v3.0", last)
+                self.assertTrue({REPOSITORY_URL, LICENCE_URL} <= link_targets(reader))
+
+    def test_only_the_icon_notice_of_the_reports_provider_is_printed(self):
+        for name, fixture, overrides in self.scenarios():
+            with self.subTest(name):
+                context, _reader, pages = self.notices_page(name, fixture, **overrides)
+                provider = context.cloud_service_provider
+                other = 1 if provider == 2 else 2
+
+                self.assertIn(self.ICON_MARKERS[provider], pages[-1])
+                everything = " ".join(pages)
+                self.assertNotIn(self.ICON_MARKERS[other], everything)
+
+    def test_the_icon_links_follow_the_provider(self):
+        for name, fixture, overrides in self.scenarios():
+            with self.subTest(name):
+                context, reader, _pages = self.notices_page(name, fixture, **overrides)
+                links = link_targets(reader)
+                if context.cloud_service_provider == 2:
+                    self.assertTrue({AWS_ICONS_URL, AWS_TRADEMARK_URL} <= links)
+                    self.assertNotIn(AZURE_ICONS_URL, links)
+                else:
+                    self.assertIn(AZURE_ICONS_URL, links)
+                    self.assertNotIn(AWS_ICONS_URL, links)
+
+    def test_the_cover_names_the_edition_and_no_classification(self):
+        _context, _reader, pages = self.notices_page("offline", provenance=provenance())
+        cover = pages[0]
+
+        self.assertIn("EDITION Community", cover)
+        self.assertNotIn("CLASSIFICATION", cover)
+        self.assertNotIn("Confidential", cover)
+        self.assertNotIn("CONFIDENTIAL", " ".join(pages))
+
+    def test_every_running_footer_names_the_edition(self):
+        _context, _reader, pages = self.notices_page("offline", provenance=provenance())
+
+        for text in pages[1:]:
+            self.assertIn("COMMUNITY EDITION", text)
+            self.assertNotIn("CONFIDENTIAL", text)
+
+    def test_the_copyright_year_is_the_year_of_generation(self):
+        later = datetime(2027, 3, 1, 9, 0, tzinfo=timezone.utc)
+        _context, _reader, pages = self.notices_page(
+            "later", provenance=provenance(generated_at=later)
+        )
+
+        self.assertIn("© 2024–2027 EscapeCloud", pages[-1])
+        self.assertNotIn("2024–2026", pages[-1])
+
+    def test_the_notices_fit_one_page(self):
+        for name, fixture, overrides in self.scenarios():
+            with self.subTest(name):
+                _context, _reader, pages = self.notices_page(name, fixture, **overrides)
+                # Page n-1 is the closing page, n the notices; neither runs over
+                self.assertTrue(
+                    pages[-2].startswith("Executive Summary"), pages[-2][:60]
+                )
+                self.assertIn("Legal Notices", pages[-1][:200])
+
+    def test_no_placeholder_is_left_in_the_notices(self):
+        for name, fixture, overrides in self.scenarios():
+            with self.subTest(name):
+                _context, _reader, pages = self.notices_page(name, fixture, **overrides)
+                self.assertNotRegex(pages[-1], r"{[a-z_]+}")
+
+    def test_the_term_guard_passes_on_the_notices(self):
+        for name, fixture, overrides in self.scenarios():
+            with self.subTest(name):
+                _context, _reader, pages = self.notices_page(name, fixture, **overrides)
+                self.assertEqual(find_terms(pages[-1]), [])
+                self.assertEqual(american_hits(pages[-1]), [])
+                self.assertEqual(retired_term_hits(pages[-1]), [])
+
+
+class NoticesDataTests(unittest.TestCase):
+    def test_the_data_is_plain_and_ordered(self):
+        notices = notices_html(2, datetime(2026, 5, 7), BLOCKS)
+
+        self.assertEqual(notices["heading"], "Legal Notices")
+        self.assertEqual(
+            [block["heading"] for block in notices["blocks"]],
+            ["Disclaimer", "Trademarks", "Software"],
+        )
+        self.assertEqual(len(notices["blocks"][0]["paragraphs"]), 4)
+        self.assertEqual(len(notices["blocks"][1]["paragraphs"]), 3)
+        self.assertEqual(notices["copyright"], "© 2024–2026 EscapeCloud")
+
+    def test_links_are_text_and_url_pairs(self):
+        software = notices_html(1, datetime(2026, 1, 1), BLOCKS)["blocks"][2]
+        links = [part for part in software["paragraphs"][0] if isinstance(part, tuple)]
+
+        self.assertEqual(
+            links, [(REPOSITORY_URL, REPOSITORY_URL), (LICENCE_URL, LICENCE_URL)]
+        )
+
+    def test_each_provider_gets_its_own_icon_notice_and_an_unknown_one_none(self):
+        def trademarks(provider):
+            blocks = notices_html(provider, datetime(2026, 1, 1), BLOCKS)["blocks"]
+            return blocks[1]["paragraphs"]
+
+        self.assertIn("AWS service icons", "".join(map(str, trademarks(2)[2])))
+        self.assertIn("Azure service icons", "".join(map(str, trademarks(1)[2])))
+        self.assertEqual(len(trademarks(99)), 2)
+
+    def test_the_year_comes_from_the_generation_time(self):
+        for year in (2026, 2027, 2031):
+            notices = notices_html(2, datetime(year, 6, 1), BLOCKS)
+            self.assertEqual(notices["copyright"], f"© 2024–{year} EscapeCloud")
+
+
+class NoticesHtmlTests(BasicReportTestCase):
+    def index_text(self, provider, resources):
+        report = build_flow_run(
+            self.tmp / f"html-{provider}",
+            resources=resources,
+            costs=[("2026-09-01", 10.0, "USD")],
+        )
+        perform_risk_assessment(1, report)
+        details = (
+            {"region": "eu-central-1"} if provider == 2 else {"resourceGroupName": "rg"}
+        )
+        generate_report(
+            provider,
+            details,
+            1,
+            1,
+            "Flow",
+            report,
+            str(Path(report) / "raw_data"),
+            sync_id=SYNC_ID,
+        )
+        return html_text((Path(report) / "index.html").read_text(encoding="utf-8"))
+
+    def test_index_html_ends_with_the_notices_and_the_providers_icon_notice(self):
+        for provider, resources, own, other in (
+            (2, [(1, "eu-central-1", 3)], "Amazon.com", "Microsoft group"),
+            (1, [(3, "westeurope", 3)], "Microsoft group", "Amazon.com"),
+        ):
+            with self.subTest(provider=provider):
+                text = self.index_text(provider, resources)
+
+                self.assertGreater(
+                    text.index("Legal Notices"),
+                    text.index("What the Full Assessment Adds"),
+                )
+                tail = text[text.index("Legal Notices") :]
+                self.assertIn(BLOCKS["notices_disclaimer"], tail)
+                self.assertIn(own, tail)
+                self.assertNotIn(other, text)
+                self.assertIn(REPOSITORY_URL, tail)
+                self.assertRegex(tail.rstrip(), r"© 2024–\d{4} EscapeCloud$")
+                self.assertEqual(find_terms(text), [])
+
+    def test_the_links_in_index_html_are_real_links(self):
+        report = build_flow_run(
+            self.tmp / "html-links", resources=[(1, "eu-central-1", 3)], costs=[]
+        )
+        perform_risk_assessment(1, report)
+        generate_report(
+            2,
+            {"region": "eu-central-1"},
+            1,
+            1,
+            "Flow",
+            report,
+            str(Path(report) / "raw_data"),
+            sync_id=SYNC_ID,
+        )
+        html = (Path(report) / "index.html").read_text(encoding="utf-8")
+
+        for url in (REPOSITORY_URL, LICENCE_URL, AWS_ICONS_URL, AWS_TRADEMARK_URL):
+            self.assertIn(f'href="{url}"', html)
+
+    def egress_text(self, provider):
+        rows = [
+            egress_helpers._row(
+                "proddata", "Storage", "object", 2048 * egress_helpers.GIB
+            )
+        ]
+        payload = egress_helpers._payload(rows)
+        payload["meta"]["cloud_service_provider"] = provider
+        folder = self.report_dir()
+        json_path = folder / "egress_inventory_raw_data.json"
+        json_path.write_text(json.dumps(payload), encoding="utf-8")
+        egress_helpers._seed_egress_inventory(
+            str(folder), rows, egress_helpers._archive_tiers(rows)
+        )
+        with patch(
+            "cloudexit.report.egress.load_data", side_effect=pricing_for_both_clouds
+        ):
+            result = generate_egress_html_report(str(folder), str(json_path))
+        self.assertTrue(result["success"], result["logs"])
+        html = Path(result["html_path"]).read_text(encoding="utf-8")
+        return html, html_text(html)
+
+    def test_egress_html_ends_with_the_same_notices(self):
+        for provider, own, other in (
+            (1, "Microsoft group", "Amazon.com"),
+            (2, "Amazon.com", "Microsoft group"),
+        ):
+            with self.subTest(provider=provider):
+                html, text = self.egress_text(provider)
+                tail = text[text.index("Legal Notices") :]
+
+                self.assertIn(BLOCKS["notices_disclaimer"], tail)
+                self.assertIn(own, tail)
+                self.assertNotIn(other, text)
+                # The timestamp of the estimate gives the year
+                self.assertTrue(tail.rstrip().endswith("© 2024–2026 EscapeCloud"))
+                self.assertIn(f'href="{LICENCE_URL}"', html)
+                self.assertEqual(find_terms(text), [])
+
+
+class WordingGuardTests(unittest.TestCase):
+    def test_the_licence_name_is_a_proper_name_and_other_license_is_not(self):
+        self.assertEqual(
+            american_hits(BLOCKS["notices_software"]), [], BLOCKS["notices_software"]
+        )
+        self.assertTrue(american_hits("the license of the data"))
+        self.assertTrue(american_hits("Under this license, you may"))
+
+    def test_the_new_labels_are_in_the_title_case_list(self):
+        for key in (
+            "notices_heading",
+            "notices_disclaimer_heading",
+            "notices_trademarks_heading",
+            "notices_software_heading",
+            "cover_edition",
+            "cover_edition_value",
+            "footer_edition",
+        ):
+            self.assertIn(key, TITLE_CASE_KEYS)
+
+    def test_the_retired_classification_is_gone(self):
+        self.assertNotIn("cover_classification", BLOCKS)
+        self.assertNotIn("cover_classification_value", BLOCKS)
 
 
 class WordingTests(unittest.TestCase):
