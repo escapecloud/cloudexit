@@ -18,7 +18,6 @@ from cloudexit.catalogue.store import (
     check_checksum,
     install_dataset,
     installed_catalogue,
-    migrate_legacy_dataset,
 )
 
 logger = logging.getLogger(__name__)
@@ -203,7 +202,6 @@ def ensure_catalogue(
     base_url: str, *, directory: Path | None = None, verify: str | bool = True
 ) -> EnsureResult:
     directory = directory or catalogue_dir()
-    migrated = migrate_legacy_dataset(directory)
     try:
         result = update_catalogue(base_url, directory=directory, verify=verify)
     except (CatalogueError, OSError) as exc:
@@ -218,7 +216,6 @@ def ensure_catalogue(
             installed.version,
             installed.date,
             str(exc),
-            migrated,
         )
 
     installed = installed_catalogue(directory)
@@ -228,7 +225,6 @@ def ensure_catalogue(
         installed.version,
         installed.date,
         None,
-        migrated,
     )
 
 

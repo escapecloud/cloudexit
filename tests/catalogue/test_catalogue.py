@@ -15,6 +15,9 @@ import requests
 from cloudexit.cli import app
 from cloudexit.cli.parser import parse_arguments
 from cloudexit.catalogue import db as catalogue_db
+from cloudexit.catalogue.db import connect
+from cloudexit.engine import create_resource_inventory
+from cloudexit.report.assets import copy_assets
 from tests.support.isolation import isolated_environ
 from tests.support.catalogue import (
     build_catalogue,
@@ -38,10 +41,10 @@ from cloudexit.catalogue.store import (
     catalogue_info,
     import_catalogue,
     installed_catalogue,
-    migrate_legacy_dataset,
     read_state,
     set_active_catalogue,
     use_catalogue_file,
+    _open_readonly,
 )
 from cloudexit.catalogue.download import (
     ensure_catalogue,
@@ -63,12 +66,6 @@ class CatalogueTestCase(unittest.TestCase):
         self.tmp = Path(tmp.name)
         self.dir = self.tmp / "catalogue"
         self.addCleanup(set_active_catalogue, None)
-        patcher = patch(
-            "cloudexit.catalogue.store.LEGACY_DATABASE",
-            self.tmp / "no-legacy" / "data.db",
-        )
-        patcher.start()
-        self.addCleanup(patcher.stop)
 
     def install(self, version=V1, **kwargs):
         gz = catalogue_gz(version=version, **kwargs)
@@ -408,51 +405,145 @@ class UseCatalogueFileTests(CatalogueTestCase):
             use_catalogue_file(path)
 
 
-class MigrationTests(CatalogueTestCase):
+class LegacyDatasetTests(CatalogueTestCase):
     def legacy(self, **kwargs):
         path = self.tmp / "datasets" / "data.db"
         path.parent.mkdir()
         build_catalogue(path, **kwargs)
         return path
 
-    def test_copies_the_legacy_dataset_once(self):
+    def run_in_tmp(self, action):
+        previous = os.getcwd()
+        os.chdir(self.tmp)
+        try:
+            return action()
+        finally:
+            os.chdir(previous)
+
+    def test_a_datasets_folder_is_never_installed_on_its_own(self):
+        self.legacy(version=V2)
+
+        def ensure():
+            with fake_http(requests.ConnectionError("offline")):
+                return ensure_catalogue(BASE, directory=self.dir)
+
+        with self.assertRaises(CatalogueUnavailable):
+            self.run_in_tmp(ensure)
+
+        self.assertFalse((self.dir / "data.db").exists())
+        self.assertIsNone(installed_catalogue(self.dir))
+
+    def test_it_is_installed_when_it_is_imported_on_purpose(self):
         legacy = self.legacy(version=V2)
 
-        self.assertTrue(migrate_legacy_dataset(self.dir, legacy))
+        info = import_catalogue(legacy, directory=self.dir)
 
+        self.assertEqual(info.version, V2)
         self.assertEqual(self.version(), V2)
-        self.assertEqual(read_state(self.dir)["version"], V2)
-        self.assertEqual((self.dir / "data.db").read_bytes(), legacy.read_bytes())
-        self.assertFalse(migrate_legacy_dataset(self.dir, legacy))
 
-    def test_does_not_overwrite_an_installed_dataset(self):
-        self.install(V3)
-        legacy = self.legacy(version=V1)
 
-        self.assertFalse(migrate_legacy_dataset(self.dir, legacy))
-        self.assertEqual(self.version(), V3)
+class HardeningTests(CatalogueTestCase):
+    def catalogue_with(self, sql, name="hostile.db"):
+        path = self.tmp / name
+        build_catalogue(path)
+        conn = sqlite3.connect(path)
+        conn.executescript(sql)
+        conn.commit()
+        conn.close()
+        return path
 
-    def test_an_old_or_invalid_legacy_file(self):
-        self.assertTrue(migrate_legacy_dataset(self.dir, self.legacy(meta=False)))
-        self.assertIsNone(self.version())
+    TRIGGER = """
+        CREATE TABLE resource_inventory (resource_type INTEGER, count INTEGER);
+        CREATE TRIGGER rewrite AFTER INSERT ON resource_inventory
+        BEGIN UPDATE resource_inventory SET count = 999999; END;
+    """
+    VIEW = "CREATE VIEW everything AS SELECT * FROM resourcetype;"
 
-        other = self.tmp / "other"
-        bad = self.tmp / "bad.db"
-        bad.write_bytes(b"nope")
-        self.assertFalse(migrate_legacy_dataset(other, bad))
-        self.assertFalse(migrate_legacy_dataset(other, self.tmp / "missing.db"))
+    def test_a_catalogue_with_a_trigger_or_a_view_is_refused_at_install(self):
+        for what, sql in (("trigger", self.TRIGGER), ("view", self.VIEW)):
+            with self.subTest(what):
+                path = self.catalogue_with(sql, f"{what}.db")
 
-    def test_ensure_reports_the_migration(self):
-        legacy = self.legacy(version=V2)
-        _, entry = self.release(V2)
+                with self.assertRaises(CatalogueError) as raised:
+                    import_catalogue(path, directory=self.dir)
+
+                self.assertIn(what, str(raised.exception))
+                self.assertIn("it was not used", str(raised.exception))
+                self.assertFalse((self.dir / "data.db").exists())
+
+    def test_a_gzipped_catalogue_with_a_trigger_is_refused_too(self):
+        path = self.catalogue_with(self.TRIGGER)
+        packed = self.tmp / "hostile.db.gz"
+        packed.write_bytes(gzip.compress(path.read_bytes()))
+
+        with self.assertRaises(CatalogueError):
+            import_catalogue(packed, directory=self.dir)
+        with self.assertRaises(CatalogueError):
+            use_catalogue_file(packed)
+        self.assertIsNone(installed_catalogue(self.dir))
+
+    def test_a_catalogue_file_given_on_the_command_line_is_refused(self):
+        path = self.catalogue_with(self.VIEW)
+
+        with self.assertRaises(CatalogueError):
+            use_catalogue_file(path)
+
+    def test_extra_tables_and_indexes_are_still_accepted(self):
+        path = self.catalogue_with(
+            "CREATE TABLE extra (a TEXT, b TEXT);"
+            "CREATE INDEX extra_a ON extra (a);"
+            "CREATE INDEX resourcetype_code ON resourcetype (code);"
+        )
+
+        info = import_catalogue(path, directory=self.dir)
+
+        self.assertEqual(info.version, "2026-11-02")
+
+    def test_a_trigger_that_got_past_the_install_is_stopped_before_the_copy_is_used(
+        self,
+    ):
+        path = self.catalogue_with(self.TRIGGER)
+        set_active_catalogue(path)
+        report = self.tmp / "report"
+        (report / "data").mkdir(parents=True)
+
+        with patch("cloudexit.report.assets.shutil.copytree"):
+            with self.assertRaises(CatalogueError):
+                copy_assets(str(report), 2)
+
+        self.assertFalse((report / "data" / "assessment.db").exists())
+
+    def test_the_resource_inventory_stage_fails_without_running_the_triggers(self):
+        path = self.catalogue_with(self.TRIGGER)
+        set_active_catalogue(path)
+        report = self.tmp / "report"
+        raw = report / "raw_data"
+        raw.mkdir(parents=True)
+
         with (
-            patch("cloudexit.catalogue.store.LEGACY_DATABASE", legacy),
-            fake_http(self.manifest_reply(entry)),
+            patch("cloudexit.report.assets.shutil.copytree"),
+            patch("cloudexit.engine.build_aws_resource_inventory") as collected,
         ):
-            result = ensure_catalogue(BASE, directory=self.dir)
+            result = create_resource_inventory(2, {}, str(report), str(raw))
 
-        self.assertTrue(result.migrated)
-        self.assertEqual(result.status, "current")
+        self.assertFalse(result["success"])
+        self.assertIn("trigger", result["logs"])
+        collected.assert_not_called()
+        self.assertFalse((report / "data" / "assessment.db").exists())
+
+    def test_the_connections_do_not_trust_the_schema(self):
+        path = self.tmp / "plain.db"
+        build_catalogue(path)
+
+        with connect(path) as conn:
+            self.assertEqual(conn.execute("PRAGMA trusted_schema").fetchone()[0], 0)
+        read_only = _open_readonly(path)
+        try:
+            self.assertEqual(
+                read_only.execute("PRAGMA trusted_schema").fetchone()[0], 0
+            )
+        finally:
+            read_only.close()
 
 
 class EnsureCatalogueTests(CatalogueTestCase):

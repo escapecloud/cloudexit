@@ -11,7 +11,7 @@ from cloudexit import codes
 from cloudexit.settings import Settings, SettingsError, load_settings
 
 from cloudexit.platform.client import ApiClient, ApiError
-from cloudexit.platform.spool import Spool
+from cloudexit.platform.spool import Spool, key_fingerprint
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +119,7 @@ def _spool(
             name=name,
             exit_strategy=meta.get("exit_strategy"),
             assessment_id=settings.assessment_id.value,
+            key_id=key_fingerprint(settings.api_key.value),
         )
         return True
     except (OSError, ValueError, SettingsError) as exc:

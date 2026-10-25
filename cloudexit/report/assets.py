@@ -3,7 +3,11 @@ import os
 import shutil
 import logging
 
-from cloudexit.catalogue.store import active_catalogue_path
+from cloudexit.catalogue.store import (
+    CatalogueError,
+    active_catalogue_path,
+    validate_schema,
+)
 
 from cloudexit.resources import asset_path
 
@@ -71,3 +75,10 @@ def copy_assets(report_path: str, cloud_service_provider: int) -> None:
     # Only copy if the destination doesn't already exist
     if not os.path.exists(db_dest_path):
         shutil.copyfile(db_src_path, db_dest_path)
+        # The run writes its results into this copy, so what it holds is checked
+        # here too: a copy with a trigger or a view is not kept
+        try:
+            validate_schema(db_dest_path)
+        except CatalogueError:
+            os.unlink(db_dest_path)
+            raise

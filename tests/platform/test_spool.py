@@ -21,6 +21,7 @@ from cloudexit.platform.spool import (
     flush,
     format_age,
     host_id,
+    key_fingerprint,
     parse_age,
     spool_root,
     state_dir,
@@ -28,6 +29,7 @@ from cloudexit.platform.spool import (
 from cloudexit.platform.upload import UploadResult, read_sync_files, upload
 from tests.support.isolation import isolated_environ
 from tests.support.api import (
+    EU_KEY,
     HOST,
     KEY,
     created_reply,
@@ -112,6 +114,7 @@ class SpoolCase(unittest.TestCase):
             name=meta.pop("name", "Spooled"),
             exit_strategy=meta.pop("exit_strategy", 1),
             assessment_id=meta.pop("assessment_id", None),
+            key_id=meta.pop("key_id", key_fingerprint(KEY)),
         )
         self.now = NOW
         return entry
@@ -245,6 +248,7 @@ class SpoolFilesTests(SpoolCase):
                 "name": "Prod",
                 "exit_strategy": 3,
                 "assessment_id": "a",
+                "key_id": key_fingerprint(KEY),
             },
         )
 
@@ -536,6 +540,104 @@ class FlushTests(SpoolCase):
         self.assertTrue(result.empty)
         self.assertEqual(fake.requests, [])
 
+    def flush_with(self, key, replies=()):
+        settings = self.settings(
+            api_key=Setting(key, "test"), upload_budget=Setting(5.0, "test")
+        )
+        with fake_http(*replies) as fake:
+            result = flush(settings, self.spool, **self.options())
+        return result, fake
+
+    def test_a_sync_is_not_delivered_with_another_key_and_stays(self):
+        self.add(OLD)
+
+        result, fake = self.flush_with(EU_KEY)
+
+        self.assertEqual(fake.requests, [])
+        self.assertEqual(result.uploaded, [])
+        self.assertEqual(result.other_key, [OLD])
+        self.assertFalse(result.empty)
+        self.assertEqual([e.sync_id for e in self.spool.entries()], [OLD])
+
+    def test_a_sync_is_delivered_once_with_the_key_that_spooled_it(self):
+        self.add(OLD)
+        self.flush_with(EU_KEY)
+
+        result, fake = self.flush_with(
+            KEY, [meta_reply(), whoami_reply(), created_reply()]
+        )
+        again, second = self.flush_with(KEY)
+
+        self.assertEqual(result.uploaded, [OLD])
+        self.assertEqual(result.other_key, [])
+        self.assertEqual(self.spool.entries(), [])
+        self.assertEqual(second.requests, [])
+        self.assertTrue(again.empty)
+
+    def test_only_the_entries_of_the_key_in_use_are_delivered(self):
+        self.add(OLD, created=NOW - 300, key_id=key_fingerprint(EU_KEY))
+        self.add(NEW, created=NOW - 10)
+
+        result, fake = self.flush_with(
+            KEY, [meta_reply(), whoami_reply(), created_reply()]
+        )
+
+        self.assertEqual(self.keys(fake), [NEW])
+        self.assertEqual(result.uploaded, [NEW])
+        self.assertEqual(result.other_key, [OLD])
+        self.assertEqual([e.sync_id for e in self.spool.entries()], [OLD])
+
+    def test_an_entry_without_a_recorded_key_is_never_delivered(self):
+        entry = self.add(OLD)
+        meta = json.loads(entry.meta_path.read_text(encoding="utf-8"))
+        del meta["key_id"]
+        entry.meta_path.write_text(json.dumps(meta), encoding="utf-8")
+        lost = self.add(NEW)
+        lost.meta_path.unlink()
+
+        result, fake = self.flush_with(KEY)
+
+        self.assertEqual(fake.requests, [])
+        self.assertEqual(sorted(result.other_key), sorted([OLD, NEW]))
+        self.assertEqual(len(self.spool.entries()), 2)
+
+    def test_the_spool_never_holds_a_key(self):
+        self.add(OLD)
+        self.add(NEW, key_id=key_fingerprint(EU_KEY))
+
+        text = "".join(
+            path.read_text(encoding="utf-8")
+            for path in (self.tmp / "spool").rglob("*")
+            if path.is_file()
+        )
+
+        self.assertTrue(text)
+        for key in (KEY, EU_KEY):
+            self.assertNotIn(key, text)
+            self.assertNotIn(key.split("_sk_")[-1], text)
+        self.assertEqual(len(key_fingerprint(KEY)), 16)
+        self.assertNotEqual(key_fingerprint(KEY), key_fingerprint(EU_KEY))
+        self.assertIsNone(key_fingerprint(None))
+        self.assertIsNone(key_fingerprint(""))
+
+    def test_a_failed_upload_spools_with_the_fingerprint_of_its_key(self):
+        settings = self.settings(upload_budget=Setting(0.0, "test"))
+        document = self.document(OLD)
+
+        with fake_http(meta_reply(), whoami_reply(), unavailable()):
+            result = upload(
+                document,
+                settings,
+                name="Prod",
+                meta={"exit_strategy": 1},
+                spool=self.spool,
+                **self.options(),
+            )
+
+        self.assertTrue(result.spooled)
+        entries = self.spool.entries(host_id(HOST))
+        self.assertEqual([e.key_id for e in entries], [key_fingerprint(KEY)])
+
     def test_entries_of_another_host_are_left_alone(self):
         self.spool.add(
             "https://other.example.com",
@@ -825,6 +927,15 @@ class AutoFlushTests(SpoolCase):
         self.assertIn("Delivered 2 spooled syncs from earlier runs.", text)
         self.assertIn("1 spooled sync still waiting.", text)
         self.assertIn("maintenance", text)
+
+    def test_what_belongs_to_another_key_is_said_and_the_run_goes_on(self):
+        self.add(OLD, key_id=key_fingerprint(EU_KEY))
+        order, steps = self.run_run(flush_result=FlushResult(other_key=[OLD]))
+
+        text = " | ".join(str(a[0]) + " " + str(k.get("logs", "")) for a, k in steps)
+        self.assertIn("1 spooled sync for another API key left in the spool.", text)
+        self.assertIn("not delivered with this key", text)
+        self.assertIn("upload", [name for name, _ in order])
 
     def test_a_failing_flush_never_blocks_the_new_run(self):
         self.add(OLD)
@@ -1143,6 +1254,27 @@ class SpoolCommandTests(CommandTestCase):
         self.assertEqual(
             lines[1].split(), [OLD, host_id(HOST), "2d", "4", "maintenance"]
         )
+
+    def test_list_marks_what_belongs_to_another_key(self):
+        self.add(OLD)
+        self.add(NEW, key_id=key_fingerprint(EU_KEY))
+        with patch("time.time", return_value=NOW):
+            _, out, _ = self.run_command(app.handle_spool, self.spool_args("list"))
+
+        lines = {line.split()[0]: line for line in out.strip().splitlines()[1:]}
+        self.assertNotIn("not for the key in use", lines[OLD])
+        self.assertIn("not for the key in use", lines[NEW])
+
+    def test_flush_leaves_the_entries_of_another_key_and_says_so(self):
+        self.add(OLD, key_id=key_fingerprint(EU_KEY))
+        code, out, fake = self.run_command(
+            app.handle_spool, self.spool_args("flush"), []
+        )
+
+        self.assertEqual(code, 0)
+        self.assertIn("1 spooled sync for another API key left in the spool.", out)
+        self.assertEqual([r for r in fake.requests if r.method == "POST"], [])
+        self.assertEqual(len(self.spool.entries()), 1)
 
     def test_list_marks_what_the_platform_will_reject(self):
         self.add(OLD, created=NOW - 31 * DAY)

@@ -1,5 +1,6 @@
 import os
 import shutil
+import sqlite3
 import tempfile
 import unittest
 from contextlib import contextmanager
@@ -21,7 +22,10 @@ def staged(cloud_service_provider):
     # on shutil itself: copytree calls copyfile internally, so patching it
     # globally would break the asset copy this module is testing.
     fake_shutil = mock.MagicMock(wraps=shutil)
-    fake_shutil.copyfile = mock.MagicMock()
+    # What the real copy leaves behind is a database; an empty one will do
+    fake_shutil.copyfile = mock.MagicMock(
+        side_effect=lambda source, target: sqlite3.connect(target).close()
+    )
 
     with tempfile.TemporaryDirectory() as report_dir:
         with mock.patch("cloudexit.report.assets.shutil", fake_shutil):

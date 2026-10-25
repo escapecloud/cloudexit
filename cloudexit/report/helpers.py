@@ -1,4 +1,6 @@
-import os
+from pathlib import Path
+
+from cloudexit.resources import resolve_inside, safe_relative
 
 CURRENCY_SYMBOLS = {"USD": "$", "EUR": "€", "GBP": "£"}
 
@@ -84,8 +86,9 @@ REPORT_ASSETS = "assets"
 def report_icon(report_path, icon_rel):
     # The page only points at files in its own folder: an icon the report
     # folder does not hold is left out, and the page draws a placeholder
-    if icon_rel and os.path.isfile(os.path.join(report_path, REPORT_ASSETS, icon_rel)):
-        return f"{REPORT_ASSETS}/{icon_rel}"
+    found = resolve_inside(Path(report_path) / REPORT_ASSETS, icon_rel)
+    if found is not None and found.is_file():
+        return f"{REPORT_ASSETS}/{safe_relative(icon_rel).as_posix()}"
     return None
 
 

@@ -12,7 +12,7 @@ import requests
 
 from cloudexit.cli import app
 from cloudexit.platform.client import ApiClient
-from cloudexit.platform.spool import Spool
+from cloudexit.platform.spool import Spool, key_fingerprint
 from cloudexit.platform.status import (
     TlsResult,
     catalogue_standing,
@@ -444,6 +444,7 @@ class ReportContentTests(StatusTestCase):
             name=None,
             exit_strategy=None,
             assessment_id=None,
+            key_id=key_fingerprint(KEY),
         )
 
         with fake_http(meta_reply(), whoami_reply()):
@@ -556,6 +557,90 @@ class HostCatalogueLinesTests(StatusTestCase):
         )
         self.assertEqual(len(lines), 1)
         self.assertIn("unavailable", lines[0])
+
+
+class ShapeTests(StatusTestCase):
+    def test_a_platform_answer_of_the_wrong_shape_never_crashes_status(self):
+        for field in ("host", "contract", "catalogue", "limits", "clients"):
+            for value in ("escapecloud", ["x"], 7, None, True):
+                with self.subTest(field=field, value=value):
+                    report = self.status(
+                        configured(),
+                        [meta_reply(**{field: value}), whoami_reply()],
+                    )
+
+                    self.assertEqual(report.exit_code, codes.SUCCESS)
+                    self.assertIn("Platform (GET /meta)", self.text(report))
+                    json.dumps(report.as_json(), allow_nan=False)
+
+    def test_a_whoami_of_the_wrong_shape_never_crashes_status(self):
+        for field, value in (
+            ("key", "esc_sk"),
+            ("tenant", ["Org"]),
+            ("warnings", "careful"),
+            ("key", {"scopes": "syncs:write", "expires_at": "soon"}),
+            ("key", {"scopes": 5, "expires_at": True}),
+        ):
+            with self.subTest(field=field, value=value):
+                report = self.status(
+                    configured(),
+                    [meta_reply(), whoami_reply(**{field: value})],
+                )
+
+                self.assertEqual(report.exit_code, codes.SUCCESS)
+                self.assertIn("Key (GET /whoami)", self.text(report))
+                json.dumps(report.as_json(), allow_nan=False)
+
+    def test_an_expiry_no_calendar_holds_is_unknown(self):
+        for expires in (1e20, -1e20, float("inf"), float("nan"), 2**80):
+            with self.subTest(expires=expires):
+                report = self.status(
+                    configured(),
+                    [meta_reply(), whoami_reply(key={"expires_at": expires})],
+                )
+
+                self.assertEqual(report.exit_code, codes.SUCCESS)
+                self.assertIn("expires:      unknown", self.text(report))
+                data = json.loads(json.dumps(report.as_json(), allow_nan=False))
+                if expires != expires or abs(expires) == float("inf"):
+                    self.assertIsNone(data["key"]["expires_at"])
+
+    def test_a_catalogue_of_the_wrong_shape_is_unknown_on_the_catalogue_command(self):
+        for catalogue in ("2026-11-02", ["2026-11-02"], {"version": 20261102}):
+            with self.subTest(catalogue=catalogue):
+                with (
+                    patch(
+                        "cloudexit.platform.status.ApiClient.from_settings",
+                        side_effect=self.make_client,
+                    ),
+                    fake_http(meta_reply(catalogue=catalogue)),
+                ):
+                    lines = host_catalogue_lines(configured(), "2026-11-01")
+
+                self.assertEqual(lines, ["platform:  the platform reports none"])
+
+    def test_the_status_command_answers_even_when_the_check_itself_fails(self):
+        for output in ("text", "json"):
+            with self.subTest(output=output):
+                out = io.StringIO()
+                with (
+                    patch("sys.argv", ["cloudexit", "status", "--output", output]),
+                    patch("cloudexit.cli.app.load_settings", return_value=configured()),
+                    patch(
+                        "cloudexit.cli.app.run_status",
+                        side_effect=AttributeError("boom"),
+                    ),
+                    contextlib.redirect_stdout(out),
+                ):
+                    with self.assertRaises(SystemExit) as raised:
+                        app.main()
+
+                self.assertEqual(raised.exception.code, codes.UNEXPECTED)
+                self.assertNotIn("boom", out.getvalue())
+                if output == "json":
+                    data = json.loads(out.getvalue())
+                    self.assertEqual(data["exit_code"], codes.UNEXPECTED)
+                    self.assertIn("AttributeError", data["problems"][0]["message"])
 
 
 class CommandTests(StatusTestCase):

@@ -457,6 +457,34 @@ class RunSummaryUnitTests(unittest.TestCase):
         self.assertIsNone(catalogue_outdated("2026-11-02", self.result()))
         self.assertIsNone(catalogue_outdated("2026-11-02", None))
 
+    def test_a_platform_catalogue_of_the_wrong_shape_is_no_answer(self):
+        for catalogue in (
+            {"host": "2026-11-02"},
+            {"host": ["2026-11-02"]},
+            {"host": {"version": 20261102}},
+            {"host": {"version": ["x"]}},
+            {"host": None},
+            {},
+        ):
+            with self.subTest(catalogue=catalogue):
+                result = self.result(catalogue=catalogue)
+                self.assertIsNone(catalogue_outdated("2026-11-02", result))
+        warned = self.result(warning_items=("not a dict", OUTDATED))
+        self.assertIs(catalogue_outdated("2026-11-02", warned), True)
+
+    def test_a_summary_with_a_platform_answer_of_the_wrong_shape_is_complete(self):
+        summary = build_run_json(
+            exit_code=0,
+            report_dir=None,
+            sync_json=None,
+            upload=self.result(catalogue={"host": "escapecloud"}),
+            skipped_reason=None,
+            catalogue_version="2026-11-02",
+        )
+
+        self.assertEqual(summary["catalogue"]["outdated"], None)
+        self.assertEqual(summary["upload"]["status"], "uploaded")
+
     def test_a_missing_upload_gives_a_complete_summary(self):
         summary = build_run_json(
             exit_code=2,
@@ -505,6 +533,39 @@ class StdoutSeparationTests(unittest.TestCase):
         self.assertIn("Preliminary Stage", err)
         self.assertIn("a step", err)
         self.assertNotIn("Preliminary Stage", out)
+
+    def test_a_platform_catalogue_of_the_wrong_shape_still_gives_one_summary(self):
+        def dispatch(args):
+            app.RUN["upload"] = UploadResult(
+                True, True, sync_id="s", catalogue={"host": "escapecloud"}
+            )
+            app.RUN["catalogue_version"] = "2026-11-02"
+
+        code, out, _ = self.run_json(dispatch)
+
+        data = json.loads(out)
+        self.assertEqual(code, 0)
+        self.assertEqual(data["exit_code"], 0)
+        self.assertIsNone(data["catalogue"]["outdated"])
+        self.assertNotIn("error", data)
+
+    def test_a_summary_that_cannot_be_built_is_still_one_object_with_an_error(self):
+        def dispatch(args):
+            sys.exit(codes.UPLOAD_REJECTED)
+
+        with patch(
+            "cloudexit.cli.app.build_run_json", side_effect=AttributeError("boom")
+        ):
+            code, out, _ = self.run_json(dispatch)
+
+        data = json.loads(out)
+        self.assertEqual(code, codes.UPLOAD_REJECTED)
+        self.assertEqual(data["exit_code"], codes.UPLOAD_REJECTED)
+        self.assertIn("AttributeError", data["error"])
+        self.assertNotIn("boom", out)
+        self.assertEqual(out.count("\n"), len(out.splitlines()))
+        for key in ("report_dir", "sync_json", "upload", "results", "catalogue"):
+            self.assertIn(key, data)
 
     def test_a_clean_run_reports_exit_code_zero(self):
         code, out, _ = self.run_json(lambda args: None)

@@ -12,6 +12,7 @@ ALLOWED = {
     "codes": set(),
     "version": set(),
     "resources": set(),
+    "private_files": set(),
     "terminal": {"codes"},
     "settings": set(),
     "catalogue": {"settings"},
@@ -20,7 +21,7 @@ ALLOWED = {
     "providers": {"catalogue", "egress", "terminal"},
     # egress.estimate reaches the providers inside a function, on purpose
     "egress": {"catalogue", "providers"},
-    "platform": {"catalogue", "settings", "version", "codes"},
+    "platform": {"catalogue", "settings", "version", "codes", "private_files"},
     "report": {"catalogue", "egress", "providers", "resources", "version", "codes"},
     "engine": {"catalogue", "providers", "report", "tfstate", "terminal", "codes"},
 }

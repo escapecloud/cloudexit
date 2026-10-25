@@ -29,6 +29,7 @@ from cloudexit.settings import (
 )
 from cloudexit.version import __version__
 
+from cloudexit.platform.shape import as_dict, as_list
 from cloudexit.platform.document import (
     MAX_BODY_BYTES,
     MAX_CATALOGUE_TYPE_IDS,
@@ -341,7 +342,7 @@ def _one_line(text: Any) -> str:
 def client_policy(meta: Mapping[str, Any]) -> tuple[str, str]:
     # What the platform says about this version of cloudexit: accepted,
     # deprecated or unsupported, and why.
-    policy = (meta.get("clients") or {}).get(CLIENT_NAME)
+    policy = as_dict(meta.get("clients")).get(CLIENT_NAME)
     current = _version(__version__)
     if not isinstance(policy, dict) or not current:
         return "accepted", f"cloudexit {__version__} is accepted"
@@ -349,7 +350,7 @@ def client_policy(meta: Mapping[str, Any]) -> tuple[str, str]:
         f"; upgrade to {policy['recommended']}" if policy.get("recommended") else ""
     )
     minimum = _version(policy.get("min_supported"))
-    blocked = [_version(v) for v in policy.get("blocked") or []]
+    blocked = [_version(v) for v in as_list(policy.get("blocked"))]
     if current in blocked or (minimum and current < minimum):
         return (
             "unsupported",
@@ -769,7 +770,7 @@ class ApiClient:
     def _check_meta(
         self, meta: Mapping[str, Any], document: Mapping[str, Any]
     ) -> list[dict[str, str | None]]:
-        versions = (meta.get("contract") or {}).get("schema_versions")
+        versions = as_dict(meta.get("contract")).get("schema_versions")
         schema_version = document.get("schema_version")
         if isinstance(versions, list) and schema_version not in versions:
             raise ApiError(
@@ -889,7 +890,7 @@ class ApiClient:
             "utf-8"
         )
         problems = limit_problems(
-            outgoing, meta.get("limits") or {}, size=len(body), now=self._clock()
+            outgoing, as_dict(meta.get("limits")), size=len(body), now=self._clock()
         )
         if problems:
             raise ApiError(

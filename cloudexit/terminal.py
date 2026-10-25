@@ -2,6 +2,7 @@
 import getpass
 import sys
 from rich.console import Console
+from rich.markup import escape
 from rich.style import Style
 from time import sleep
 
@@ -47,18 +48,33 @@ def print_step(
     # Handle the pending status with a spinner
     if status == "pending":
         with console.status(
-            f"{description:<50} [yellow]{status_map['pending']}[/yellow]",
+            f"{escape(description):<50} [yellow]{status_map['pending']}[/yellow]",
             spinner="dots",
         ):
             sleep(2)
             print_step(description, status="ok")
     elif status == "ok":
-        console.print(f"{description:<50} {status_map['ok']}", style=ok_style)
+        console.print(
+            f"{description:<50} {status_map['ok']}",
+            style=ok_style,
+            markup=False,
+            emoji=False,
+        )
     elif status == "warning":
-        console.print(f"{description:<50} {status_map['warning']}", style=warning_style)
+        console.print(
+            f"{description:<50} {status_map['warning']}",
+            style=warning_style,
+            markup=False,
+            emoji=False,
+        )
         if logs:
-            console.print(f"   ↳ {logs}", style="dim")
+            console.print(f"   ↳ {logs}", style="dim", markup=False, emoji=False)
     elif status == "error":
-        console.print(f"{description:<50} {status_map['error']}", style=error_style)
+        console.print(
+            f"{description:<50} {status_map['error']}",
+            style=error_style,
+            markup=False,
+            emoji=False,
+        )
         if logs:
-            console.print(f"   ↳ {logs}", style="dim")
+            console.print(f"   ↳ {logs}", style="dim", markup=False, emoji=False)

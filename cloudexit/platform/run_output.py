@@ -5,6 +5,7 @@ from typing import Any
 from cloudexit import codes
 from cloudexit.catalogue.store import compare_catalogue_versions
 
+from cloudexit.platform.shape import as_dict, as_text
 from cloudexit.platform.upload import UploadResult
 
 
@@ -23,10 +24,10 @@ def catalogue_outdated(
     # used; None when nothing tells.
     if result is None or not result.success:
         return None
-    codes_seen = {item.get("code") for item in result.warning_items}
+    codes_seen = {as_dict(item).get("code") for item in result.warning_items}
     if "collector_catalogue_outdated" in codes_seen:
         return True
-    host = ((result.catalogue or {}).get("host") or {}).get("version")
+    host = as_text(as_dict(as_dict(result.catalogue).get("host")).get("version"))
     standing = compare_catalogue_versions(local_version, host)
     if standing is None:
         return None
@@ -78,6 +79,25 @@ def build_run_json(
             "version": catalogue_version,
             "outdated": catalogue_outdated(catalogue_version, upload),
         },
+    }
+
+
+def run_json_fallback(
+    *,
+    exit_code: int,
+    report_dir: str | None,
+    sync_json: str | None,
+    error: str,
+) -> dict[str, Any]:
+    # The same keys as the full summary, with what is known and the reason
+    return {
+        "exit_code": int(exit_code),
+        "report_dir": report_dir,
+        "sync_json": sync_json,
+        "upload": None,
+        "results": None,
+        "catalogue": {"version": None, "outdated": None},
+        "error": error,
     }
 
 
