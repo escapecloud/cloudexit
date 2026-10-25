@@ -37,6 +37,7 @@ from cloudexit.egress.model import (
 from cloudexit.providers.aws.egress import ARCHIVE_TIERS as AWS_ARCHIVE_TIERS
 from cloudexit.providers.azure.egress import ARCHIVE_TIERS as AZURE_ARCHIVE_TIERS
 from cloudexit.report.context import scope_facts
+from cloudexit.report.notices import notices_html
 from cloudexit.report.wording import BLOCKS
 
 PDF_HEADER_TITLE = "EscapeCloud Community Edition - Data & Egress"
@@ -582,6 +583,14 @@ def _load_estimate(
     return meta, rows, totals, pricing, total_fee, type_groups
 
 
+def _generated_at(timestamp):
+    # The run's own time, as the estimate stored it; now when it cannot be read
+    try:
+        return datetime.strptime(str(timestamp), "%Y-%m-%d %H:%M:%S UTC")
+    except ValueError:
+        return datetime.now()
+
+
 def generate_egress_html_report(report_path: str, json_path: str) -> dict[str, Any]:
     try:
         meta, rows, totals, pricing, total_fee, type_groups = _load_estimate(
@@ -625,6 +634,9 @@ def generate_egress_html_report(report_path: str, json_path: str) -> dict[str, A
             free_tier_limit_display=summary["free_tier_limit"],
             known_data_display=format_bytes(totals["known_size_bytes"]),
             type_groups=type_groups,
+            notices=notices_html(
+                meta["cloud_service_provider"], _generated_at(meta["timestamp"])
+            ),
         )
 
         html_path = os.path.join(report_path, "egress.html")

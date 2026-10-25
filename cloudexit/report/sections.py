@@ -66,6 +66,11 @@ PRODUCT_SITES = (
     ("escapecloud", "https://escapecloud.io"),
     ("exitcloud", "https://exitcloud.io"),
 )
+AWS_ICONS_URL = "https://aws.amazon.com/architecture/icons/"
+AWS_TRADEMARK_URL = "https://aws.amazon.com/trademark-guidelines/"
+AZURE_ICONS_URL = "https://learn.microsoft.com/en-us/azure/architecture/icons/"
+REPOSITORY_URL = "https://github.com/escapecloud/cloudexit/"
+LICENCE_URL = "https://github.com/escapecloud/cloudexit/blob/main/LICENSE"
 
 
 def _text(value, style=ALT_BODY):

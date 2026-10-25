@@ -1103,6 +1103,23 @@
           </p>
           {% endif %}
         </div>
+        <div class="bg-white shadow-s rounded-4 p-4 mt-3">
+          <h2 class="h4 mb-3">{{ summary.notices.heading }}</h2>
+          {% for block in summary.notices.blocks %}
+          <h3 class="h6 mt-3">{{ block.heading }}</h3>
+          {% for paragraph in block.paragraphs %}
+          <p>
+            {% for part in paragraph %}{% if part is string %}{{ part }}{% else %}<a
+              href="{{ part[1] }}"
+              target="_blank"
+              rel="noopener noreferrer"
+              >{{ part[0] }}</a
+            >{% endif %}{% endfor %}
+          </p>
+          {% endfor %}
+          {% endfor %}
+          <p class="text-muted small mt-4 mb-0">{{ summary.notices.copyright }}</p>
+        </div>
       </div>
       {% endif %}
     </main>

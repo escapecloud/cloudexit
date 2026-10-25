@@ -143,12 +143,10 @@ def draw_footer(canvas, running):
     canvas.setFont(FONT_MONO, 6.8)
     canvas.drawString(MARGIN, FOOTER_BASELINE, running.document_id)
 
-    classification = running.b["cover_classification_value"].upper()
-    classification_width = canvas.stringWidth(classification, FONT, 6.8)
+    edition = running.b["footer_edition"].upper()
+    edition_width = canvas.stringWidth(edition, FONT, 6.8)
     canvas.setFont(FONT, 6.8)
-    canvas.drawString(
-        (width - classification_width) / 2, FOOTER_BASELINE, classification
-    )
+    canvas.drawString((width - edition_width) / 2, FOOTER_BASELINE, edition)
     canvas.restoreState()
 
 
