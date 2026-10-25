@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path, PurePosixPath
 from unittest.mock import patch
 
+from cloudexit.report.cover import LOGO_FILE, logo_reader
 from cloudexit.report.helpers import report_icon
 from cloudexit.resources import find_asset, resolve_inside, safe_relative
 
@@ -61,6 +62,12 @@ class SafeRelativeTests(unittest.TestCase):
 
 
 class FindAssetTests(AssetPathTestCase):
+    def test_the_report_logo_is_found_by_its_own_name_on_every_system(self):
+        self.assertNotIn("\\", LOGO_FILE)
+        self.assertEqual(safe_relative(LOGO_FILE), PurePosixPath(LOGO_FILE))
+        self.assertIsNotNone(find_asset(self.report, LOGO_FILE))
+        self.assertIsNotNone(logo_reader(self.report))
+
     def test_a_normal_icon_still_resolves(self):
         found = find_asset(self.report, "/icons/aws/EC2.png")
 
