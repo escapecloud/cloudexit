@@ -286,7 +286,7 @@ def _alternative_entries(
     return entries
 
 
-def _scope(provider_details, cloud_service_provider, tfstate_scope):
+def scope_facts(provider_details, cloud_service_provider, tfstate_scope):
     provider = PROVIDER_NAMES.get(cloud_service_provider, "–")
     if provider_details.get("tfstatePath"):
         scope = tfstate_scope or {
@@ -362,7 +362,7 @@ def build_context(
         provider=PROVIDER_NAMES.get(csp, "–"),
         exit_strategy=exit_strategy,
         strategy_code=STRATEGY_CODES.get(int(exit_strategy), ""),
-        scope=_scope(provider_details, csp, tfstate_scope),
+        scope=scope_facts(provider_details, csp, tfstate_scope),
         provenance=provenance,
         resources=resources,
         costs=_cost_entries(cost_data, provenance.collected_at),

@@ -1,5 +1,6 @@
 import ast
 import importlib
+import logging
 import tempfile
 import unittest
 from pathlib import Path
@@ -58,6 +59,52 @@ class LoggerNameTests(unittest.TestCase):
             text = (Path(tmp) / "run.log").read_text(encoding="utf-8")
             self.assertIn("cloudexit.platform.client - WARNING - a line", text)
             self.assertNotIn("core.engine", text)
+
+
+class ThirdPartyLevelTests(unittest.TestCase):
+    NAMES = ("botocore", "boto3", "azure", "urllib3", "msal", "PIL")
+
+    def setUp(self):
+        root = logging.getLogger()
+        saved = (root.level, list(root.handlers))
+        levels = {name: logging.getLogger(name).level for name in self.NAMES}
+
+        def restore():
+            root.setLevel(saved[0])
+            root.handlers[:] = saved[1]
+            for name, level in levels.items():
+                logging.getLogger(name).setLevel(level)
+
+        self.addCleanup(restore)
+
+    def level(self, name):
+        return logging.getLogger(name).getEffectiveLevel()
+
+    def test_msal_is_never_below_warning_because_it_logs_the_client_id(self):
+        for verbose in (0, 1, 2, 3):
+            with self.subTest(verbose=verbose):
+                app.configure_logging(verbose)
+                self.assertEqual(self.level("msal"), logging.WARNING)
+                self.assertEqual(self.level("msal.telemetry"), logging.WARNING)
+
+    def test_urllib3_shows_connection_lines_only_at_the_deepest_verbosity(self):
+        for verbose, expected in (
+            (0, logging.WARNING),
+            (1, logging.WARNING),
+            (2, logging.DEBUG),
+        ):
+            with self.subTest(verbose=verbose):
+                app.configure_logging(verbose)
+                self.assertEqual(self.level("urllib3"), expected)
+
+    def test_the_other_libraries_keep_their_levels(self):
+        app.configure_logging(0)
+        for name in ("botocore", "boto3", "azure", "PIL"):
+            self.assertEqual(self.level(name), logging.WARNING, name)
+        app.configure_logging(2)
+        for name in ("botocore", "boto3", "azure"):
+            self.assertEqual(self.level(name), logging.DEBUG, name)
+        self.assertEqual(self.level("PIL"), logging.WARNING)
 
 
 if __name__ == "__main__":

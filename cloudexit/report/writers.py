@@ -26,17 +26,6 @@ from cloudexit.report.json_data import (
 logger = logging.getLogger(__name__)
 
 
-def anonymize_string(s: str, num_visible: int = 4) -> str:
-    if not isinstance(s, str):
-        return "N/A"
-
-    if len(s) <= 2 * num_visible:
-        return "*" * len(s)
-
-    middle_length = len(s) - 2 * num_visible
-    return f"{s[:num_visible]}{'*' * middle_length}{s[-num_visible:]}"
-
-
 def generate_html_report(
     report_path: str,
     metadata: dict[str, Any],
