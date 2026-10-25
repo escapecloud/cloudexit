@@ -124,11 +124,13 @@ console = Console()
 LOCAL_REPORT_ASSESSMENT_TYPE = 1
 
 # Third-party loggers kept quiet unless the user opts into deep verbosity (-vv)
-_THIRD_PARTY_NOISY = ("botocore", "boto3", "azure")
+_THIRD_PARTY_NOISY = ("botocore", "boto3", "azure", "urllib3")
 
 # Loggers with no diagnostic value ever — pinned to WARNING regardless of verbosity,
-#  so they never flood the -vv console or run.log.
-_ALWAYS_QUIET = ("PIL",)
+#  so they never flood the -vv console or run.log. MSAL (behind the Azure
+#  credentials) writes the client ID in its debug output, and run.log is a file
+#  users share.
+_ALWAYS_QUIET = ("PIL", "msal")
 
 
 def configure_logging(verbose: int = 0) -> None:

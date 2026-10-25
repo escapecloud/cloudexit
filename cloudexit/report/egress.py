@@ -36,7 +36,8 @@ from cloudexit.egress.model import (
 )
 from cloudexit.providers.aws.egress import ARCHIVE_TIERS as AWS_ARCHIVE_TIERS
 from cloudexit.providers.azure.egress import ARCHIVE_TIERS as AZURE_ARCHIVE_TIERS
-from cloudexit.report.writers import anonymize_string
+from cloudexit.report.context import scope_facts
+from cloudexit.report.wording import BLOCKS
 
 PDF_HEADER_TITLE = "EscapeCloud Community Edition - Data & Egress"
 
@@ -268,6 +269,25 @@ def _build_tfstate_scope_rows(metadata, scope):
     return rows
 
 
+def _live_scope_rows(cloud_service_provider, provider_details):
+    # The same facts as the Assessment Scope on page 2 of the Executive
+    # Summary, and nothing that identifies the credentials in use
+    b = BLOCKS
+    scope = scope_facts(provider_details, cloud_service_provider, None)
+    values = dict(scope.rows)
+    if scope.kind == "azure":
+        return [
+            [b["ev_tenant_id"], values.get("tenant") or b["ev_dash"]],
+            [b["ev_subscription_id"], values.get("subscription") or b["ev_dash"]],
+            [b["ev_resource_group"], values.get("resource_group") or b["ev_dash"]],
+        ]
+    rows = []
+    if values.get("account"):
+        rows.append([b["ev_account_id"], values["account"]])
+    rows.append([b["ev_region"], values.get("region") or b["ev_dash"]])
+    return rows
+
+
 def build_scope_section(
     metadata, provider_details, styles, content_style, tfstate_scope=None
 ):
@@ -291,35 +311,12 @@ def build_scope_section(
 
     if tfstate_path:
         # Fall back to the little we know from the config when the manifest is
-        # unavailable, rather than rendering credential rows that are all N/A.
+        # unavailable, rather than rendering a table of N/A.
         scope = tfstate_scope or {"file": os.path.basename(tfstate_path)}
         scope_data.extend(_build_tfstate_scope_rows(metadata, scope))
-    elif metadata["cloud_service_provider"] == 1:  # Azure
+    elif metadata["cloud_service_provider"] in (1, 2):
         scope_data.extend(
-            [
-                ["Tenant ID", provider_details.get("tenantId", "N/A")],
-                ["Client ID", provider_details.get("clientId", "N/A")],
-                [
-                    "Client Secret",
-                    anonymize_string(provider_details.get("clientSecret", "N/A")),
-                ],
-                ["Subscription ID", provider_details.get("subscriptionId", "N/A")],
-                [
-                    "Resource Group Name",
-                    provider_details.get("resourceGroupName", "N/A"),
-                ],
-            ]
-        )
-    elif metadata["cloud_service_provider"] == 2:  # AWS
-        scope_data.extend(
-            [
-                ["Access Key", provider_details.get("accessKey", "N/A")],
-                [
-                    "Secret Key",
-                    anonymize_string(provider_details.get("secretKey", "N/A")),
-                ],
-                ["Region", provider_details.get("region", "N/A")],
-            ]
+            _live_scope_rows(metadata["cloud_service_provider"], provider_details)
         )
     else:
         scope_data.append(["N/A", "N/A"])

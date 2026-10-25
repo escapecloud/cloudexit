@@ -9,7 +9,9 @@ from cloudexit.report.egress import (
     build_summary_section,
     default_table_style,
 )
-from cloudexit.report.writers import anonymize_string
+from cloudexit.report.context import scope_facts
+from cloudexit.report.wording import BLOCKS
+from tests.support.credentials import AWS_DETAILS, AZURE_DETAILS, leaked_fragments
 from tests.support.report import (
     build_report_fixture,
 )
@@ -25,31 +27,6 @@ def _make_styles():
     styles["Heading2"].leading = 1.5 * styles["Heading2"].fontSize
     styles["Heading2"].textColor = HexColor("#112726")
     return styles, content_style
-
-
-class AnonymizeStringTests(unittest.TestCase):
-    def test_anonymizes_middle_of_long_string(self):
-        result = anonymize_string("AKIAIOSFODNN7EXAMPLE")
-        self.assertTrue(result.startswith("AKIA"))
-        self.assertTrue(result.endswith("MPLE"))
-        self.assertIn("*", result)
-        self.assertEqual(len(result), len("AKIAIOSFODNN7EXAMPLE"))
-
-    def test_short_string_fully_masked(self):
-        result = anonymize_string("abcd")
-        self.assertEqual(result, "****")
-
-    def test_empty_string_returns_empty_mask(self):
-        result = anonymize_string("")
-        self.assertEqual(result, "")
-
-    def test_non_string_returns_na(self):
-        self.assertEqual(anonymize_string(None), "N/A")
-        self.assertEqual(anonymize_string(12345), "N/A")
-
-    def test_custom_num_visible(self):
-        result = anonymize_string("ABCDEFGHIJ", num_visible=2)
-        self.assertEqual(result, "AB******IJ")
 
 
 class DefaultTableStyleTests(unittest.TestCase):
@@ -105,37 +82,80 @@ class BuildScopeSectionTests(unittest.TestCase):
     def setUp(self):
         self.styles, self.content_style = _make_styles()
         self.fixture = build_report_fixture()
+        self.aws = {**self.fixture["metadata"], "cloud_service_provider": 2}
+        self.azure = {**self.fixture["metadata"], "cloud_service_provider": 1}
 
-    def test_aws_scope_contains_access_key(self):
-        content = build_scope_section(
-            self.fixture["metadata"],
-            self.fixture["provider_details"],
-            self.styles,
-            self.content_style,
-        )
-        tables = [item for item in content if isinstance(item, Table)]
-        self.assertEqual(len(tables), 1)
-
-    def test_azure_scope_contains_tenant_id(self):
-        metadata = {**self.fixture["metadata"], "cloud_service_provider": 1}
-        provider_details = {
-            "tenantId": "tenant-123",
-            "clientId": "client-456",
-            "clientSecret": "secret-789-very-long-value",
-            "subscriptionId": "sub-000",
-            "resourceGroupName": "rg-test",
-        }
+    def rows(self, metadata, provider_details):
         content = build_scope_section(
             metadata, provider_details, self.styles, self.content_style
         )
         tables = [item for item in content if isinstance(item, Table)]
         self.assertEqual(len(tables), 1)
+        return [list(row) for row in tables[0]._cellvalues[1:]]
+
+    def test_aws_scope_is_the_account_and_the_region(self):
+        rows = self.rows(self.aws, AWS_DETAILS)
+
+        self.assertEqual(
+            rows, [["Account ID", "123456789012"], ["Region", "eu-central-1"]]
+        )
+
+    def test_aws_scope_leaves_out_an_account_that_is_not_known(self):
+        details = {k: v for k, v in AWS_DETAILS.items() if k != "accountId"}
+
+        self.assertEqual(self.rows(self.aws, details), [["Region", "eu-central-1"]])
+
+    def test_a_missing_value_is_a_dash_not_na(self):
+        self.assertEqual(self.rows(self.aws, {}), [["Region", "–"]])
+        self.assertEqual(
+            self.rows(self.azure, {}),
+            [["Tenant ID", "–"], ["Subscription ID", "–"], ["Resource Group", "–"]],
+        )
+
+    def test_azure_scope_is_the_tenant_the_subscription_and_the_resource_group(self):
+        rows = self.rows(self.azure, AZURE_DETAILS)
+
+        self.assertEqual(
+            rows,
+            [
+                ["Tenant ID", AZURE_DETAILS["tenantId"]],
+                ["Subscription ID", AZURE_DETAILS["subscriptionId"]],
+                ["Resource Group", "rg-leakcheck"],
+            ],
+        )
+
+    def test_no_row_names_or_shows_a_credential(self):
+        for metadata, details in ((self.aws, AWS_DETAILS), (self.azure, AZURE_DETAILS)):
+            with self.subTest(provider=metadata["cloud_service_provider"]):
+                rows = self.rows(metadata, details)
+                for label, value in rows:
+                    for word in ("Key", "Secret", "Client", "Token"):
+                        self.assertNotIn(word, label)
+                text = " ".join(map(str, sum(rows, [])))
+                for name, fragment in leaked_fragments(details).items():
+                    self.assertNotIn(fragment, text, name)
+
+    def test_the_rows_agree_with_the_scope_on_page_two(self):
+        # Both documents take the facts from scope_facts and name them the same way
+        self.assertEqual(
+            [row[0] for row in self.rows(self.azure, AZURE_DETAILS)],
+            [
+                BLOCKS["ev_tenant_id"],
+                BLOCKS["ev_subscription_id"],
+                BLOCKS["ev_resource_group"],
+            ],
+        )
+        self.assertEqual(
+            [row[0] for row in self.rows(self.aws, AWS_DETAILS)],
+            [BLOCKS["ev_account_id"], BLOCKS["ev_region"]],
+        )
+        facts = dict(scope_facts(AWS_DETAILS, 2, None).rows)
+        self.assertEqual(self.rows(self.aws, AWS_DETAILS)[0][1], facts["account"])
 
     def test_unknown_provider_returns_na(self):
         metadata = {**self.fixture["metadata"], "cloud_service_provider": 99}
-        content = build_scope_section(metadata, {}, self.styles, self.content_style)
-        tables = [item for item in content if isinstance(item, Table)]
-        self.assertEqual(len(tables), 1)
+
+        self.assertEqual(self.rows(metadata, {}), [["N/A", "N/A"]])
 
 
 class BuildTfstateScopeSectionTests(unittest.TestCase):
@@ -243,12 +263,12 @@ class BuildTfstateScopeSectionTests(unittest.TestCase):
         # Never the credential rows, which would all be N/A here.
         self.assertNotIn("Access Key", rows)
 
-    def test_live_mode_table_is_unchanged(self):
+    def test_live_mode_table_has_no_credential_rows(self):
         rows = self._rows(
             self.fixture["metadata"], self.fixture["provider_details"], None
         )
 
-        self.assertEqual(list(rows), ["Access Key", "Secret Key", "Region"])
+        self.assertEqual(list(rows), ["Region"])
         self.assertEqual(rows["Region"], "eu-central-1")
 
 
