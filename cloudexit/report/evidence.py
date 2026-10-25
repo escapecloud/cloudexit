@@ -53,6 +53,22 @@ def build_document_table(
     return key_value_table(rows, context.appearance)
 
 
+def _not_assessed_text(scope, b):
+    parts = [
+        _counted(b, key, n)
+        for key, n in (
+            ("ev_not_assessed_other", scope.not_assessed_other),
+            ("ev_not_assessed_unmapped", scope.not_assessed_unmapped),
+        )
+        if n
+    ]
+    return ", ".join(parts)
+
+
+def _counted(b, key, n):
+    return b[f"{key}_one"] if n == 1 else b[f"{key}_many"].format(n=n)
+
+
 def scope_rows(context, b):
     # (label, text, monospaced), the same for the PDF and the HTML report
     scope = context.scope
@@ -91,6 +107,8 @@ def scope_rows(context, b):
         ):
             if key in values:
                 rows.append((b[label], values[key] or b["ev_not_determinable"], False))
+        if scope.not_assessed:
+            rows.append((b["ev_not_assessed"], _not_assessed_text(scope, b), False))
     source = b["ev_source_tfstate" if scope.kind == "tfstate" else "ev_source_live"]
     rows.append(
         (
@@ -117,6 +135,19 @@ def link_markup(url, color):
     return f'<a href={quoteattr(url)} color="{color}">{escape(url)}</a>'
 
 
+def platform_failure(provenance, b):
+    # What happened to an upload that failed, as it was true when the report was written
+    if provenance.upload_reason:
+        text = b["ev_platform_failed"].format(
+            reason=provenance.upload_reason.rstrip(". ")
+        )
+    else:
+        text = b["ev_platform_failed_no_reason"]
+    if provenance.upload_spooled:
+        text = f"{text} {b['ev_platform_kept']}"
+    return text
+
+
 def build_provenance_table(context, b):
     provenance = context.provenance
     if provenance.catalogue_version and provenance.catalogue_sha256:
@@ -137,7 +168,11 @@ def build_provenance_table(context, b):
         text = escape(b["ev_platform_uploaded"])
         if provenance.platform_url:
             text = f"{text}: {link_markup(provenance.platform_url, context.appearance.heading2_color)}"
+        elif provenance.assessment_id:
+            text = f"{text} · {escape(b['fa_uploaded_id'].format(assessment_id=provenance.assessment_id))}"
         rows.append((b["ev_platform_label"], Paragraph(text, KV_VALUE)))
+    elif provenance.upload_failed:
+        rows.append((b["ev_platform_label"], platform_failure(provenance, b)))
     else:
         rows.append((b["ev_platform_label"], b["ev_platform_none"]))
     return key_value_table(rows, context.appearance)

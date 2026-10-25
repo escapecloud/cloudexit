@@ -7,7 +7,6 @@ from reportlab.lib.units import cm
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
     Flowable,
-    KeepTogether,
     ListFlowable,
     ListItem,
     Paragraph,
@@ -17,7 +16,6 @@ from reportlab.platypus import (
 )
 
 from .brief_summary import cost_finding
-from .evidence import link_markup
 from .flow import section
 from .fonts import FONT, FONT_BOLD, FONT_MONO
 from .placeholder import LabelWithPlaceholder
@@ -56,9 +54,6 @@ RISK_CODE = text_style("RiskCode", 8, 11, SECONDARY).clone(
     "RiskCode", fontName=FONT_MONO
 )
 RISK_MUTED_RIGHT = text_style("RiskMutedRight", 8.5, 11, MUTED, alignment=TA_RIGHT)
-COMMAND = text_style("CommandLine", 8.5, 12, INK).clone(
-    "CommandLine", fontName=FONT_MONO, leftIndent=8, spaceBefore=4, spaceAfter=8
-)
 GLOSSARY_TERM_WIDTH = 4.2 * cm
 RISK_BAR_MIN_SEGMENT = 62
 ALT_EXAMPLES = 3
@@ -358,6 +353,11 @@ def resource_inventory(context, styles, b):
             ("NOSPLIT", (0, total_row - 1), (-1, total_row)),
         ],
     )
+    caption = b["es_res_caption"]
+    skipped = context.scope.not_assessed
+    if skipped:
+        key = "res_not_assessed_one" if skipped == 1 else "res_not_assessed_many"
+        caption = f"{caption} {b[key].format(n=skipped)}"
     return section(
         head,
         [
@@ -371,7 +371,7 @@ def resource_inventory(context, styles, b):
             Spacer(1, 12),
             table,
             Spacer(1, 6),
-            Paragraph(b["es_res_caption"], ALT_CAPTION),
+            Paragraph(caption, ALT_CAPTION),
         ],
     )
 
@@ -576,11 +576,7 @@ def risk_inventory(context, styles, b):
 def _examples_cell(entry, b):
     cell = []
     for alt in entry.alternatives[:ALT_EXAMPLES]:
-        vendor = (
-            f' <font color="{MUTED}">· {escape(alt.vendor)}</font>'
-            if alt.vendor
-            else ""
-        )
+        vendor = f' <font color="{MUTED}">· {escape(alt.vendor or b["ev_dash"])}</font>'
         cell.append(Paragraph(f"{escape(alt.name)}{vendor}", ALT_BODY))
         flags = [
             b[key]
@@ -757,77 +753,4 @@ def glossary(context, styles, b):
         Paragraph(b["es_glossary_block"], styles["ContentStyle"]),
         Spacer(1, 12),
         table,
-    ]
-
-
-# Closing page
-def full_assessment(context, styles, b):
-    body = styles["ContentStyle"]
-    provenance = context.provenance
-    if provenance.uploaded:
-        content = [
-            Paragraph(b["fa_heading_uploaded"], styles["Heading1"]),
-            Paragraph(escape(b["fa_uploaded"]), body),
-        ]
-        if provenance.platform_url:
-            link = link_markup(
-                provenance.platform_url, context.appearance.heading2_color
-            )
-            content.append(Paragraph(b["fa_uploaded_link"].format(link=link), body))
-        elif provenance.assessment_id:
-            content.append(
-                Paragraph(
-                    escape(
-                        b["fa_uploaded_id"].format(
-                            assessment_id=provenance.assessment_id
-                        )
-                    ),
-                    body,
-                )
-            )
-        return content
-
-    rows = [[_text(term, ALT_BODY_BOLD), _text(text)] for term, text in b["fa_items"]]
-    table = Table(
-        rows,
-        colWidths=[GLOSSARY_TERM_WIDTH, 16 * cm - GLOSSARY_TERM_WIDTH],
-        hAlign="LEFT",
-    )
-    table.setStyle(
-        TableStyle(
-            [
-                (
-                    "LINEABOVE",
-                    (0, 0),
-                    (-1, 0),
-                    1,
-                    HexColor(context.appearance.header_row_color),
-                ),
-                ("LINEBELOW", (0, 0), (-1, -1), 0.4, HexColor(HAIRLINE)),
-                ("LEFTPADDING", (0, 0), (-1, -1), 5),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-                ("TOPPADDING", (0, 0), (-1, -1), 5),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ]
-        )
-    )
-    color = context.appearance.heading2_color
-    sites = b["fa_sites"].format(
-        **{name: link_markup(url, color) for name, url in PRODUCT_SITES}
-    )
-    return [
-        Paragraph(b["fa_heading"], styles["Heading1"]),
-        Paragraph(escape(b["fa_lead"]), body),
-        Spacer(1, 6),
-        table,
-        Spacer(1, 6),
-        KeepTogether(
-            [
-                Paragraph(b["fa_how_heading"], styles["Heading2"]),
-                Paragraph(escape(b["fa_how"]), body),
-                Paragraph(escape(b["fa_command"]), COMMAND),
-                Paragraph(sites, body),
-            ]
-        ),
     ]

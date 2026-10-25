@@ -11,7 +11,12 @@ from urllib.parse import urlparse
 from pypdf import PdfReader
 
 from cloudexit.engine import generate_report, perform_risk_assessment
-from cloudexit.report.sections import AWS_ICONS_URL, AZURE_ICONS_URL, REPOSITORY_URL
+from cloudexit.report.sections import (
+    AWS_ICONS_URL,
+    AWS_TRADEMARK_URL,
+    AZURE_ICONS_URL,
+    REPOSITORY_URL,
+)
 from cloudexit.report.wording import BLOCKS
 from cloudexit.resources import asset_path
 from tests.report.test_basic_report import page_texts
@@ -227,9 +232,8 @@ class StructureTests(SampleTestCase):
                 chip = re.search(r'<span class="chip[^>]*>(.*?)</span>', page).group(1)
                 url = (scenario.upload or {}).get("url")
 
-                self.assertEqual(
-                    chip, "Uploaded" if scenario.upload else "Self-collected"
-                )
+                uploaded = (scenario.upload or {}).get("status") == "uploaded"
+                self.assertEqual(chip, "Uploaded" if uploaded else "Self-collected")
                 self.assertEqual("Open on the platform" in page, bool(url))
                 self.assertEqual(f'href="{url}"' in page, bool(url))
 
@@ -613,6 +617,41 @@ class AboutTests(SampleTestCase):
             "a state file holds no billing data, so this report shows no costs", page
         )
 
+    def test_excluded_state_file_instances_are_named_in_the_scope_and_the_inventory(
+        self,
+    ):
+        about = html_text(self.section("tfstate_skipped", "about"))
+        page = html_text(self.page("tfstate_skipped"))
+
+        self.assertIn(
+            "Not Assessed 3 resources of other providers, "
+            "3 resources of types not in the data catalogue",
+            about,
+        )
+        self.assertIn(
+            "6 resources in the state file were not assessed (see About This Report)",
+            page,
+        )
+        only_unmapped = html_text(self.section("tfstate_aws", "about"))
+        self.assertIn(
+            "Not Assessed 1 resource of a type not in the data catalogue", only_unmapped
+        )
+        self.assertNotIn("other provider", only_unmapped)
+        self.assertIn(
+            "1 resource in the state file was not assessed (see About This Report)",
+            html_text(self.page("tfstate_aws")),
+        )
+
+    def test_a_run_without_excluded_instances_has_no_row_and_no_caption_part(self):
+        for case, scenario in self.cases():
+            if scenario.tfstate:
+                continue
+            with self.subTest(case):
+                text = html_text(self.page(case))
+
+                self.assertNotIn("Not Assessed", text)
+                self.assertNotIn("not assessed (see", text)
+
     def test_the_disclosures_are_collapsed_and_named(self):
         section = self.section("aws_typical", "about")
 
@@ -671,7 +710,7 @@ class ConnectedTests(SampleTestCase):
             )
             html = (Path(report) / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("Not uploaded: upload_unavailable", html_text(html))
+        self.assertIn("Upload failed: upload_unavailable.", html_text(html))
         self.assertIn("Self-collected", html)
 
 
@@ -901,6 +940,36 @@ class NoticesTests(SampleTestCase):
         )
         self.assertIn(AWS_ICONS_URL, page)
         self.assertNotIn(AZURE_ICONS_URL, page)
+
+    def test_the_icon_names_are_the_links_and_are_not_repeated_in_brackets(self):
+        names = {
+            "aws": {
+                "AWS Architecture Icons": AWS_ICONS_URL,
+                "AWS Trademark Guidelines": AWS_TRADEMARK_URL,
+            },
+            "azure": {"Azure Architecture Icons": AZURE_ICONS_URL},
+        }
+        for case, scenario in self.cases():
+            with self.subTest(case):
+                page = self.page(case)
+                text = html_text(page)
+                for name, url in names[scenario.provider].items():
+                    self.assertEqual(text.count(name), 1, name)
+                    self.assertEqual(
+                        len(
+                            re.findall(
+                                rf'<a href="{re.escape(url)}"[^>]*>{name}</a>', page
+                            )
+                        ),
+                        1,
+                        name,
+                    )
+                    self.assertNotIn(f"({name})", text)
+                    self.assertNotIn(f"( {name} )", text)
+                    self.assertNotIn(f"{name} (", text)
+                for other in names.keys() - {scenario.provider}:
+                    for name in names[other]:
+                        self.assertNotIn(name, text)
 
     def test_the_figures_notice_follows_the_state(self):
         def figures(case):

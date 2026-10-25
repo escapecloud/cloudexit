@@ -14,7 +14,6 @@ from .notices import legal_notices
 from .sections import (
     alternative_technologies,
     costs_overview,
-    full_assessment,
     glossary,
     introduction,
     resource_inventory,
@@ -44,8 +43,6 @@ def build_content(context, styles, b):
     content += severity_levels(context, styles, b)
     content.append(Spacer(1, 18))
     content += glossary(context, styles, b)
-    content.append(chapter_break())
-    content += full_assessment(context, styles, b)
     content.append(chapter_break())
     content += legal_notices(context, styles, b)
     return content

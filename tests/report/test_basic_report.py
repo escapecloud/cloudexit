@@ -69,15 +69,13 @@ BASE_OUTLINE = [
     (0, "Risk Severity Levels"),
     (0, "Glossary"),
 ]
-OFFLINE_OUTLINE = BASE_OUTLINE + [
-    (0, "What the Full Assessment Adds"),
-    (1, "How to Get Them"),
-    (0, "Legal Notices"),
-]
-UPLOADED_OUTLINE = BASE_OUTLINE + [
-    (0, "The Full Assessment"),
-    (0, "Legal Notices"),
-]
+OUTLINE = BASE_OUTLINE + [(0, "Legal Notices")]
+CLOSING_PAGE_TEXTS = (
+    "What the Full Assessment Adds",
+    "The Full Assessment",
+    "How to Get Them",
+    "HOST",
+)
 SCORE_PATTERNS = (
     r"/ 100",
     r"/ 5\b",
@@ -87,6 +85,14 @@ SCORE_PATTERNS = (
     "Lock-in Score",
     "Scored Alternatives",
 )
+# An edition name; the "Enterprise support" flag of an alternative is not one
+PROMOTION_PATTERNS = (
+    r"\bLight\b",
+    r"\bEnterprise\b(?!\s+support)",
+    "Exit Readiness Grade",
+    "Vendor Lock-in Score",
+)
+EXITCLOUD_URL = "https://app.exitcloud.io/assessments/a-1"
 TFSTATE_SCOPE = {
     "file": "infra.tfstate",
     "sha256": "ab" * 32,
@@ -252,19 +258,125 @@ class SmokeRenderTests(BasicReportTestCase):
         self.assertIn("e1c2f0c0-0000-4000-8000-000000000000 (serial 7)", text)
 
 
+class TfstateCoverageTests(BasicReportTestCase):
+    def coverage(self, other=0, unmapped=0):
+        return {
+            "instances_total": 9 + other + unmapped,
+            "instances_counted": 9,
+            "instances_excluded_other_provider": other,
+            "instances_excluded_unmapped": unmapped,
+        }
+
+    def pages(self, key, coverage, **overrides):
+        _path, context, reader = self.render(
+            self.tfstate_fixture(),
+            key=key,
+            tfstate_scope=TFSTATE_SCOPE,
+            tfstate_coverage=coverage,
+            **overrides,
+        )
+        return context, page_texts(reader)
+
+    def test_both_kinds_are_named_with_the_total_in_the_inventory_caption(self):
+        context, pages = self.pages("covered", self.coverage(other=3, unmapped=2))
+
+        self.assertEqual(context.scope.not_assessed, 5)
+        self.assertIn(
+            "Not Assessed 3 resources of other providers, "
+            "2 resources of types not in the data catalogue",
+            pages[1],
+        )
+        inventory = next(text for text in pages if "Share = resources" in text)
+        self.assertIn(
+            "5 resources in the state file were not assessed (see page 2)", inventory
+        )
+
+    def test_only_the_parts_that_are_not_zero_are_shown(self):
+        for key, coverage, expected, absent in (
+            (
+                "other",
+                self.coverage(other=4),
+                "4 resources of other providers",
+                "types not in",
+            ),
+            (
+                "unmapped",
+                self.coverage(unmapped=1),
+                "1 resource of a type not in the data catalogue",
+                "other provider",
+            ),
+            (
+                "one other",
+                self.coverage(other=1),
+                "1 resource of another provider",
+                "types not in",
+            ),
+        ):
+            with self.subTest(key):
+                _context, pages = self.pages(key, coverage)
+                row = pages[1].split("Not Assessed", 1)[1].split("Source", 1)[0]
+
+                self.assertIn(expected, row)
+                self.assertNotIn(absent, row)
+
+    def test_a_singular_total_says_was(self):
+        _context, pages = self.pages("one total", self.coverage(unmapped=1))
+
+        inventory = next(text for text in pages if "Share = resources" in text)
+        self.assertIn(
+            "1 resource in the state file was not assessed (see page 2)", inventory
+        )
+
+    def test_without_excluded_instances_there_is_no_row_and_no_caption(self):
+        for key, coverage in (
+            ("zeros", self.coverage()),
+            ("older manifest", None),
+            ("empty", {}),
+            (
+                "not numbers",
+                {
+                    "instances_excluded_other_provider": "3",
+                    "instances_excluded_unmapped": -2,
+                },
+            ),
+        ):
+            with self.subTest(key):
+                context, pages = self.pages(key, coverage)
+                text = " ".join(pages)
+
+                self.assertEqual(context.scope.not_assessed, 0)
+                self.assertNotIn("Not Assessed", text)
+                self.assertNotIn("were not assessed", text)
+                self.assertNotIn("was not assessed", text)
+
+    def test_a_live_run_never_shows_the_row(self):
+        _path, context, reader = self.render(
+            key="live coverage", tfstate_coverage=self.coverage(other=3, unmapped=2)
+        )
+
+        self.assertEqual(context.scope.not_assessed, 0)
+        self.assertNotIn("Not Assessed", " ".join(page_texts(reader)))
+
+
 class StructureTests(BasicReportTestCase):
     def test_the_heading_outline_is_the_expected_list(self):
         for name, fixture, overrides in self.scenarios():
             with self.subTest(name):
                 _path, _context, reader = self.render(fixture, key=name, **overrides)
-                expected = UPLOADED_OUTLINE if "uploaded" in name else OFFLINE_OUTLINE
-                self.assertEqual(outline_entries(reader.outline), expected)
+                self.assertEqual(outline_entries(reader.outline), OUTLINE)
+
+    def test_the_outline_is_the_same_for_an_upload_without_a_link(self):
+        _path, _context, reader = self.render(
+            key="no link", provenance=provenance(uploaded=True, assessment_id="a-77")
+        )
+
+        self.assertEqual(outline_entries(reader.outline), OUTLINE)
 
     def test_the_outline_does_not_depend_on_the_data(self):
         _path, _context, reader = self.render(
             build_empty_report_fixture(), provenance=provenance()
         )
-        self.assertEqual(outline_entries(reader.outline), OFFLINE_OUTLINE)
+        self.assertEqual(outline_entries(reader.outline), OUTLINE)
 
     def test_each_chapter_starts_a_page_and_page_two_is_the_document_information(self):
         _path, _context, reader = self.render(key="default")
@@ -281,7 +393,9 @@ class StructureTests(BasicReportTestCase):
         numbers = [reader.get_destination_page_number(entry) for entry in chapters]
         # One chapter per page, except the severity levels and the glossary
         self.assertEqual(len(set(numbers)), len(numbers) - 1)
-        self.assertEqual(numbers[-4], numbers[-3])
+        self.assertEqual(numbers[-3], numbers[-2])
+        self.assertIn("Legal Notices", pages[numbers[-1]])
+        self.assertEqual(numbers[-1], len(pages) - 1)
 
     def test_running_header_and_footer(self):
         path, context, reader = self.render(key="default")
@@ -393,7 +507,7 @@ class ContentTests(BasicReportTestCase):
 
 
 class AlternativesTests(BasicReportTestCase):
-    def test_a_missing_vendor_is_left_out_and_alternatives_are_alphabetical(self):
+    def test_a_missing_vendor_shows_a_dash_and_alternatives_are_alphabetical(self):
         fixture = build_report_fixture()
         technologies = fixture["alternative_technologies"]
         technologies.append(
@@ -416,7 +530,11 @@ class AlternativesTests(BasicReportTestCase):
         )
         self.assertEqual(entry.alternatives[0].vendor, "")
         self.assertEqual(entry.alternatives[1].vendor, "OpenInfra Foundation")
-        self.assertNotIn("Unknown Organization", " ".join(page_texts(reader)))
+        text = " ".join(page_texts(reader))
+        self.assertIn("Alpha · –", text)
+        self.assertIn("OpenStack · OpenInfra Foundation", text)
+        self.assertLess(text.index("Alpha · –"), text.index("OpenStack ·"))
+        self.assertNotIn("Unknown Organization", text)
 
 
 class ProvenanceTests(BasicReportTestCase):
@@ -433,33 +551,71 @@ class ProvenanceTests(BasicReportTestCase):
         self.assertIn(SYNC_ID, second)
         self.assertIn("2026-11-02 · (sha256 cccccccccccc)", second)
         self.assertIn("Self-collected data: no platform evaluated this report.", second)
-        self.assertIn("What the Full Assessment Adds", pages[-2])
         self.assertEqual(
             link_targets(reader) - AWS_NOTICE_LINKS,
-            {"https://escapecloud.io", "https://exitcloud.io"},
+            set(),
         )
 
-    def test_an_uploaded_report_carries_the_link_instead_of_the_promotion(self):
+    def test_an_uploaded_report_carries_the_link_on_page_two_only(self):
         _path, _context, reader = self.render(key="uploaded", provenance=uploaded())
         pages = page_texts(reader)
 
         self.assertIn("Uploaded to the platform", pages[1])
         self.assertIn(URL, pages[1])
         self.assertNotIn("Self-collected data", " ".join(pages))
-        self.assertIn("The Full Assessment", pages[-2])
-        self.assertIn(URL, pages[-2])
-        self.assertNotIn("What the Full Assessment Adds", " ".join(pages))
+        self.assertEqual(sum(URL in text for text in pages), 1)
         self.assertEqual(link_targets(reader) - AWS_NOTICE_LINKS, {URL})
 
-    def test_an_upload_without_a_link_names_the_assessment(self):
+    def test_an_upload_without_a_link_names_the_assessment_on_page_two(self):
         _path, _context, reader = self.render(
-            provenance=(
-                uploaded(platform_url=None)
-                if False
-                else provenance(uploaded=True, platform_url=None, assessment_id="a-77")
-            )
+            key="no link", provenance=provenance(uploaded=True, assessment_id="a-77")
         )
-        self.assertIn("Assessment ID: a-77", page_texts(reader)[-2])
+        pages = page_texts(reader)
+
+        self.assertIn("Uploaded to the platform", pages[1])
+        self.assertIn("Assessment ID: a-77", pages[1])
+        self.assertEqual(sum("a-77" in text for text in pages), 1)
+        self.assertEqual(link_targets(reader) - AWS_NOTICE_LINKS, set())
+
+    def test_a_failed_upload_says_what_happened(self):
+        for name, changes, expected in (
+            (
+                "kept",
+                {"upload_reason": "upload_unavailable", "upload_spooled": True},
+                "Upload failed: upload_unavailable. The run was kept for a later upload.",
+            ),
+            (
+                "lost",
+                {"upload_reason": "upload_rejected"},
+                "Upload failed: upload_rejected.",
+            ),
+            ("no reason", {}, "Upload failed."),
+            (
+                "no reason, kept",
+                {"upload_spooled": True},
+                "Upload failed. The run was kept",
+            ),
+        ):
+            with self.subTest(name):
+                _path, _context, reader = self.render(
+                    key=f"failed {name}",
+                    provenance=provenance(upload_failed=True, **changes),
+                )
+                pages = page_texts(reader)
+
+                self.assertIn(expected, pages[1])
+                self.assertNotIn("Self-collected data", " ".join(pages))
+                self.assertEqual("kept for a later upload" in pages[1], "kept" in name)
+                self.assertEqual(link_targets(reader) - AWS_NOTICE_LINKS, set())
+
+    def test_a_reason_that_ends_in_a_full_stop_is_not_doubled(self):
+        _path, _context, reader = self.render(
+            key="failed stop",
+            provenance=provenance(upload_failed=True, upload_reason="No answer."),
+        )
+
+        self.assertIn("Upload failed: No answer. ", page_texts(reader)[1] + " ")
+        self.assertNotIn("No answer..", page_texts(reader)[1])
 
     def test_an_unknown_catalogue_version_is_said_so(self):
         _path, _context, reader = self.render(
@@ -554,31 +710,71 @@ class ProvenanceTests(BasicReportTestCase):
 
 
 class BasicOnlyTests(BasicReportTestCase):
-    def test_no_score_or_grade_appears_outside_the_closing_page(self):
+    def test_no_score_or_grade_appears_on_any_page(self):
         for name, fixture, overrides in self.scenarios():
             with self.subTest(name):
                 _path, _context, reader = self.render(fixture, key=name, **overrides)
-                body = " ".join(page_texts(reader)[:-2])
+                body = " ".join(page_texts(reader))
 
                 for pattern in SCORE_PATTERNS:
                     self.assertIsNone(re.search(pattern, body, re.IGNORECASE), pattern)
 
-    def test_the_closing_page_only_names_what_the_full_assessment_adds(self):
-        _path, _context, reader = self.render(key="offline", provenance=provenance())
-        closing = page_texts(reader)[-2]
+    def test_no_closing_page_and_no_command_is_left(self):
+        for name, fixture, overrides in self.scenarios():
+            with self.subTest(name):
+                _path, _context, reader = self.render(fixture, key=name, **overrides)
+                body = " ".join(page_texts(reader))
 
-        for name in (
-            "Exit Readiness Grade",
-            "Vendor Lock-in Score",
-            "Scored Alternatives",
-        ):
-            self.assertIn(name, closing)
-        # The Community Edition produces it itself, so the platforms do not add it
-        self.assertNotIn("Egress & Data Landscape", closing)
-        self.assertFalse(
-            any("Egress" in term for term, _text in BLOCKS["fa_items"]),
-        )
-        self.assertNotRegex(closing, r"\d+ / (100|5)")
+                for text in CLOSING_PAGE_TEXTS:
+                    self.assertNotIn(text, body)
+                self.assertNotIn("--api-key-file", body)
+
+    def test_no_edition_or_grade_is_promoted_on_any_page(self):
+        for name, fixture, overrides in self.scenarios():
+            with self.subTest(name):
+                _path, _context, reader = self.render(fixture, key=name, **overrides)
+                for number, text in enumerate(page_texts(reader), start=1):
+                    for pattern in PROMOTION_PATTERNS:
+                        self.assertIsNone(re.search(pattern, text), (number, pattern))
+
+    def test_the_enterprise_support_flag_does_not_trip_the_edition_check(self):
+        _path, _context, reader = self.render(key="default")
+        body = " ".join(page_texts(reader))
+
+        self.assertIn("Enterprise support", body)
+        self.assertIsNone(re.search(PROMOTION_PATTERNS[1], body))
+        self.assertIsNotNone(re.search(PROMOTION_PATTERNS[1], "The Enterprise edition"))
+        self.assertIsNotNone(re.search(PROMOTION_PATTERNS[0], "A Light assessment"))
+
+    def test_exitcloud_is_named_only_on_page_two_of_an_uploaded_report(self):
+        for name, fixture, overrides in self.scenarios():
+            if "uploaded" in name:
+                overrides = {
+                    **overrides,
+                    "provenance": provenance(
+                        uploaded=True, platform_url=EXITCLOUD_URL, assessment_id="a-1"
+                    ),
+                }
+            with self.subTest(name):
+                _path, _context, reader = self.render(fixture, **overrides)
+                pages = [text.lower() for text in page_texts(reader)]
+                named = [
+                    n for n, text in enumerate(pages, start=1) if "exitcloud" in text
+                ]
+
+                self.assertEqual(named, [2] if "uploaded" in name else [])
+
+    def test_escapecloud_is_named_only_on_the_legal_notices_page(self):
+        for name, fixture, overrides in self.scenarios():
+            with self.subTest(name):
+                _path, _context, reader = self.render(fixture, key=name, **overrides)
+                pages = [text.lower() for text in page_texts(reader)]
+                named = [
+                    n for n, text in enumerate(pages, start=1) if "escapecloud" in text
+                ]
+
+                self.assertEqual(named, [len(pages)])
+                self.assertIn("legal notices", pages[-1])
 
 
 class TermGuardTests(BasicReportTestCase):
@@ -622,19 +818,6 @@ class TermGuardTests(BasicReportTestCase):
         )
         self.assertEqual(find_terms("an ordinary sentence about cloud exit"), [])
         self.assertEqual(find_terms("ICTs and DORAs"), [])
-
-    def test_the_platforms_are_named_only_on_the_last_two_pages(self):
-        _path, _context, reader = self.render(key="default")
-        pages = page_texts(reader)
-
-        for text in pages[:-2]:
-            self.assertNotIn("escapecloud", text.lower())
-            self.assertNotIn("exitcloud", text.lower())
-        # The closing page keeps both platform URLs; the notices name EscapeCloud
-        self.assertIn("https://escapecloud.io", pages[-2])
-        self.assertIn("https://exitcloud.io", pages[-2])
-        self.assertIn("EscapeCloud", pages[-1])
-        self.assertNotIn("exitcloud", pages[-1].lower())
 
 
 class LegalNoticesTests(BasicReportTestCase):
@@ -684,6 +867,21 @@ class LegalNoticesTests(BasicReportTestCase):
                 else:
                     self.assertIn(AZURE_ICONS_URL, links)
                     self.assertNotIn(AWS_ICONS_URL, links)
+
+    def test_the_icon_names_are_followed_by_their_addresses(self):
+        expected = {
+            2: [
+                f"AWS Architecture Icons ({AWS_ICONS_URL})",
+                f"AWS Trademark Guidelines ({AWS_TRADEMARK_URL})",
+            ],
+            1: [f"Azure Architecture Icons ({AZURE_ICONS_URL})"],
+        }
+        for name, fixture, overrides in self.scenarios():
+            with self.subTest(name):
+                context, _reader, pages = self.notices_page(name, fixture, **overrides)
+                last = pages[-1].replace(" ", "")
+                for text in expected[context.cloud_service_provider]:
+                    self.assertIn(text.replace(" ", ""), last)
 
     def test_the_cover_names_the_edition_and_no_classification(self):
         _context, _reader, pages = self.notices_page("offline", provenance=provenance())

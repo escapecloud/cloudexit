@@ -1,0 +1,52 @@
+{
+  "name": "Sample – Order Tracking Service",
+  "purpose": "A failed upload that was kept for a later upload: the wording on page 2 and in About This Report.",
+  "provider": "aws",
+  "exit_strategy": 1,
+  "scope": {
+    "accountId": "123456789012",
+    "region": "eu-central-1"
+  },
+  "resources": [
+    {
+      "type": "AWS.ec2.describe_instances.Reservations",
+      "region": "eu-central-1",
+      "count": 5
+    },
+    {
+      "type": "AWS.s3.list_buckets.Buckets",
+      "region": "eu-central-1",
+      "count": 3
+    },
+    {
+      "type": "AWS.rds.describe_db_instances.DBInstances",
+      "region": "eu-central-1",
+      "count": 1
+    },
+    {
+      "type": "AWS.lambda.list_functions.Functions",
+      "region": "eu-central-1",
+      "count": 6
+    }
+  ],
+  "costs": {
+    "currency": "USD",
+    "months": {
+      "2026-06": 412.5,
+      "2026-07": 398.2,
+      "2026-08": 405.75,
+      "2026-09": 421.1,
+      "2026-10": 418.9,
+      "2026-11": 171.6
+    }
+  },
+  "egress": null,
+  "upload": {
+    "status": "failed",
+    "reason": "The platform did not answer in time",
+    "spooled": true,
+    "sync_id": "01939b8e-7c2a-7d41-9a51-3c8f0a6e0013"
+  },
+  "clock": "2026-11-12T09:30:00Z",
+  "run_id": "01939b8e-7c2a-7d41-9a51-3c8f0a6e0013"
+}

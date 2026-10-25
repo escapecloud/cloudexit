@@ -5,6 +5,7 @@ import os
 import sqlite3
 import tempfile
 import unittest
+from dataclasses import replace
 from contextlib import nullcontext
 from pathlib import Path
 from unittest.mock import patch
@@ -23,6 +24,7 @@ from cloudexit.platform.upload import (
     upload,
     write_upload_record,
 )
+from tests.support.html import html_text
 from tests.support.isolation import forget_cache, isolated_environ
 from tests.support.api import (
     ASSESSMENT_ID,
@@ -184,7 +186,7 @@ class LocalResultsTests(FlowTestCase):
             sorted(int(entry["id"]) for entry in document["data"]["risk_inventory"]),
             [2, 4],
         )
-        self.assertNotIn("Not uploaded", self.html(report))
+        self.assertNotIn("Upload failed", self.html(report))
         self.assertTrue(Path(result["reports"]["PDF"]).is_file())
 
     def generate(self, report, upload_info):
@@ -207,9 +209,28 @@ class LocalResultsTests(FlowTestCase):
         result = self.generate(report, info)
 
         self.assertTrue(result["success"], result.get("logs"))
-        self.assertIn("Not uploaded: upload_unavailable", self.html(report))
+        self.assertIn("Upload failed: upload_unavailable.", self.html(report))
         self.assertEqual(self.json_report(report)["meta"]["upload"], info)
         self.assertTrue(Path(result["reports"]["PDF"]).is_file())
+
+    def test_a_failed_upload_that_was_kept_says_so_in_the_provenance(self):
+        report = self.report()
+        perform_risk_assessment(1, report)
+        info = {
+            "status": "failed",
+            "reason": REASON_UNAVAILABLE,
+            "sync_id": SYNC_ID,
+            "spooled": True,
+        }
+
+        result = self.generate(report, info)
+
+        self.assertTrue(result["success"], result.get("logs"))
+        self.assertIn(
+            "Upload failed: upload_unavailable. The run was kept for a later upload.",
+            html_text(self.html(report)),
+        )
+        self.assertEqual(self.json_report(report)["meta"]["upload"], info)
 
     def test_a_successful_upload_records_only_the_link(self):
         report = self.report()
@@ -346,6 +367,17 @@ class UploadInterfaceTests(FlowTestCase):
         )
         self.assertIsNone(report_info(None))
         self.assertIsNone(report_info(UploadResult(False, False)))
+
+        kept = replace(failed, spooled=True)
+        self.assertEqual(
+            report_info(kept),
+            {
+                "status": "failed",
+                "reason": REASON_REJECTED,
+                "sync_id": SYNC_ID,
+                "spooled": True,
+            },
+        )
 
         detailed = UploadResult(
             True,
@@ -547,7 +579,7 @@ class RunFlowTests(FlowTestCase):
 
                 self.assertEqual(ctx.exception.code, exit_code)
                 self.assert_local_report(report)
-                self.assertIn(f"Not uploaded: {reason}", self.html(report))
+                self.assertIn(f"Upload failed: {reason}.", self.html(report))
                 self.assertEqual(
                     self.json_report(report)["meta"]["upload"]["reason"], reason
                 )
@@ -650,7 +682,7 @@ class RunFlowTests(FlowTestCase):
         mock_upload.assert_not_called()
         self.assertEqual(ctx.exception.code, codes.UPLOAD_AUTH)
         self.assert_local_report(report)
-        self.assertIn("Not uploaded: upload_auth", self.html(report))
+        self.assertIn("Upload failed: upload_auth.", self.html(report))
         # A configured platform keeps the requested depth: nothing forces Basic
         self.assertEqual(self.sync(report)["assessment_type"], 2)
         messages = [args[0] for args, _ in self.steps]
@@ -691,7 +723,7 @@ class RunFlowTests(FlowTestCase):
 
         self.assertEqual(ctx.exception.code, codes.EGRESS)
         self.assert_local_report(report)
-        self.assertIn("Not uploaded", self.html(report))
+        self.assertIn("Upload failed", self.html(report))
 
     def test_a_sync_document_problem_wins_over_an_upload_code(self):
         report = self.report()

@@ -1,0 +1,43 @@
+{
+  "name": "Sample – Internal Wiki",
+  "purpose": "A dataset without catalogue_meta: the catalogue version is unknown on page 2 and in About This Report.",
+  "provider": "aws",
+  "exit_strategy": 2,
+  "scope": {
+    "accountId": "123456789012",
+    "region": "eu-central-1"
+  },
+  "resources": [
+    {
+      "type": "AWS.ec2.describe_instances.Reservations",
+      "region": "eu-central-1",
+      "count": 2
+    },
+    {
+      "type": "AWS.s3.list_buckets.Buckets",
+      "region": "eu-central-1",
+      "count": 1
+    },
+    {
+      "type": "AWS.rds.describe_db_instances.DBInstances",
+      "region": "eu-central-1",
+      "count": 1
+    }
+  ],
+  "costs": {
+    "currency": "USD",
+    "months": {
+      "2026-06": 96.4,
+      "2026-07": 98.1,
+      "2026-08": 97.25,
+      "2026-09": 99.6,
+      "2026-10": 98.8,
+      "2026-11": 40.3
+    }
+  },
+  "egress": null,
+  "upload": null,
+  "clock": "2026-11-12T09:30:00Z",
+  "run_id": "01939b8e-7c2a-7d41-9a51-3c8f0a6e0016",
+  "catalogue": "legacy"
+}

@@ -1,6 +1,6 @@
 from markupsafe import Markup
 
-from .evidence import scope_rows
+from .evidence import platform_failure, scope_rows
 from .helpers import (
     format_change,
     initials,
@@ -11,12 +11,9 @@ from .helpers import (
     strategy_name,
 )
 from .html_egress import egress_page
-from .notices import text_parts
+from .notices import icon_notice, text_parts
 from .palette import SEVERITIES
 from .sections import (
-    AWS_ICONS_URL,
-    AWS_TRADEMARK_URL,
-    AZURE_ICONS_URL,
     PRODUCT_SITES,
     REPOSITORY_URL,
 )
@@ -406,6 +403,15 @@ def _inventory(context, b):
         ]
         if scope.kind == "tfstate":
             caption_parts.append(b["html_inv_not_managed"])
+    if scope.not_assessed:
+        key = (
+            "html_inv_not_assessed_one"
+            if scope.not_assessed == 1
+            else "html_inv_not_assessed_many"
+        )
+        caption_parts.append(
+            b[key].format(n=scope.not_assessed, about=b["html_nav_about"])
+        )
 
     if scope.kind == "azure":
         empty = b["html_inv_empty_resource_group"].format(
@@ -544,10 +550,8 @@ def _count_more(b, n):
 def _platform_cell(context, b):
     provenance = context.provenance
     if not provenance.uploaded:
-        if provenance.upload_reason:
-            return [
-                b["html_platform_not_uploaded"].format(reason=provenance.upload_reason)
-            ]
+        if provenance.upload_failed:
+            return [platform_failure(provenance, b)]
         return [b["ev_platform_none"]]
     parts = [b["ev_platform_uploaded"]]
     if provenance.platform_url:
@@ -667,20 +671,7 @@ def _about(context, egress, b):
 
 def _notices(context, egress, b):
     provenance = context.provenance
-    icons = None
-    if context.cloud_service_provider == 2:
-        icons = text_parts(
-            b["notices_icons_aws"],
-            {
-                "icons_url": (b["html_label_aws_icons"], AWS_ICONS_URL),
-                "guidelines_url": (b["html_label_aws_guidelines"], AWS_TRADEMARK_URL),
-            },
-        )
-    elif context.cloud_service_provider == 1:
-        icons = text_parts(
-            b["notices_icons_azure"],
-            {"icons_url": (b["html_label_azure_icons"], AZURE_ICONS_URL)},
-        )
+    icons = icon_notice(context.cloud_service_provider, b)
     if context.scope.kind == "tfstate":
         figures = b["html_figures_tfstate"]
     else:

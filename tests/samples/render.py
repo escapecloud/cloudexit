@@ -1,6 +1,7 @@
 import logging
 import shutil
 import sqlite3
+import tempfile
 from contextlib import ExitStack
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -228,6 +229,19 @@ def _render(scenario, directory, catalogue_path):
         raise RenderError(f"egress.pdf failed: {report['egress_pdf_logs']}")
 
 
+def _legacy_copy(catalogue_path, directory):
+    # The dataset of an older release: the same tables, no catalogue_meta
+    copy = Path(directory) / "legacy_catalogue.db"
+    shutil.copy(catalogue_path, copy)
+    conn = sqlite3.connect(copy)
+    try:
+        conn.execute("DROP TABLE IF EXISTS catalogue_meta")
+        conn.commit()
+    finally:
+        conn.close()
+    return copy
+
+
 def render_case(scenario, out_dir, *, catalogue_path):
     directory = Path(out_dir) / scenario.case
     if directory.exists():
@@ -237,8 +251,11 @@ def render_case(scenario, out_dir, *, catalogue_path):
     previous = store._active_override
     clock = frozen_datetime(scenario.clock)
     try:
-        store.set_active_catalogue(catalogue_path)
         with ExitStack() as stack:
+            if scenario.catalogue == "legacy":
+                scratch = stack.enter_context(tempfile.TemporaryDirectory())
+                catalogue_path = _legacy_copy(catalogue_path, scratch)
+            store.set_active_catalogue(catalogue_path)
             # The warnings of the pipeline are about the sample data, not news
             stack.callback(logging.disable, logging.root.manager.disable)
             logging.disable(logging.WARNING)
