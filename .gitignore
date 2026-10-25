@@ -100,6 +100,9 @@ web_modules/
 # Generated reports
 reports/
 
+# Rendered sample reports (python -m tests.samples)
+/samples/
+
 # Local configs (only the example templates are tracked)
 config/*
 !config/*_example.json
@@ -107,6 +110,7 @@ config/*
 # Terraform state and downloaded datasets
 *.tfstate
 !tests/fixtures/smoke/aws.tfstate
+!tests/fixtures/samples/tfstate/*.tfstate
 datasets/
 
 # TypeScript cache

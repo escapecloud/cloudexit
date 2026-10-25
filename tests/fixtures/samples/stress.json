@@ -1,0 +1,211 @@
+{
+  "name": "Sample – A Deliberately Long Project Name That Keeps Going To Check How Titles, Headers And The Cover Wrap Over Several Lines",
+  "purpose": "Many types, long names, big counts, cent-level amounts and mixed currencies.",
+  "provider": "aws",
+  "exit_strategy": 1,
+  "scope": {
+    "accountId": "123456789012",
+    "region": "eu-central-1"
+  },
+  "resources": [
+    {
+      "type": "AWS.acm-pca",
+      "region": "eu-central-1",
+      "count": 1
+    },
+    {
+      "type": "AWS.acm.list_certificates.CertificateSummaryList",
+      "region": "eu-west-1",
+      "count": 8
+    },
+    {
+      "type": "AWS.amplify.list_apps.apps",
+      "region": "us-east-1",
+      "count": 15
+    },
+    {
+      "type": "AWS.apigateway.get_rest_apis.items",
+      "region": "eu-central-1",
+      "count": 22
+    },
+    {
+      "type": "AWS.appconfig.list_applications.Items",
+      "region": "eu-west-1",
+      "count": 29
+    },
+    {
+      "type": "AWS.appflow.list_flows.flows",
+      "region": "us-east-1",
+      "count": 36
+    },
+    {
+      "type": "AWS.application-autoscaling",
+      "region": "eu-central-1",
+      "count": 2
+    },
+    {
+      "type": "AWS.appmesh.list_meshes.meshes",
+      "region": "eu-west-1",
+      "count": 9
+    },
+    {
+      "type": "AWS.apprunner.list_services.ServiceSummaryList",
+      "region": "us-east-1",
+      "count": 16
+    },
+    {
+      "type": "AWS.appstream.describe_images.Images",
+      "region": "eu-central-1",
+      "count": 23
+    },
+    {
+      "type": "AWS.appsync.list_graphql_apis.graphqlApis",
+      "region": "eu-west-1",
+      "count": 30
+    },
+    {
+      "type": "AWS.athena.list_databases.DatabaseList",
+      "region": "us-east-1",
+      "count": 37
+    },
+    {
+      "type": "AWS.auditmanager.list_assessments.assessmentMetadata",
+      "region": "eu-central-1",
+      "count": 3
+    },
+    {
+      "type": "AWS.backup.list_backup_plans.BackupPlansList",
+      "region": "eu-west-1",
+      "count": 10
+    },
+    {
+      "type": "AWS.batch.describe_job_queues.jobQueues",
+      "region": "us-east-1",
+      "count": 17
+    },
+    {
+      "type": "AWS.cloud9.list_environments.environmentIds",
+      "region": "eu-central-1",
+      "count": 24
+    },
+    {
+      "type": "AWS.cloudcontrol.list_resources.ResourceDescriptions",
+      "region": "eu-west-1",
+      "count": 31
+    },
+    {
+      "type": "AWS.cloudformation.list_stacks.StackSummaries",
+      "region": "us-east-1",
+      "count": 38
+    },
+    {
+      "type": "AWS.cloudfront.list_distributions.DistributionList.Items",
+      "region": "eu-central-1",
+      "count": 4
+    },
+    {
+      "type": "AWS.cloudtrail.describe_trails.trailList",
+      "region": "eu-west-1",
+      "count": 11
+    },
+    {
+      "type": "AWS.cloudwatch.describe_alarms.MetricAlarms",
+      "region": "us-east-1",
+      "count": 18
+    },
+    {
+      "type": "AWS.codeartifact.list_repositories.repositories",
+      "region": "eu-central-1",
+      "count": 25
+    },
+    {
+      "type": "AWS.codebuild.list_projects.projects",
+      "region": "eu-west-1",
+      "count": 32
+    },
+    {
+      "type": "AWS.codecommit.list_repositories.repositories",
+      "region": "us-east-1",
+      "count": 39
+    },
+    {
+      "type": "AWS.dynamodb.list_tables.TableNames",
+      "region": "eu-central-1",
+      "count": 5
+    },
+    {
+      "type": "AWS.ec2.describe_volumes.Volumes",
+      "region": "eu-west-1",
+      "count": 12
+    },
+    {
+      "type": "AWS.ec2.describe_instances.Reservations",
+      "region": "us-east-1",
+      "count": 19
+    },
+    {
+      "type": "AWS.eks.list_clusters.clusters",
+      "region": "eu-central-1",
+      "count": 26
+    },
+    {
+      "type": "AWS.elasticache.describe_cache_clusters.CacheClusters",
+      "region": "eu-west-1",
+      "count": 33
+    },
+    {
+      "type": "AWS.kinesis.list_streams.StreamNames",
+      "region": "us-east-1",
+      "count": 40
+    },
+    {
+      "type": "AWS.lambda.list_functions.Functions",
+      "region": "eu-central-1",
+      "count": 6
+    },
+    {
+      "type": "AWS.rds.describe_db_instances.DBInstances",
+      "region": "eu-west-1",
+      "count": 13
+    },
+    {
+      "type": "AWS.route53.list_hosted_zones.HostedZones",
+      "region": "us-east-1",
+      "count": 20
+    },
+    {
+      "type": "AWS.s3.list_buckets.Buckets",
+      "region": "eu-central-1",
+      "count": 27
+    },
+    {
+      "type": "AWS.sns.list_topics.Topics",
+      "region": "eu-west-1",
+      "count": 34
+    },
+    {
+      "type": "AWS.sqs.list_queues.QueueUrls",
+      "region": "us-east-1",
+      "count": 41
+    },
+    {
+      "type": "AWS.ec2.describe_instances.Reservations",
+      "region": "ap-southeast-2",
+      "count": 123
+    }
+  ],
+  "costs": {
+    "currency": "USD",
+    "months": {
+      "2026-10": 0.07,
+      "2026-11": 0.03
+    },
+    "currencies": {
+      "2026-11": "EUR"
+    }
+  },
+  "egress": null,
+  "upload": null,
+  "clock": "2026-11-12T09:30:00Z",
+  "run_id": "01939b8e-7c2a-7d41-9a51-3c8f0a6e0012"
+}

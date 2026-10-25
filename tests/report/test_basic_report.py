@@ -5,7 +5,6 @@ import re
 import tempfile
 import unittest
 from datetime import datetime, timezone
-from html.parser import HTMLParser
 from pathlib import Path
 from unittest.mock import patch
 
@@ -35,6 +34,7 @@ from cloudexit.report.wording import BLOCKS, TITLE_CASE_KEYS
 from tests.report import test_egress as egress_helpers
 from tests.report.test_no_credentials import pricing_for_both_clouds
 from tests.support.flow import build_flow_run
+from tests.support.html import html_text
 from tests.support.report import (
     build_empty_report_fixture,
     build_fixture_context,
@@ -116,31 +116,6 @@ def provenance(**changes):
 
 def uploaded(**changes):
     return provenance(uploaded=True, platform_url=URL, assessment_id="a-1", **changes)
-
-
-class TextOfHtml(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.parts = []
-        self.skip = 0
-
-    def handle_starttag(self, tag, attrs):
-        if tag in ("script", "style"):
-            self.skip += 1
-
-    def handle_endtag(self, tag):
-        if tag in ("script", "style") and self.skip:
-            self.skip -= 1
-
-    def handle_data(self, data):
-        if not self.skip:
-            self.parts.append(data)
-
-
-def html_text(html):
-    parser = TextOfHtml()
-    parser.feed(html)
-    return " ".join(" ".join(parser.parts).split())
 
 
 def page_texts(reader):

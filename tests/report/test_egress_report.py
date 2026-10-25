@@ -23,7 +23,6 @@ from tests.report import test_egress as egress_helpers
 from tests.report.test_basic_report import (
     COLLECTED,
     URL,
-    html_text,
     metadata_texts,
     outline_entries,
     page_texts,
@@ -32,6 +31,7 @@ from tests.report.test_basic_report import (
 )
 from tests.report.test_no_credentials import pricing_for_both_clouds
 from tests.support.flow import build_flow_run
+from tests.support.html import html_text
 from tests.support.report import (
     build_fixture_context,
     build_report_fixture,
