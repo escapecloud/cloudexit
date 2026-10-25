@@ -3,49 +3,37 @@ import json
 import logging
 import os
 import sqlite3
+from collections import Counter
 from datetime import datetime
 from typing import Any
-from xml.sax.saxutils import escape
 from jinja2 import Environment
-from reportlab.lib import colors
-from reportlab.lib.colors import HexColor
-from reportlab.graphics.charts.piecharts import Pie
-from reportlab.graphics.shapes import Drawing, Rect, String
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import cm
-from reportlab.platypus import (
-    Image,
-    PageBreak,
-    Paragraph,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-)
 
-from cloudexit.report.helpers import initials
-from cloudexit.report.placeholder import IconPlaceholder
-from cloudexit.resources import asset_path, find_asset
+from cloudexit.report.helpers import format_gib, gib_number, initials, share_label
+from cloudexit.resources import asset_path
 from cloudexit.catalogue.db import load_data
 from cloudexit.egress.model import (
     GIB,
     compute_totals,
-    format_bytes,
     read_egress_inventory,
 )
 from cloudexit.providers.aws.egress import ARCHIVE_TIERS as AWS_ARCHIVE_TIERS
 from cloudexit.providers.azure.egress import ARCHIVE_TIERS as AZURE_ARCHIVE_TIERS
-from cloudexit.report.context import scope_facts
-from cloudexit.report.notices import notices_html
+from cloudexit.report.context import (
+    DOCUMENT_CODE,
+    EGRESS_DOCUMENT_CODE,
+    PROVIDER_NAMES,
+    format_document_id,
+    scope_facts,
+)
+from cloudexit.report.notices import notices_html, text_parts
+from cloudexit.report.sections import BOOK_DEMO_URL, PRODUCT_SITES
 from cloudexit.report.wording import BLOCKS
-
-PDF_HEADER_TITLE = "EscapeCloud Community Edition - Data & Egress"
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_PRICING_ZONE = "zone1"
 UNIT_DIVISORS = {"GB": 10**9, "GiB": 2**30}
+COMPONENTS = ("internet_egress", "archive_retrieval")
 
 ARCHIVE_TIERS_BY_CSP = {1: AZURE_ARCHIVE_TIERS, 2: AWS_ARCHIVE_TIERS}
 
@@ -81,46 +69,6 @@ CATEGORIES = {
         "in_allocation": False,
     },
 }
-EGRESS_FEE_CHART_COLORS = [
-    HexColor("#115e59"),
-    HexColor("#ffae1f"),
-    HexColor("#539bff"),
-    HexColor("#a855f7"),
-    HexColor("#22c55e"),
-    HexColor("#991b1b"),
-]
-
-PROVIDER_NAMES = {1: "Microsoft Azure", 2: "Amazon Web Services"}
-COMPONENT_LABELS = {
-    "internet_egress": "Internet Egress",
-    "archive_retrieval": "Archive Retrieval",
-}
-COVERAGE_NOTES = {
-    1: [
-        ("Storage Accounts", "Capacity metrics can lag by up to roughly 48 hours"),
-        ("Managed Disks, Snapshots", "Provisioned size; counted as an upper bound"),
-        ("SQL Databases", "Used space from database metrics"),
-        ("Cosmos DB Accounts", "Used space from database metrics"),
-        ("PostgreSQL / MySQL Flexible Servers", "Used space from database metrics"),
-        ("Recovery Services Vaults", "Not sized; recovery points cannot be exported"),
-    ],
-    2: [
-        ("S3 Buckets", "Metrics can lag by up to roughly 48 hours"),
-        (
-            "EBS Volumes, Snapshots",
-            "Upper bound; snapshots can over-count shared blocks",
-        ),
-        ("RDS Instances", "Aurora is not sized"),
-        ("DynamoDB Tables", ""),
-        ("AWS Backup Vaults", "Not sized; recovery points cannot be exported"),
-    ],
-}
-
-ALPHA_NOTE = (
-    "NOTE: This Data Landscape & Egress Estimation feature is currently in "
-    "alpha version. Estimated values may be incomplete or inaccurate in some "
-    "environments."
-)
 
 PRICING_SOURCE_LINKS = {
     1: {
@@ -135,6 +83,8 @@ PRICING_SOURCE_LINKS = {
     },
 }
 
+COVERAGE_NOTES_KEYS = {1: "eg_coverage_notes_azure", 2: "eg_coverage_notes_aws"}
+
 FALLBACK_ICONS = {
     "microsoft.compute/disks": "/icons/azure/compute/10032-icon-service-Disks.png",
     "microsoft.compute/snapshots": (
@@ -146,187 +96,6 @@ FALLBACK_ICONS = {
     ),
     "aws.backup.list_backup_vaults.backupvaultlist": "/icons/aws/Storage/Backup.png",
 }
-
-
-def default_table_style() -> TableStyle:
-    """Shared header style used by summary and scope tables."""
-    return TableStyle(
-        [
-            ("BACKGROUND", (0, 0), (-1, 0), HexColor("#115e59")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("GRID", (0, 0), (-1, -1), 1, HexColor("#000000")),
-            ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, 0), 11),
-            ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
-            ("TOPPADDING", (0, 0), (-1, 0), 12),
-        ]
-    )
-
-
-def build_summary_section(metadata, styles, content_style):
-    """Page 1: Summary table."""
-    content = []
-    content.append(Spacer(1, 12))
-    content.append(Paragraph("Summary", styles["Heading1"]))
-    content.append(Paragraph("Quick overview of the assessment:", content_style))
-
-    cloud_service_provider_map = {
-        "1": "Microsoft Azure",
-        "2": "Amazon Web Services",
-        "3": "Alibaba Cloud",
-        "4": "Google Cloud",
-    }
-    exit_strategy_map = {
-        "1": "Repatriation to On-Premises",
-        "2": "Hybrid Cloud Adoption",
-        "3": "Migration to Alternate Cloud",
-    }
-    type_map = {"1": "Basic", "2": "Standard"}
-
-    summary_data = [
-        ["Name", "Value"],
-        [
-            "Cloud Service Provider",
-            cloud_service_provider_map.get(
-                str(metadata["cloud_service_provider"]), "Unknown"
-            ),
-        ],
-        [
-            "Exit Strategy",
-            exit_strategy_map.get(str(metadata["exit_strategy"]), "Unknown"),
-        ],
-        ["Assessment Type", type_map.get(str(metadata["assessment_type"]), "Unknown")],
-        ["TimeStamp", metadata["timestamp"]],
-    ]
-
-    summary_table = Table(summary_data, colWidths=[4 * cm, 11.5 * cm])
-    summary_table.setStyle(default_table_style())
-    content.append(summary_table)
-    content.append(Spacer(1, 12))
-
-    upload = metadata.get("upload")
-    if upload:
-        if upload.get("status") == "uploaded":
-            note = "Uploaded to the platform."
-            if upload.get("url"):
-                url = escape(upload["url"])
-                note += f' <a href="{url}" color="blue">{url}</a>'
-        else:
-            note = f"<b>Not uploaded:</b> {escape(upload.get('reason', 'unknown'))}"
-        content.append(Paragraph(note, content_style))
-    return content
-
-
-# Cap on how many subscriptions / resource groups / regions a scope row lists
-# before it summarises the remainder. The full list stays in the manifest.
-MAX_SCOPE_VALUES = 3
-
-
-def _shorten(value: str, head: int = 4, tail: int = 4) -> str:
-    if not isinstance(value, str):
-        return "N/A"
-    if len(value) <= head + tail + 1:
-        return value
-    return f"{value[:head]}…{value[-tail:]}"
-
-
-def _join_scope_values(values) -> str:
-    if not values:
-        return "Not determinable from state"
-    shown = list(values)[:MAX_SCOPE_VALUES]
-    remaining = len(values) - len(shown)
-    text = ", ".join(shown)
-    return f"{text}, +{remaining} more" if remaining > 0 else text
-
-
-def _build_tfstate_scope_rows(metadata, scope):
-    rows = []
-
-    file_name = scope.get("file") or "N/A"
-    sha256 = scope.get("sha256")
-    if sha256:
-        file_name = f"{file_name} (SHA-256 {_shorten(sha256)})"
-    rows.append(["File", file_name])
-
-    lineage = scope.get("lineage")
-    serial = scope.get("serial")
-    if lineage and serial is not None:
-        rows.append(["State", f"{lineage} (Serial: {serial})"])
-    elif lineage:
-        rows.append(["State", lineage])
-    elif serial is not None:
-        rows.append(["State", f"Serial: {serial}"])
-
-    if metadata["cloud_service_provider"] == 1:  # Azure
-        rows.append(["Subscription", _join_scope_values(scope.get("subscriptions"))])
-        rows.append(
-            ["Resource Group(s)", _join_scope_values(scope.get("resource_groups"))]
-        )
-    else:  # AWS
-        rows.append(["Region(s)", _join_scope_values(scope.get("locations"))])
-
-    return rows
-
-
-def _live_scope_rows(cloud_service_provider, provider_details):
-    # The same facts as the Assessment Scope on page 2 of the Executive
-    # Summary, and nothing that identifies the credentials in use
-    b = BLOCKS
-    scope = scope_facts(provider_details, cloud_service_provider, None)
-    values = dict(scope.rows)
-    if scope.kind == "azure":
-        return [
-            [b["ev_tenant_id"], values.get("tenant") or b["ev_dash"]],
-            [b["ev_subscription_id"], values.get("subscription") or b["ev_dash"]],
-            [b["ev_resource_group"], values.get("resource_group") or b["ev_dash"]],
-        ]
-    rows = []
-    if values.get("account"):
-        rows.append([b["ev_account_id"], values["account"]])
-    rows.append([b["ev_region"], values.get("region") or b["ev_dash"]])
-    return rows
-
-
-def build_scope_section(
-    metadata, provider_details, styles, content_style, tfstate_scope=None
-):
-    """Page 1: Scope of Assessment table."""
-    content = []
-    content.append(Paragraph("Scope of Assessment", styles["Heading2"]))
-
-    tfstate_path = provider_details.get("tfstatePath")
-    if tfstate_path:
-        content.append(
-            Paragraph(
-                "Assessed from Terraform state. Resources not managed by "
-                "Terraform are not included.",
-                content_style,
-            )
-        )
-    else:
-        content.append(Paragraph("Defined scope of assessment:", content_style))
-
-    scope_data = [["Name", "Value"]]
-
-    if tfstate_path:
-        # Fall back to the little we know from the config when the manifest is
-        # unavailable, rather than rendering a table of N/A.
-        scope = tfstate_scope or {"file": os.path.basename(tfstate_path)}
-        scope_data.extend(_build_tfstate_scope_rows(metadata, scope))
-    elif metadata["cloud_service_provider"] in (1, 2):
-        scope_data.extend(
-            _live_scope_rows(metadata["cloud_service_provider"], provider_details)
-        )
-    else:
-        scope_data.append(["N/A", "N/A"])
-
-    scope_table = Table(scope_data, colWidths=[4 * cm, 11.5 * cm])
-    scope_table.setStyle(default_table_style())
-    content.append(scope_table)
-    content.append(Spacer(1, 12))
-    return content
 
 
 def _unit_divisor(unit: str) -> float:
@@ -417,9 +186,9 @@ def format_fee(fee: float | None) -> str:
     return f"${fee:,.2f}"
 
 
-def free_tier_limit_display(
+def _free_tier(
     prices: list[dict[str, Any]], cloud_service_provider: int
-) -> str | None:
+) -> dict[str, Any] | None:
     tiers = sorted(
         (
             price
@@ -431,8 +200,22 @@ def free_tier_limit_display(
         key=lambda tier: tier["tier_from"],
     )
     if tiers and tiers[0]["price_per_unit"] == 0.0 and tiers[0]["tier_to"]:
-        return f"{tiers[0]['tier_to']:g} {tiers[0]['unit']}"
+        return tiers[0]
     return None
+
+
+def free_tier_limit_display(
+    prices: list[dict[str, Any]], cloud_service_provider: int
+) -> str | None:
+    tier = _free_tier(prices, cloud_service_provider)
+    return f"{tier['tier_to']:g} {tier['unit']}" if tier else None
+
+
+def free_allowance_bytes(
+    prices: list[dict[str, Any]], cloud_service_provider: int
+) -> float | None:
+    tier = _free_tier(prices, cloud_service_provider)
+    return tier["tier_to"] * _unit_divisor(tier["unit"]) if tier else None
 
 
 def _summarize_totals(
@@ -448,8 +231,8 @@ def _summarize_totals(
         and free_tier_limit is not None
     )
     unknown_count = totals["resources_with_unknown_size"]
-    total_fee_display = "$0" if free_tier else format_fee(total_fee)
-    total_data_display = format_bytes(totals["known_size_bytes"])
+    total_fee_display = format_fee(total_fee)
+    total_data_display = format_gib(totals["known_size_bytes"])
     if unknown_count > 0:
         total_data_display = f"{total_data_display}+"
         if not free_tier:
@@ -547,7 +330,7 @@ def _build_type_groups(
         )
 
     for group in groups.values():
-        group["size_display"] = format_bytes(group["size_bytes"])
+        group["size_display"] = format_gib(group["size_bytes"])
         group["fee_display"] = format_fee(group["fee"])
 
     return sorted(
@@ -583,6 +366,23 @@ def _load_estimate(
     return meta, rows, totals, pricing, total_fee, type_groups
 
 
+def load_egress_estimate(report_path: str, json_path: str) -> dict[str, Any]:
+    meta, rows, totals, pricing, total_fee, type_groups = _load_estimate(
+        report_path, json_path
+    )
+    return {
+        "meta": meta,
+        "rows": rows,
+        "totals": totals,
+        "pricing": pricing,
+        "total_fee": total_fee,
+        "type_groups": type_groups,
+        "summary": _summarize_totals(
+            totals, total_fee, pricing, meta["cloud_service_provider"]
+        ),
+    }
+
+
 def _generated_at(timestamp):
     # The run's own time, as the estimate stored it; now when it cannot be read
     try:
@@ -591,20 +391,400 @@ def _generated_at(timestamp):
         return datetime.now()
 
 
-def generate_egress_html_report(report_path: str, json_path: str) -> dict[str, Any]:
-    try:
-        meta, rows, totals, pricing, total_fee, type_groups = _load_estimate(
-            report_path, json_path
-        )
+def _share(part, whole):
+    return part / whole * 100 if whole else 0
 
-        summary = _summarize_totals(
-            totals, total_fee, pricing, meta["cloud_service_provider"]
+
+def _plus(text, estimate):
+    # Resources without a size are left out, so the figure is a lower bound
+    return f"{text}+" if estimate["summary"]["unknown_count"] > 0 else text
+
+
+def introduction_facts(scope, b=BLOCKS):
+    return {
+        "heading": b["eg_heading_introduction"],
+        "purpose_heading": b["eg_heading_purpose"],
+        "purpose": b["eg_purpose_block"],
+        "scope_heading": b["eg_heading_scope"],
+        "scope": scope_sentence(scope, b),
+        "limitations_heading": b["eg_heading_limitations"],
+        "limitations": [
+            b["eg_limitations_block"],
+            b["eg_limitations_scope"],
+            b["eg_limitations_data"],
+        ],
+    }
+
+
+def scope_sentence(scope, b=BLOCKS):
+    if scope.kind == "azure":
+        return b["eg_scope_azure"].format(
+            resource_group=scope.resource_group or b["ev_dash"]
         )
+    if scope.kind == "aws":
+        return b["eg_scope_aws"].format(region=scope.region or b["ev_dash"])
+    return b["eg_scope_plain"]
+
+
+def coverage_facts(cloud_service_provider, b=BLOCKS):
+    key = COVERAGE_NOTES_KEYS.get(cloud_service_provider)
+    if not key:
+        return None
+    return {
+        "heading": b["eg_heading_coverage"],
+        "intro": b["eg_coverage_intro"],
+        "headers": (b["eg_th_resource_type"], b["eg_th_measured"]),
+        "rows": [(name, note or b["ev_dash"]) for name, note in b[key]],
+    }
+
+
+def landscape_facts(estimate, b=BLOCKS):
+    rows = estimate["rows"]
+    summary = estimate["summary"]
+    total = estimate["totals"]["known_size_bytes"]
+    resources = len(rows)
+    unsized = [row for row in rows if row["size_bytes"] is None]
+    sized = resources - len(unsized)
+    counts = Counter(row["label"] for row in rows)
+    groups = sorted(
+        (group for group in estimate["type_groups"] if group["size_bytes"] is not None),
+        key=lambda group: -group["size_bytes"],
+    )
+    top = groups[0] if groups else None
+
+    if not resources:
+        lead = b["eg_no_data_notice"]
+    elif not sized:
+        key = "eg_land_none_sized_one" if resources == 1 else "eg_land_none_sized"
+        lead = b[key].format(resources=resources)
+    else:
+        sentences = [
+            b["eg_land_lead_one" if resources == 1 else "eg_land_lead"].format(
+                total=format_gib(total), sized=sized, resources=resources
+            )
+        ]
+        if len(groups) > 1 and total > 0 and top["size_bytes"]:
+            sentences.append(
+                b["eg_land_top"].format(
+                    type=top["label"],
+                    size=format_gib(top["size_bytes"]),
+                    share=share_label(_share(top["size_bytes"], total)),
+                )
+            )
+        if len(unsized) == 1:
+            sentences.append(b["eg_land_unsized_one"])
+        elif unsized:
+            sentences.append(b["eg_land_unsized_many"].format(count=len(unsized)))
+        lead = " ".join(sentences)
+
+    unsized_counts = Counter(row["label"] for row in unsized)
+    not_sized = [
+        b["eg_land_not_sized_one" if count == 1 else "eg_land_not_sized_many"].format(
+            type=label, count=count
+        )
+        for label, count in sorted(
+            unsized_counts.items(), key=lambda item: (-item[1], item[0])
+        )
+    ]
+    return {
+        "heading": b["eg_heading_landscape"],
+        "empty": not resources,
+        "lead": lead,
+        "stats": [
+            (b["eg_st_volume"], summary["total_data_display"], False),
+            (
+                b["eg_st_sized"],
+                b["eg_st_sized_value"].format(sized=sized, resources=resources),
+                False,
+            ),
+            (b["eg_st_not_sized"], str(len(unsized)), bool(unsized)),
+            (b["eg_st_largest"], top["label"] if top else b["ev_dash"], False),
+        ],
+        "headers": (
+            b["eg_th_resource_type"],
+            b["eg_th_resources"],
+            b["eg_th_size_gib"],
+            b["eg_th_share"],
+        ),
+        "rows": [
+            {
+                "label": group["label"],
+                "icon": group["icon"],
+                "initials": group["initials"],
+                "resources": counts[group["label"]],
+                "size": gib_number(group["size_bytes"]),
+                "share": _share(group["size_bytes"], total),
+                "share_text": share_label(_share(group["size_bytes"], total)),
+            }
+            for group in groups
+        ],
+        "total": (b["eg_total"], resources, _plus(gib_number(total), estimate)),
+        "not_sized": (
+            b["eg_land_not_sized"].format(types=", ".join(not_sized))
+            if not_sized
+            else None
+        ),
+        "caption": b["eg_land_caption"],
+        "source_note": b["eg_land_source_note"],
+    }
+
+
+def _allowance_text(prices, cloud_service_provider):
+    # The provider's own figure, plus the GiB value when it is published in GB
+    tier = _free_tier(prices, cloud_service_provider)
+    if tier is None:
+        return None
+    limit = f"{tier['tier_to']:g} {tier['unit']}"
+    if tier["unit"] == "GiB":
+        return limit
+    return (
+        f"{limit} ({format_gib(free_allowance_bytes(prices, cloud_service_provider))})"
+    )
+
+
+def cost_facts(estimate, b=BLOCKS):
+    rows = estimate["rows"]
+    summary = estimate["summary"]
+    csp = estimate["meta"]["cloud_service_provider"]
+    total = estimate["totals"]["known_size_bytes"]
+    total_fee = estimate["total_fee"]
+    resources = len(rows)
+    unsized = sum(1 for row in rows if row["size_bytes"] is None)
+    sized = resources - unsized
+    allowance = free_allowance_bytes(estimate["pricing"], csp)
+    allowance_text = _allowance_text(estimate["pricing"], csp)
+    groups = [
+        group for group in estimate["type_groups"] if group["size_bytes"] is not None
+    ]
+    billable = total if allowance is None else max(0, total - allowance)
+
+    if not resources:
+        sentences = [b["eg_no_data_notice"]]
+    elif not sized:
+        sentences = [b["eg_cost_lead_none"]]
+    elif summary["free_tier"]:
+        sentences = [
+            b["eg_cost_lead_free"].format(fee=format_fee(total_fee)),
+            b["eg_cost_headroom"].format(
+                used=format_gib(total), allowance=allowance_text
+            ),
+        ]
+    else:
+        sentences = [
+            b["eg_cost_lead_paid"].format(
+                total=format_gib(total), fee=format_fee(total_fee)
+            )
+        ]
+        if allowance is not None:
+            sentences.append(
+                b["eg_cost_lead_allowance"].format(
+                    allowance=allowance_text, billable=format_gib(billable)
+                )
+            )
+        top = max(groups, key=lambda group: group["fee"] or 0)
+        if total_fee > 0 and top["fee"] and len(groups) > 1:
+            sentences.append(
+                b["eg_cost_lead_top"].format(
+                    type=top["label"],
+                    share=share_label(_share(top["fee"], total_fee)),
+                )
+            )
+    if sized and unsized == 1:
+        sentences.append(b["eg_cost_unsized_one"])
+    elif sized and unsized:
+        sentences.append(b["eg_cost_unsized_many"].format(count=unsized))
+
+    if summary["free_tier"]:
+        volume_stat = (b["eg_st_allowance"], summary["free_tier_limit"], False)
+    else:
+        volume_stat = (b["eg_st_billable"], format_gib(billable), False)
+    return {
+        "heading": b["eg_heading_costs"],
+        "empty": not resources,
+        "lead": " ".join(sentences),
+        "stats": [
+            (b["eg_st_fee"], summary["total_fee_display"], False),
+            (b["eg_st_volume"], summary["total_data_display"], False),
+            volume_stat,
+            (b["eg_st_not_sized"], str(unsized), bool(unsized)),
+        ],
+        "headers": (
+            b["eg_th_resource_type"],
+            b["eg_th_size_gib"],
+            b["eg_th_share"],
+            b["eg_th_fee"],
+        ),
+        # A fee of zero has no split to show
+        "rows": (
+            [
+                {
+                    "label": group["label"],
+                    "icon": group["icon"],
+                    "initials": group["initials"],
+                    "size": gib_number(group["size_bytes"]),
+                    "share": _share(group["size_bytes"], total),
+                    "share_text": share_label(_share(group["size_bytes"], total)),
+                    "fee": format_fee(group["fee"]),
+                }
+                for group in groups
+            ]
+            if total_fee > 0
+            else []
+        ),
+        "total": (
+            b["eg_total"],
+            _plus(gib_number(total), estimate),
+            summary["total_fee_display"],
+        ),
+        "caption": b["eg_cost_caption"],
+    }
+
+
+def _tier_display(row, b):
+    unit = row["unit"]
+    if row["tier_from"] == 0 and row["tier_to"] is None:
+        return b["eg_tier_all_volumes"]
+    if row["tier_from"] == 0 and row["price_per_unit"] == 0:
+        return b["eg_tier_first"].format(to=f"{row['tier_to']:,.0f}", unit=unit)
+    if row["tier_to"] is None:
+        return b["eg_tier_over"].format(from_=f"{row['tier_from']:,.0f}", unit=unit)
+    return b["eg_tier_range"].format(
+        from_=f"{row['tier_from']:,.0f}", to=f"{row['tier_to']:,.0f}", unit=unit
+    )
+
+
+def _price_display(row, b):
+    if row["price_per_unit"] == 0:
+        return b["eg_price_free"]
+    return f"{row['price_per_unit']:g} / {row['unit']}"
+
+
+def pricing_facts(estimate, b=BLOCKS):
+    csp = estimate["meta"]["cloud_service_provider"]
+    rows = sorted(
+        (
+            price
+            for price in estimate["pricing"]
+            if price["csp"] == csp
+            and price["zone"] == DEFAULT_PRICING_ZONE
+            and price["component"] in COMPONENTS
+        ),
+        key=lambda price: (COMPONENTS.index(price["component"]), price["tier_from"]),
+    )
+    if not rows:
+        return None
+
+    provider = PROVIDER_NAMES.get(csp) or b["eg_provider_fallback"]
+    valid_dates = {row["valid_from"] for row in rows}
+    show_valid_from = len(valid_dates) > 1
+    if show_valid_from:
+        intro = b["eg_pricing_intro_mixed"].format(provider=provider)
+    else:
+        intro = b["eg_pricing_intro"].format(
+            provider=provider, valid=next(iter(valid_dates))
+        )
+    headers = [b["eg_th_component"], b["eg_th_tier"], b["eg_th_price"]]
+    if show_valid_from:
+        headers.append(b["eg_th_valid_from"])
+
+    table = []
+    for row in rows:
+        table_row = [
+            b[f"eg_component_{row['component']}"],
+            _tier_display(row, b),
+            _price_display(row, b),
+        ]
+        if show_valid_from:
+            table_row.append(row["valid_from"])
+        table.append(table_row)
+
+    unit = next(
+        (row["unit"] for row in rows if row["component"] == "internet_egress"), None
+    )
+    units = {"GB": "eg_pricing_units", "GiB": "eg_pricing_units_gib"}.get(unit)
+    shown = {row["component"] for row in rows}
+    links = PRICING_SOURCE_LINKS.get(csp, {})
+    sources = [
+        (component, links[component])
+        for component in COMPONENTS
+        if component in shown and component in links
+    ]
+    if len(sources) == 1:
+        source_lines = [(b["eg_pricing_source"], sources[0][1])]
+    else:
+        source_lines = [
+            (
+                b["eg_pricing_source_component"].replace(
+                    "{component}", b[f"eg_component_{component}"]
+                ),
+                link,
+            )
+            for component, link in sources
+        ]
+    return {
+        "heading": b["eg_heading_pricing"],
+        "intro": intro,
+        "headers": headers,
+        "rows": table,
+        "units": b[units].format(provider=provider) if units else None,
+        "no_archive": (
+            None if "archive_retrieval" in shown else b["eg_pricing_no_archive"]
+        ),
+        # (template with a {link} field, url)
+        "sources": source_lines,
+        "note": b["eg_pricing_note"],
+        "glossary_heading": b["eg_heading_glossary"],
+        "glossary": [
+            (entry["term"], entry["definition"])
+            for entry in sorted(
+                b["eg_glossary"], key=lambda entry: entry["term"].lower()
+            )
+        ],
+    }
+
+
+def next_steps_facts(
+    executive_id, uploaded=False, platform_url=None, assessment_id=None, b=BLOCKS
+):
+    # Paragraphs as text and (text, url) links, like the notices
+    sites = dict(PRODUCT_SITES)
+    paragraphs = [text_parts(b["eg_next_lead"], {}, {"executive_id": executive_id})]
+    if uploaded:
+        paragraphs.append([b["eg_next_uploaded"]])
+        if platform_url:
+            paragraphs.append(text_parts(b["fa_uploaded_link"], {"link": platform_url}))
+        elif assessment_id:
+            paragraphs.append(
+                text_parts(b["fa_uploaded_id"], {}, {"assessment_id": assessment_id})
+            )
+    else:
+        paragraphs.append(
+            text_parts(
+                b["eg_next_platforms"],
+                {"exitcloud_url": sites["exitcloud"], "book_demo_url": BOOK_DEMO_URL},
+            )
+        )
+    return {"heading": b["eg_heading_next_steps"], "paragraphs": paragraphs}
+
+
+def generate_egress_html_report(
+    report_path: str,
+    json_path: str,
+    provider_details: dict[str, Any] | None = None,
+    run_id: str | None = None,
+) -> dict[str, Any]:
+    try:
+        estimate = load_egress_estimate(report_path, json_path)
+        meta, rows = estimate["meta"], estimate["rows"]
+        csp = meta["cloud_service_provider"]
+        summary = estimate["summary"]
+        b = BLOCKS
 
         allocation_labels, allocation_values, allocation_colors = _build_allocation(
             rows
         )
 
+        type_groups = estimate["type_groups"]
         fee_groups = [group for group in type_groups if (group["fee"] or 0.0) > 0]
         fee_labels = [group["label"] for group in fee_groups]
         fee_values = [round(group["fee"], 2) for group in fee_groups]
@@ -613,11 +793,15 @@ def generate_egress_html_report(report_path: str, json_path: str) -> dict[str, A
             encoding="utf-8"
         )
 
+        scope = scope_facts(provider_details or {}, csp, None)
+        executive_id = format_document_id(DOCUMENT_CODE, run_id)
         env = Environment(autoescape=True)
         template = env.from_string(template_content)
         html_content = template.render(
+            page_title=f"{b['cover_title_egress']} – {meta['name']}",
+            document_id=format_document_id(EGRESS_DOCUMENT_CODE, run_id),
             name=meta["name"],
-            cloud_service_provider=meta["cloud_service_provider"],
+            cloud_service_provider=csp,
             assessment_type=meta["assessment_type"],
             timestamp=meta["timestamp"],
             total_data_display=summary["total_data_display"],
@@ -632,11 +816,15 @@ def generate_egress_html_report(report_path: str, json_path: str) -> dict[str, A
             fee_values_json=json.dumps(fee_values),
             free_tier=summary["free_tier"],
             free_tier_limit_display=summary["free_tier_limit"],
-            known_data_display=format_bytes(totals["known_size_bytes"]),
+            known_data_display=format_gib(estimate["totals"]["known_size_bytes"]),
             type_groups=type_groups,
-            notices=notices_html(
-                meta["cloud_service_provider"], _generated_at(meta["timestamp"])
-            ),
+            introduction=introduction_facts(scope, b),
+            coverage=coverage_facts(csp, b),
+            landscape=landscape_facts(estimate, b),
+            costs=cost_facts(estimate, b),
+            pricing=pricing_facts(estimate, b),
+            next_steps=next_steps_facts(executive_id, b=b),
+            notices=notices_html(csp, _generated_at(meta["timestamp"]), b, egress=True),
         )
 
         html_path = os.path.join(report_path, "egress.html")
@@ -651,592 +839,4 @@ def generate_egress_html_report(report_path: str, json_path: str) -> dict[str, A
 
     except Exception as e:
         logger.error(f"Error generating egress report: {str(e)}", exc_info=True)
-        return {"success": False, "logs": str(e)}
-
-
-def _icon_flowable(report_path: str, icon: str | None, label: str) -> Any:
-    icon_path = find_asset(report_path, icon) if icon else None
-    if icon_path is None:
-        return IconPlaceholder(label, 20)
-    return Image(str(icon_path), width=20, height=20)
-
-
-def _fee_breakdown_display(group: dict[str, Any]) -> str:
-    if group["fee"] is None:
-        return "n/a (not sized)"
-    return group["fee_display"]
-
-
-def _egress_fee_chart_groups(
-    type_groups: list[dict[str, Any]], max_segments: int = 5
-) -> list[tuple[str, float]]:
-    fee_groups = [
-        (group["label"], group["fee"])
-        for group in type_groups
-        if group.get("fee") is not None and group["fee"] > 0
-    ]
-    if len(fee_groups) <= max_segments:
-        return fee_groups
-    visible = fee_groups[: max_segments - 1]
-    other_total = sum(fee for _, fee in fee_groups[max_segments - 1 :])
-    if other_total > 0:
-        visible.append(("Other Components", other_total))
-    return visible
-
-
-def _draw_egress_fee_chart(type_groups: list[dict[str, Any]]) -> Drawing | None:
-    chart_groups = _egress_fee_chart_groups(type_groups)
-    if not chart_groups:
-        return None
-
-    total_fee = sum(fee for _, fee in chart_groups)
-    drawing = Drawing(360, 170)
-
-    pie = Pie()
-    pie.x = 35
-    pie.y = 20
-    pie.width = 125
-    pie.height = 125
-    pie.data = [fee for _, fee in chart_groups]
-    pie.innerRadiusFraction = 0.55
-    for index, _ in enumerate(chart_groups):
-        color = EGRESS_FEE_CHART_COLORS[index % len(EGRESS_FEE_CHART_COLORS)]
-        pie.slices[index].fillColor = color
-        pie.slices[index].strokeColor = colors.white
-        pie.slices[index].strokeWidth = 1
-    drawing.add(pie)
-
-    legend_x = 190
-    legend_y = 130
-    for index, (label, fee) in enumerate(chart_groups):
-        y = legend_y - index * 22
-        color = EGRESS_FEE_CHART_COLORS[index % len(EGRESS_FEE_CHART_COLORS)]
-        share = (fee / total_fee * 100) if total_fee else 0
-        drawing.add(Rect(legend_x, y, 8, 8, fillColor=color, strokeColor=color))
-        drawing.add(
-            String(
-                legend_x + 14,
-                y - 1,
-                f"{label}: {share:.1f}%",
-                fontName="Helvetica",
-                fontSize=8,
-                fillColor=HexColor("#112726"),
-            )
-        )
-    return drawing
-
-
-def _build_coverage_section(cloud_service_provider, styles, content_style):
-    rows = COVERAGE_NOTES.get(cloud_service_provider)
-    if not rows:
-        return []
-
-    content = []
-    content.append(
-        Paragraph(
-            "The estimation covers the following data-related resource types "
-            "within the assessed scope:",
-            content_style,
-        )
-    )
-    table_data = [["Name", "Notes"]] + [[name, notes] for name, notes in rows]
-    coverage_table = Table(table_data, colWidths=[7 * cm, 8.5 * cm])
-    coverage_table.setStyle(default_table_style())
-    content.append(coverage_table)
-    content.append(Spacer(1, 6))
-    note_style = ParagraphStyle(
-        "CoverageNote",
-        fontSize=8,
-        leading=10,
-        textColor=HexColor("#6c757d"),
-    )
-    content.append(Paragraph(ALPHA_NOTE, note_style))
-    content.append(PageBreak())
-    return content
-
-
-def _build_estimated_costs_section(
-    total_fee, totals, free_tier, free_tier_limit, type_groups, styles, content_style
-):
-    content = []
-    content.append(Spacer(1, 12))
-    content.append(Paragraph("Estimated Costs", styles["Heading2"]))
-
-    unknown_count = totals["resources_with_unknown_size"]
-    if free_tier:
-        fee_display = "$0"
-        intro = (
-            f"The scanned footprint ({format_bytes(totals['known_size_bytes'])}) "
-            "falls entirely within the cloud provider's complimentary monthly "
-            f"internet egress allowance ({free_tier_limit} free tier)."
-        )
-    else:
-        fee_display = format_fee(total_fee)
-        if unknown_count > 0:
-            fee_display = f"{fee_display}+"
-        intro = (
-            "Estimated one-time internet egress fee for transferring the data "
-            "identified on the previous page out of the cloud provider."
-        )
-    content.append(Paragraph(intro, content_style))
-
-    card_title_style = ParagraphStyle(
-        "EgressCostCardTitle",
-        parent=content_style,
-        fontName="Helvetica-Bold",
-        fontSize=8,
-        leading=10,
-        textColor=HexColor("#115e59"),
-    )
-    card_amount_style = ParagraphStyle(
-        "EgressCostCardAmount",
-        parent=content_style,
-        fontName="Helvetica-Bold",
-        fontSize=20,
-        leading=24,
-        textColor=HexColor("#112726"),
-    )
-    warning_style = ParagraphStyle(
-        "EgressCostWarning",
-        parent=content_style,
-        fontSize=8,
-        leading=10,
-        textColor=HexColor("#664d03"),
-    )
-    breakdown_header_style = ParagraphStyle(
-        "EgressCostBreakdownHeader",
-        parent=card_title_style,
-        textColor=colors.white,
-    )
-    total_card_data = [
-        [
-            Paragraph("TOTAL ESTIMATED NETWORK TRANSIT FEE", card_title_style),
-        ],
-        [Paragraph(fee_display, card_amount_style)],
-    ]
-    if unknown_count > 0:
-        total_card_data.append(
-            [
-                Paragraph(
-                    f"Excludes {unknown_count} "
-                    f"resource{'s' if unknown_count != 1 else ''} with "
-                    "unavailable size calculations.",
-                    warning_style,
-                )
-            ]
-        )
-    total_card = Table(total_card_data, colWidths=[15.5 * cm])
-    total_card.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, -1), HexColor("#f8fafc")),
-                ("BOX", (0, 0), (-1, -1), 1, HexColor("#d7e3e1")),
-                ("LEFTPADDING", (0, 0), (-1, -1), 12),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 12),
-                ("TOPPADDING", (0, 0), (-1, -1), 8),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-            ]
-        )
-    )
-    content.append(total_card)
-    content.append(Spacer(1, 12))
-
-    chart = _draw_egress_fee_chart(type_groups)
-    if chart:
-        chart_table = Table([[chart]], colWidths=[15.5 * cm])
-        chart_table.setStyle(
-            TableStyle(
-                [
-                    ("BOX", (0, 0), (-1, -1), 1, HexColor("#d7e3e1")),
-                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                    ("TOPPADDING", (0, 0), (-1, -1), 10),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
-                ]
-            )
-        )
-        content.append(chart_table)
-        content.append(Spacer(1, 12))
-
-    breakdown_data = [
-        [
-            Paragraph("Resource Type", breakdown_header_style),
-            Paragraph("Estimated Cost (List Rate)", breakdown_header_style),
-        ]
-    ]
-    for group in type_groups:
-        breakdown_data.append([group["label"], _fee_breakdown_display(group)])
-    breakdown_data.append(
-        [
-            Paragraph("Estimated Total Egress Fee", breakdown_header_style),
-            Paragraph(fee_display, breakdown_header_style),
-        ]
-    )
-    breakdown_table = Table(breakdown_data, colWidths=[10 * cm, 5.5 * cm])
-    breakdown_table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, 0), HexColor("#115e59")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("BACKGROUND", (0, -1), (-1, -1), HexColor("#115e59")),
-                ("TEXTCOLOR", (0, -1), (-1, -1), colors.white),
-                ("BOX", (0, 0), (-1, -1), 1, HexColor("#112726")),
-                ("INNERGRID", (0, 0), (-1, -1), 0.5, HexColor("#d7e3e1")),
-                ("ALIGN", (1, 1), (1, -1), "RIGHT"),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 8),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-                ("TOPPADDING", (0, 0), (-1, -1), 7),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-            ]
-        )
-    )
-    content.append(Paragraph("Cost Breakdown", styles["Heading2"]))
-    content.append(breakdown_table)
-    content.append(PageBreak())
-    return content
-
-
-def _build_data_landscape_section(
-    type_groups,
-    total_size_display,
-    report_path,
-    styles,
-    content_style,
-):
-    content = []
-    content.append(Spacer(1, 12))
-    content.append(Paragraph("Data Landscape", styles["Heading1"]))
-    content.append(
-        Paragraph(
-            "The Data Landscape summarizes the data-bearing cloud resources "
-            "identified within the defined scope, with the amount of data per "
-            "resource type:",
-            content_style,
-        )
-    )
-    content.append(Spacer(1, 12))
-
-    table_data = [["#", "Resource Type", "", "Size"]]
-    for index, group in enumerate(type_groups, start=1):
-        table_data.append(
-            [
-                str(index),
-                group["label"],
-                _icon_flowable(report_path, group["icon"], group["label"]),
-                group["size_display"],
-            ]
-        )
-    table_data.append(["Total", "", "", total_size_display])
-
-    landscape_table = Table(table_data, colWidths=[1 * cm, 9 * cm, 1.5 * cm, 4 * cm])
-    landscape_table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, 0), HexColor("#115e59")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("BACKGROUND", (0, -1), (-1, -1), HexColor("#115e59")),
-                ("TEXTCOLOR", (0, -1), (-1, -1), colors.white),
-                ("BOX", (0, 0), (-1, -1), 1, HexColor("#112726")),
-                ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
-                ("TOPPADDING", (0, 0), (-1, 0), 12),
-                ("ALIGN", (0, 1), (1, -2), "LEFT"),
-                ("ALIGN", (2, 1), (2, -2), "CENTER"),
-                ("ALIGN", (3, 0), (-1, -1), "CENTER"),
-                ("VALIGN", (0, 1), (-1, -1), "MIDDLE"),
-            ]
-        )
-    )
-    content.append(landscape_table)
-    content.append(PageBreak())
-    return content
-
-
-def _tier_display(row: dict[str, Any]) -> str:
-    unit = row["unit"]
-    if row["tier_from"] == 0 and row["tier_to"] is None:
-        return "all volumes"
-    if row["tier_from"] == 0 and row["price_per_unit"] == 0:
-        return f"first {row['tier_to']:,.0f} {unit} / month"
-    if row["tier_to"] is None:
-        return f"over {row['tier_from']:,.0f} {unit}"
-    return f"{row['tier_from']:,.0f} {unit} – {row['tier_to']:,.0f} {unit}"
-
-
-def _price_display(row: dict[str, Any]) -> str:
-    if row["price_per_unit"] == 0:
-        return "Free"
-    return f"${row['price_per_unit']:g} / {row['unit']}"
-
-
-def _build_pricing_basis_section(prices, cloud_service_provider, styles, content_style):
-    rows = sorted(
-        (
-            price
-            for price in prices
-            if price["csp"] == cloud_service_provider
-            and price["zone"] == DEFAULT_PRICING_ZONE
-            and price["component"] in COMPONENT_LABELS
-        ),
-        key=lambda price: (
-            list(COMPONENT_LABELS).index(price["component"]),
-            price["tier_from"],
-        ),
-    )
-    if not rows:
-        return []
-
-    content = []
-    content.append(Spacer(1, 12))
-    content.append(Paragraph("Appendix – Egress Prices", styles["Heading1"]))
-
-    provider_name = PROVIDER_NAMES.get(cloud_service_provider, "Unknown Provider")
-    content.append(
-        Paragraph(
-            "Our calculations and estimations are based on the following "
-            f"{provider_name} list prices (Zone 1 – US/Europe, public "
-            "internet routing):",
-            content_style,
-        )
-    )
-    content.append(Spacer(1, 12))
-
-    show_valid_from = len({row["valid_from"] for row in rows}) > 1
-    header = ["#", "Component", "Tier", "Price"]
-    if show_valid_from:
-        header.append("Valid from")
-    table_data = [header]
-    for index, row in enumerate(rows, start=1):
-        table_row = [
-            str(index),
-            COMPONENT_LABELS[row["component"]],
-            _tier_display(row),
-            _price_display(row),
-        ]
-        if show_valid_from:
-            table_row.append(row["valid_from"])
-        table_data.append(table_row)
-
-    col_widths = (
-        [1 * cm, 4 * cm, 5.5 * cm, 2.5 * cm, 2.5 * cm]
-        if show_valid_from
-        else [1 * cm, 4.5 * cm, 6 * cm, 4 * cm]
-    )
-    pricing_table = Table(table_data, colWidths=col_widths)
-    pricing_table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, 0), HexColor("#115e59")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("BOX", (0, 0), (-1, -1), 1, HexColor("#112726")),
-                ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
-                ("TOPPADDING", (0, 0), (-1, 0), 12),
-                ("ALIGN", (0, 1), (2, -1), "LEFT"),
-                ("ALIGN", (3, 0), (-1, -1), "CENTER"),
-                ("VALIGN", (0, 1), (-1, -1), "MIDDLE"),
-            ]
-        )
-    )
-    content.append(pricing_table)
-    content.append(Spacer(1, 12))
-
-    footnote_style = ParagraphStyle(
-        "PricingFootnote",
-        fontSize=8,
-        leading=10,
-        textColor=HexColor("#6c757d"),
-        spaceAfter=4,
-    )
-    if not any(row["component"] == "archive_retrieval" for row in rows):
-        content.append(
-            Paragraph(
-                "Archive retrieval pricing was not available for this provider "
-                "at assessment time; rehydration fees are not included in the "
-                "estimate.",
-                footnote_style,
-            )
-        )
-    links = PRICING_SOURCE_LINKS.get(cloud_service_provider, {})
-    components_shown = {row["component"] for row in rows}
-    source_lines = [
-        (COMPONENT_LABELS[component], links[component])
-        for component in COMPONENT_LABELS
-        if component in components_shown and component in links
-    ]
-    if len(source_lines) == 1:
-        content.append(Paragraph(f"Source: {source_lines[0][1]}", footnote_style))
-    else:
-        for label, link in source_lines:
-            content.append(Paragraph(f"Source ({label}): {link}", footnote_style))
-    content.append(
-        Paragraph(
-            "List prices at the time of the assessment; excludes "
-            "request/transaction costs and cross-region traffic.",
-            footnote_style,
-        )
-    )
-    return content
-
-
-def draw_header_footer(
-    report_path: str,
-    canvas,
-    doc,
-    title: str = "EscapeCloud Community Edition - Report",
-) -> None:
-    # Save the state of the canvas to not affect the drawing
-    canvas.saveState()
-    width, height = A4
-
-    # Include the date in the format mm-dd-yyyy
-    current_date = datetime.now().strftime("%m-%d-%Y")
-    left_text_content1 = title
-    left_text_content2 = f"Date: {current_date}"
-
-    # Define the header content with Paragraphs
-    header_style = ParagraphStyle(
-        "HeaderStyle", fontSize=10, textColor=HexColor("#9cafae")
-    )
-    header_data = [
-        [Paragraph(left_text_content1, header_style), "", ""],
-        [Paragraph(left_text_content2, header_style), "", ""],
-    ]
-
-    # Create the header table
-    table = Table(
-        header_data, colWidths=[width - 188 - doc.rightMargin - doc.leftMargin, 10, 150]
-    )
-
-    # Define the style for the table
-    table.setStyle(
-        TableStyle(
-            [
-                ("SPAN", (1, 0), (1, 1)),  # Merge Column 2 in both rows
-                ("SPAN", (2, 0), (2, 1)),  # Merge Column 3 in both rows
-                (
-                    "ALIGN",
-                    (0, 0),
-                    (0, 0),
-                    "LEFT",
-                ),  # Align left_text_content1 to the left
-                (
-                    "ALIGN",
-                    (0, 1),
-                    (0, 1),
-                    "LEFT",
-                ),  # Align left_text_content2 to the left
-                ("ALIGN", (2, 0), (2, 1), "RIGHT"),  # Align logo to the right
-                ("VALIGN", (0, 0), (0, 1), "TOP"),  # Vertically align to the top
-                ("VALIGN", (2, 0), (2, 1), "MIDDLE"),  # Vertically align to the middle
-                # ('GRID', (0, 0), (-1, -1), 0.5, colors.red),  # Temporary borders for visualization
-            ]
-        )
-    )
-    # Build the header table and draw it on the canvas
-    table.wrapOn(canvas, doc.leftMargin, height - doc.topMargin)
-    table.drawOn(canvas, doc.leftMargin, height - doc.topMargin)
-
-    # Add the logo
-    logo_path = find_asset(report_path, "img/logo/report_logo.png")
-    logo = Image(str(logo_path), width=150, height=30)
-
-    # Aligning logo vertically with the text
-    logo_y = height - doc.topMargin + 5
-    logo.drawOn(canvas, width - 150 - doc.rightMargin, logo_y)
-
-    # Line below the header
-    canvas.setStrokeColor(HexColor("#115e59"))
-    canvas.setLineWidth(1)
-    line_y = height - doc.topMargin - 10
-    canvas.line(doc.leftMargin, line_y, width - doc.rightMargin, line_y)
-
-    # Footer
-    footer_padding = 15  # Add padding under the page number
-    canvas.setStrokeColor(HexColor("#115e59"))
-    canvas.line(40, 60 + footer_padding, A4[0] - 40, 60 + footer_padding)
-
-    canvas.setFont("Helvetica", 8)
-    canvas.drawString(A4[0] / 2 - 30, 60 + footer_padding - 15, f"Page {doc.page}")
-
-    canvas.setFont("Helvetica-Oblique", 8)
-    canvas.setFillColor(HexColor("#9cafae"))
-    canvas.drawCentredString(
-        A4[0] / 2,
-        40,
-        "EscapeCloud Community Edition - This report is provided 'As Is,' without any warranty of any kind.",
-    )
-    canvas.drawCentredString(
-        A4[0] / 2,
-        30,
-        "EscapeCloud makes no warranty that the information contained in this report is complete or error-free. Copyright 2024-2026",
-    )
-
-    # Restore the state of the canvas
-    canvas.restoreState()
-
-
-def generate_egress_pdf_report(
-    report_path: str, json_path: str, provider_details: dict[str, Any]
-) -> dict[str, Any]:
-    try:
-        meta, rows, totals, pricing, total_fee, type_groups = _load_estimate(
-            report_path, json_path
-        )
-
-        summary = _summarize_totals(
-            totals, total_fee, pricing, meta["cloud_service_provider"]
-        )
-
-        pdf_path = os.path.join(report_path, "egress.pdf")
-
-        def header_footer(canvas, doc):
-            draw_header_footer(report_path, canvas, doc, title=PDF_HEADER_TITLE)
-
-        doc = SimpleDocTemplate(
-            pdf_path, pagesize=A4, title="EscapeCloud_-_Data_and_Egress_Report"
-        )
-        styles = getSampleStyleSheet()
-        content_style = ParagraphStyle(
-            "ContentStyle", fontSize=10, leading=12, spaceAfter=10
-        )
-        styles["Heading1"].leading = 1.5 * styles["Heading1"].fontSize
-        styles["Heading1"].textColor = HexColor("#112726")
-        styles["Heading2"].leading = 1.5 * styles["Heading2"].fontSize
-        styles["Heading2"].textColor = HexColor("#112726")
-
-        content = []
-        content += build_summary_section(meta, styles, content_style)
-        content += build_scope_section(meta, provider_details, styles, content_style)
-        content += _build_coverage_section(
-            meta["cloud_service_provider"], styles, content_style
-        )
-        content += _build_data_landscape_section(
-            type_groups,
-            summary["total_data_display"],
-            report_path,
-            styles,
-            content_style,
-        )
-        content += _build_estimated_costs_section(
-            total_fee,
-            totals,
-            summary["free_tier"],
-            summary["free_tier_limit"],
-            type_groups,
-            styles,
-            content_style,
-        )
-        content += _build_pricing_basis_section(
-            pricing, meta["cloud_service_provider"], styles, content_style
-        )
-
-        doc.build(content, onFirstPage=header_footer, onLaterPages=header_footer)
-
-        return {
-            "success": True,
-            "logs": "Egress PDF report generated successfully.",
-            "pdf_path": pdf_path,
-        }
-
-    except Exception as e:
-        logger.error(f"Error generating egress PDF report: {str(e)}", exc_info=True)
         return {"success": False, "logs": str(e)}

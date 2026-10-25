@@ -14,6 +14,16 @@ PROVIDER_NAMES = {1: "Microsoft Azure", 2: "Amazon Web Services"}
 STRATEGY_CODES = {1: "repatriation", 2: "hybrid_cloud", 3: "alternate_cloud"}
 COST_MONTHS = 6
 DOCUMENT_CODE = "ES"
+EGRESS_DOCUMENT_CODE = "EDL"
+
+
+def short_run_id(run_id):
+    # The end of a UUIDv7 is random; its start is the time.
+    return run_id.replace("-", "")[-8:] if run_id else ""
+
+
+def format_document_id(code, run_id):
+    return f"{code}-{short_run_id(run_id) or 'LOCAL'}-EN"
 
 
 @dataclass(frozen=True)
@@ -31,8 +41,7 @@ class Provenance:
 
     @property
     def run_short_id(self):
-        # The end of a UUIDv7 is random; its start is the time.
-        return self.run_id.replace("-", "")[-8:] if self.run_id else ""
+        return short_run_id(self.run_id)
 
     @property
     def collected_date(self):
@@ -146,10 +155,16 @@ class ReportContext:
     alternatives: list
     report_path: str
     appearance: Appearance = DEFAULT_APPEARANCE
+    # Set when the run has an egress estimate, so the Executive Summary can name
+    # the document that carries it.
+    egress_document_id: str | None = None
+
+    def document_id_for(self, code):
+        return format_document_id(code, self.provenance.run_id)
 
     @property
     def document_id(self):
-        return f"{DOCUMENT_CODE}-{self.provenance.run_short_id or 'LOCAL'}-EN"
+        return self.document_id_for(DOCUMENT_CODE)
 
     @property
     def total_resources(self):

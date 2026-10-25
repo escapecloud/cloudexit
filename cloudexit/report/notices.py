@@ -20,7 +20,7 @@ NOTICE_LABEL = "NoticeLabel"
 FIELD = re.compile(r"({[a-z_]+})")
 
 
-def _parts(template, links, values=None):
+def text_parts(template, links, values=None):
     # A template split into plain text and (text, url) links, so the PDF and
     # the HTML are built from the same content
     parts = []
@@ -37,18 +37,26 @@ def _parts(template, links, values=None):
 
 def _icon_notice(provider, b):
     if provider == 2:
-        return _parts(
+        return text_parts(
             b["notices_icons_aws"],
             {"icons_url": AWS_ICONS_URL, "guidelines_url": AWS_TRADEMARK_URL},
         )
     if provider == 1:
-        return _parts(b["notices_icons_azure"], {"icons_url": AZURE_ICONS_URL})
+        return text_parts(b["notices_icons_azure"], {"icons_url": AZURE_ICONS_URL})
     return None
 
 
-def notices_html(provider, generated_at, b=BLOCKS):
+def notices_html(provider, generated_at, b=BLOCKS, egress=False):
     # The notices as plain data. A paragraph is a list of text and
     # (text, url) links. Only the notice for the report's own provider's icons.
+    # The Egress & Data Landscape adds what its figures are and are not.
+    disclaimer = [
+        [b["notices_disclaimer"]],
+        [b["notices_generated"]],
+        [b["notices_purpose"]],
+        [b["notices_figures"]],
+        *([[b["notices_egress"]]] if egress else []),
+    ]
     trademarks = [[b["notices_trademark_own"]], [b["notices_trademark_others"]]]
     icons = _icon_notice(provider, b)
     if icons:
@@ -58,18 +66,13 @@ def notices_html(provider, generated_at, b=BLOCKS):
         "blocks": [
             {
                 "heading": b["notices_disclaimer_heading"],
-                "paragraphs": [
-                    [b["notices_disclaimer"]],
-                    [b["notices_generated"]],
-                    [b["notices_purpose"]],
-                    [b["notices_figures"]],
-                ],
+                "paragraphs": disclaimer,
             },
             {"heading": b["notices_trademarks_heading"], "paragraphs": trademarks},
             {
                 "heading": b["notices_software_heading"],
                 "paragraphs": [
-                    _parts(
+                    text_parts(
                         b["notices_software"],
                         {"repository_url": REPOSITORY_URL, "licence_url": LICENCE_URL},
                     )
@@ -80,7 +83,7 @@ def notices_html(provider, generated_at, b=BLOCKS):
     }
 
 
-def _markup(parts, color):
+def parts_markup(parts, color):
     return "".join(
         link_markup(part[1], color) if isinstance(part, tuple) else escape(part)
         for part in parts
@@ -104,9 +107,9 @@ def _styles(styles):
     )
 
 
-def legal_notices(context, styles, b):
+def legal_notices(context, styles, b, egress=False):
     notices = notices_html(
-        context.cloud_service_provider, context.provenance.generated_at, b
+        context.cloud_service_provider, context.provenance.generated_at, b, egress
     )
     color = context.appearance.heading2_color
     body, label = _styles(styles)
@@ -114,7 +117,7 @@ def legal_notices(context, styles, b):
     for block in notices["blocks"]:
         content.append(Paragraph(escape(block["heading"]), label))
         for parts in block["paragraphs"]:
-            content.append(Paragraph(_markup(parts, color), body))
+            content.append(Paragraph(parts_markup(parts, color), body))
     content.append(Spacer(1, 10))
     content.append(Paragraph(escape(notices["copyright"]), body))
     return content

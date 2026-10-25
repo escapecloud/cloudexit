@@ -22,7 +22,12 @@ from cloudexit.providers.azure.inventory import build_azure_resource_inventory
 from cloudexit.providers.azure.sdk import azure_import
 from cloudexit.catalogue.db import connect, load_data
 from cloudexit.tfstate import build_tfstate_resource_inventory
-from cloudexit.report.context import build_context, collect_provenance
+from cloudexit.report.context import (
+    EGRESS_DOCUMENT_CODE,
+    build_context,
+    collect_provenance,
+)
+from cloudexit.report.egress_report import generate_egress_report
 from cloudexit.report.executive_summary import generate_executive_summary
 from cloudexit.report.html_sections import html_sections
 from cloudexit.report.writers import (
@@ -432,6 +437,7 @@ def generate_report(
     raw_data_path: str,
     upload: dict[str, str] | None = None,
     sync_id: str | None = None,
+    egress_json_path: str | None = None,
 ) -> dict[str, Any]:
     try:
         db_path = os.path.join(report_path, "data", "assessment.db")
@@ -493,6 +499,8 @@ def generate_report(
             provenance=provenance,
             report_path=report_path,
         )
+        if egress_json_path:
+            context.egress_document_id = context.document_id_for(EGRESS_DOCUMENT_CODE)
 
         # Generate HTML report
         reports["HTML"] = generate_html_report(
@@ -530,7 +538,20 @@ def generate_report(
             provenance=provenance.as_dict(),
         )
 
-        return {"success": True, "reports": reports}
+        result = {"success": True, "reports": reports}
+
+        # The Egress & Data Landscape is written last, from the same context: a
+        # problem with it never costs the Executive Summary
+        if egress_json_path:
+            try:
+                reports["EGRESS_PDF"] = generate_egress_report(
+                    context, egress_json_path
+                )
+            except Exception as e:
+                logger.error("Error generating the egress PDF: %s", e, exc_info=True)
+                result["egress_pdf_logs"] = str(e)
+
+        return result
 
     except Exception as e:
         return {"success": False, "logs": f"Error generating report: {str(e)}"}

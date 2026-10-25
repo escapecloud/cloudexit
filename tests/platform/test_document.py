@@ -848,7 +848,10 @@ class RunAssessmentTests(SyncDocumentTestCase):
             ),
             patch(
                 "cloudexit.cli.app.generate_report",
-                return_value={"success": True, "reports": {}},
+                return_value={
+                    "success": True,
+                    "reports": {"EGRESS_PDF": "p"} if egress_ok else {},
+                },
             ),
             patch("cloudexit.cli.app.add_run_log_handler"),
             patch("cloudexit.cli.app.print_step"),
@@ -863,10 +866,6 @@ class RunAssessmentTests(SyncDocumentTestCase):
                 patch(
                     "cloudexit.cli.app.generate_egress_html_report",
                     return_value={"success": True, "html_path": "h"},
-                ),
-                patch(
-                    "cloudexit.cli.app.generate_egress_pdf_report",
-                    return_value={"success": True, "pdf_path": "p"},
                 ),
             ]
         for item in patches:

@@ -20,11 +20,9 @@ from cloudexit.report.placeholder import IconPlaceholder, LabelWithPlaceholder
 from cloudexit.report.sections import ALT_BODY
 from cloudexit.egress.model import GIB
 from cloudexit.report.writers import generate_html_report
-from cloudexit.report.egress import (
-    _icon_flowable,
-    generate_egress_html_report,
-    generate_egress_pdf_report,
-)
+from cloudexit.report.egress import generate_egress_html_report
+from cloudexit.report.egress_report import generate_egress_report
+from cloudexit.report.egress_sections import _type_cell
 from cloudexit.report.aggregate import enrich_resource_inventory
 from tests.support.report import (
     build_fixture_context,
@@ -350,27 +348,35 @@ class EgressReportTests(TempDirTestCase):
         self.assertTrue(result["success"], result.get("logs"))
         return result
 
-    def test_the_icon_flowable_is_a_placeholder_without_an_icon_file(self):
+    def run_pdf(self, icons):
+        directory, json_path, icons = self.prepare(icons)
+        fixture = build_report_fixture()
+        fixture["metadata"]["cloud_service_provider"] = 1
+        context = build_fixture_context(fixture, directory)
+        with (
+            patch("cloudexit.report.egress.load_data", side_effect=_fake_load_data),
+            patch("cloudexit.report.egress._build_icon_lookup", return_value=icons),
+        ):
+            return generate_egress_report(context, json_path)
+
+    def test_the_type_cell_is_a_placeholder_without_an_icon_file(self):
         directory = self.directory()
         stage_report_assets(str(directory))
 
+        def cell(icon):
+            return _type_cell({"label": "Managed Disk", "icon": icon}, str(directory))
+
+        self.assertIsInstance(cell(None), LabelWithPlaceholder)
         self.assertIsInstance(
-            _icon_flowable(str(directory), None, "Managed Disk"), IconPlaceholder
+            cell("/icons/aws/Compute/NoSuchIcon.png"), LabelWithPlaceholder
         )
-        self.assertIsInstance(
-            _icon_flowable(str(directory), "/icons/aws/Compute/NoSuchIcon.png", "X"),
-            IconPlaceholder,
-        )
-        image = _icon_flowable(str(directory), EC2_ICON, "Managed Disk")
-        self.assertNotIsInstance(image, IconPlaceholder)
+        self.assertNotIsInstance(cell(EC2_ICON), LabelWithPlaceholder)
 
     def test_the_pdf_shows_a_placeholder_for_a_type_without_an_icon(self):
         icons = {"microsoft.storage/storageaccounts": EC2_ICON}
-        result = self.run_report(
-            lambda d, j: generate_egress_pdf_report(d, j, {}), icons
-        )
 
-        text = pdf_text(result["pdf_path"])
+        text = pdf_text(self.run_pdf(icons))
+
         self.assertRegex(text, r"MD")
         self.assertIn("Managed Disk", text)
 
@@ -380,15 +386,9 @@ class EgressReportTests(TempDirTestCase):
             "some/type": LAMBDA_ICON,
         }
         one = {"microsoft.storage/storageaccounts": EC2_ICON}
-        with_both = self.run_report(
-            lambda d, j: generate_egress_pdf_report(d, j, {}), both
-        )
-        count_both = image_count(with_both["pdf_path"])
-        with_one = self.run_report(
-            lambda d, j: generate_egress_pdf_report(d, j, {}), one
-        )
+        count_both = image_count(self.run_pdf(both))
 
-        self.assertEqual(image_count(with_one["pdf_path"]), count_both - 1)
+        self.assertEqual(image_count(self.run_pdf(one)), count_both - 1)
 
     def test_the_html_shows_a_placeholder_and_keeps_the_images(self):
         icons = {"microsoft.storage/storageaccounts": EC2_ICON}

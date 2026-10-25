@@ -66,6 +66,7 @@ PRODUCT_SITES = (
     ("escapecloud", "https://escapecloud.io"),
     ("exitcloud", "https://exitcloud.io"),
 )
+BOOK_DEMO_URL = "https://escapecloud.io/book-demo/"
 AWS_ICONS_URL = "https://aws.amazon.com/architecture/icons/"
 AWS_TRADEMARK_URL = "https://aws.amazon.com/trademark-guidelines/"
 AZURE_ICONS_URL = "https://learn.microsoft.com/en-us/azure/architecture/icons/"
@@ -252,15 +253,24 @@ def _cost_table(context, b):
     ]
 
 
+def egress_note(context, b):
+    # The companion document, when the run has an egress estimate
+    if not context.egress_document_id:
+        return None
+    return b["es_costs_egress_note"].format(document_id=context.egress_document_id)
+
+
 def costs_overview(context, facts, styles, b):
     head = [
         Paragraph(b["es_heading_costs_overview"], styles["Heading1"]),
         Paragraph(cost_finding(facts, b), styles["ContentStyle"]),
         Spacer(1, 8),
     ]
+    note = egress_note(context, b)
+    closing = [Paragraph(escape(note), styles["ContentStyle"])] if note else []
     problem = cost_problem(context, b)
     if problem is not None:
-        return section(head, [])
+        return section(head, closing)
     entries = context.costs
     total = sum(entry.amount for entry in entries)
     latest = entries[-1]
@@ -293,6 +303,7 @@ def costs_overview(context, facts, styles, b):
         *_cost_table(context, b),
         Spacer(1, 12),
         Paragraph(b["es_cost_note"], styles["ContentStyle"]),
+        *closing,
     ]
     return section(head, items)
 

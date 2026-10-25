@@ -29,10 +29,7 @@ from cloudexit.providers.azure.clients import (
     create_subscription_client,
 )
 from cloudexit.egress.estimate import estimate_egress
-from cloudexit.report.egress import (
-    generate_egress_html_report,
-    generate_egress_pdf_report,
-)
+from cloudexit.report.egress import generate_egress_html_report
 from cloudexit.platform.client import ApiError, check_key
 from cloudexit.platform.run_output import build_run_json, exit_code_of
 from cloudexit.platform.status import host_catalogue_lines, run_status
@@ -992,7 +989,6 @@ def run_assessment(
         egress_collected = False
         egress_json_path = None
         egress_html_path = None
-        egress_pdf_path = None
         if egress:
             console.print("Stage #5 – Egress Estimation", style="bold")
 
@@ -1014,7 +1010,10 @@ def run_assessment(
 
                 with console.status("Generating egress report...", spinner="dots"):
                     egress_report_result = generate_egress_html_report(
-                        report_path, egress_json_path
+                        report_path,
+                        egress_json_path,
+                        config["providerDetails"],
+                        sync_id,
                     )
 
                 if egress_report_result["success"]:
@@ -1025,22 +1024,6 @@ def run_assessment(
                         "Generating egress report...",
                         status="error",
                         logs=egress_report_result["logs"],
-                    )
-                    egress_failed = True
-
-                with console.status("Generating egress PDF...", spinner="dots"):
-                    egress_pdf_result = generate_egress_pdf_report(
-                        report_path, egress_json_path, config["providerDetails"]
-                    )
-
-                if egress_pdf_result["success"]:
-                    print_step("Generating egress PDF...", status="ok")
-                    egress_pdf_path = egress_pdf_result.get("pdf_path")
-                else:
-                    print_step(
-                        "Generating egress PDF...",
-                        status="error",
-                        logs=egress_pdf_result["logs"],
                     )
                     egress_failed = True
             else:
@@ -1170,6 +1153,7 @@ def run_assessment(
                 raw_data_path,
                 upload=report_info(upload_result),
                 sync_id=sync_id,
+                egress_json_path=egress_json_path,
             )
 
         # Handle the result
@@ -1180,6 +1164,20 @@ def run_assessment(
                 "Generating report...", status="error", logs=report_status["logs"]
             )
             sys.exit(codes.REPORT)
+
+        # The egress PDF is written with the report, after the upload, so it can
+        # show the run and the platform link. Its failure is an egress failure,
+        # not a report failure.
+        egress_pdf_path = report_status.get("reports", {}).get("EGRESS_PDF")
+        if egress_pdf_path:
+            print_step("Generating egress PDF...", status="ok")
+        elif egress_json_path:
+            print_step(
+                "Generating egress PDF...",
+                status="error",
+                logs=report_status.get("egress_pdf_logs", "no egress PDF was written"),
+            )
+            egress_failed = True
 
         # Output the report path after the separator
         if not (dry_run or non_interactive):

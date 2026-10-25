@@ -4,7 +4,7 @@ from .brief_summary import collect_brief_facts, finding_rows, lead_text
 from .helpers import severity_label
 from .notices import notices_html
 from .palette import SEVERITIES
-from .sections import glossary_entries, scope_boundary, scope_strategy
+from .sections import egress_note, glossary_entries, scope_boundary, scope_strategy
 from .wording import BLOCKS
 
 
@@ -70,6 +70,7 @@ def html_sections(context, b=BLOCKS):
             "platform_url": provenance.platform_url,
             "document_id": context.document_id,
         },
+        "costs_egress_note": egress_note(context, b),
         "introduction": {
             "heading": b["es_heading_introduction"],
             "purpose_heading": b["es_heading_purpose"],

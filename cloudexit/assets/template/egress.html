@@ -9,7 +9,7 @@
       sizes="16x16"
       href="assets/img/logo/favicon.png"
     />
-    <title>EscapeCloud Community Edition - Data Landscape & Egress Estimation</title>
+    <title>{{ page_title }}</title>
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css"
@@ -86,7 +86,7 @@
         </h2>
         <div class="d-flex align-items-center gap-3 px-4 flex-wrap flex-sm-nowrap">
           <a href="egress.pdf" target="_blank" class="btn btn-primary"
-            >Egress Summary (PDF)</a
+            >Egress &amp; Data Landscape (PDF)</a
           >
         </div>
       </div>
@@ -95,21 +95,6 @@
 
     <main id="main-content">
       <div class="px-3 px-md-4">
-        <div
-          class="alert align-items-start d-flex alert-warning mb-lg-2 rounded-4"
-          role="alert"
-        >
-          <i class="bi bi-bell px-3"></i>
-          <div>
-            <p>
-              The Data Landscape &amp; Egress Estimation feature is currently in
-              alpha. Estimated values may be incomplete or inaccurate in some
-              environments. If you notice bugs or unexpected results, please
-              let us know at
-              <a href="mailto:beta@escapecloud.io">beta@escapecloud.io</a>
-            </p>
-          </div>
-        </div>
         <div class="mt-1 row g-3 stats">
           <div class="col-xl-4 col-lg-6 col-md-6 chart-box">
             <div
@@ -202,6 +187,15 @@
                 </div>
                 <div class="d-flex align-items-center gap-3 sync-status-card">
                   <div class="sync-status-icon">
+                    <span><i class="bi bi-file-earmark-text"></i></span>
+                  </div>
+                  <div class="sync-status-text">
+                    <h6>Document ID</h6>
+                    <h5>{{ document_id }}</h5>
+                  </div>
+                </div>
+                <div class="d-flex align-items-center gap-3 sync-status-card">
+                  <div class="sync-status-icon">
                     <span><i class="bi bi-clock"></i></span>
                   </div>
                   <div class="sync-status-text">
@@ -260,7 +254,7 @@
                     class="text-muted small mb-0"
                     style="font-size: 0.8rem; line-height: 1.4;"
                   >
-                    Your scanned footprint (<span class="fw-semibold"
+                    The scanned footprint (<span class="fw-semibold"
                       >{{ known_data_display }}</span
                     >) falls entirely within the cloud provider's complimentary
                     monthly internet egress allowance
@@ -325,13 +319,61 @@
         </div>
         <div class="mt-4 row g-0">
           <div class="col-12">
+            <div class="bg-white shadow-s rounded-4 p-4">
+              <h2 class="h4 mb-3">{{ introduction.heading }}</h2>
+              <h3 class="h6">{{ introduction.purpose_heading }}</h3>
+              <p>{{ introduction.purpose }}</p>
+              <h3 class="h6">{{ introduction.scope_heading }}</h3>
+              <p>{{ introduction.scope }}</p>
+              <h3 class="h6">{{ introduction.limitations_heading }}</h3>
+              {% for paragraph in introduction.limitations %}
+              <p>{{ paragraph }}</p>
+              {% endfor %}
+              {% if coverage %}
+              <h3 class="h6 mt-4">{{ coverage.heading }}</h3>
+              <p>{{ coverage.intro }}</p>
+              <table class="table">
+                <thead>
+                  <tr>
+                    {% for header in coverage.headers %}
+                    <th>{{ header }}</th>
+                    {% endfor %}
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for name, note in coverage.rows %}
+                  <tr>
+                    <td class="fw-semibold">{{ name }}</td>
+                    <td>{{ note }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 row g-0">
+          <div class="col-12">
             <div class="bg-white shadow-s rounded-4">
               <div
                 class="d-flex flex-wrap align-items-center justify-content-between gap-3 px-3 px-lg-4 py-3"
               >
-                <h3>Data Landscape</h3>
+                <h3>{{ landscape.heading }}</h3>
               </div>
               <div class="divider-border"></div>
+              <div class="px-3 px-lg-4 pt-3">
+                <p>{{ landscape.lead }}</p>
+                <div class="d-flex flex-wrap gap-4">
+                  {% for label, value, attention in landscape.stats %}
+                  <div>
+                    <div class="small text-muted text-uppercase">{{ label }}</div>
+                    <div class="fs-5 fw-bold{% if attention %} text-warning-emphasis{% endif %}">{{ value }}</div>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
               <div class="risk-table-container p-3">
                 <table class="table">
                   <thead>
@@ -339,7 +381,7 @@
                       <th>#</th>
                       <th>Resource Type</th>
                       <th class="text-center">Category</th>
-                      <th class="text-center">Size</th>
+                      <th class="text-center">{{ landscape.headers[2] }}</th>
                     </tr>
                   </thead>
                   <tbody id="landscape-table-body">
@@ -426,6 +468,124 @@
                   </tbody>
                 </table>
               </div>
+              <div class="px-3 px-lg-4 pb-3 small text-muted">
+                {% if landscape.not_sized %}<p class="mb-1">{{ landscape.not_sized }}</p>{% endif %}
+                <p class="mb-1">{{ landscape.caption }}</p>
+                <p class="mb-0">{{ landscape.source_note }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 row g-0">
+          <div class="col-12">
+            <div class="bg-white shadow-s rounded-4 p-4">
+              <h2 class="h4 mb-3">{{ costs.heading }}</h2>
+              <p>{{ costs.lead }}</p>
+              <div class="d-flex flex-wrap gap-4 mb-3">
+                {% for label, value, attention in costs.stats %}
+                <div>
+                  <div class="small text-muted text-uppercase">{{ label }}</div>
+                  <div class="fs-5 fw-bold{% if attention %} text-warning-emphasis{% endif %}">{{ value }}</div>
+                </div>
+                {% endfor %}
+              </div>
+              {% if costs.rows %}
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>{{ costs.headers[0] }}</th>
+                    <th class="text-end">{{ costs.headers[1] }}</th>
+                    <th>{{ costs.headers[2] }}</th>
+                    <th class="text-end">{{ costs.headers[3] }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in costs.rows %}
+                  <tr>
+                    <td class="fw-semibold">{{ row.label }}</td>
+                    <td class="text-end">{{ row.size }}</td>
+                    <td>{{ row.share_text }}</td>
+                    <td class="text-end">{{ row.fee }}</td>
+                  </tr>
+                  {% endfor %}
+                  <tr class="fw-bold">
+                    <td>{{ costs.total[0] }}</td>
+                    <td class="text-end">{{ costs.total[1] }}</td>
+                    <td></td>
+                    <td class="text-end">{{ costs.total[2] }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              {% endif %}
+              <p class="small text-muted mb-0">{{ costs.caption }}</p>
+            </div>
+          </div>
+        </div>
+
+        {% if pricing %}
+        <div class="mt-4 row g-0">
+          <div class="col-12">
+            <div class="bg-white shadow-s rounded-4 p-4">
+              <h2 class="h4 mb-3">{{ pricing.heading }}</h2>
+              <p>{{ pricing.intro }}</p>
+              <table class="table">
+                <thead>
+                  <tr>
+                    {% for header in pricing.headers %}
+                    <th>{{ header }}</th>
+                    {% endfor %}
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in pricing.rows %}
+                  <tr>
+                    {% for cell in row %}
+                    <td>{{ cell }}</td>
+                    {% endfor %}
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+              <div class="small text-muted">
+                {% if pricing.units %}<p class="mb-1">{{ pricing.units }}</p>{% endif %}
+                {% if pricing.no_archive %}<p class="mb-1">{{ pricing.no_archive }}</p>{% endif %}
+                {% for template, url in pricing.sources %}
+                <p class="mb-1">{{ template.split("{link}")[0] }}<a
+                    href="{{ url }}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >{{ url }}</a
+                  >{{ template.split("{link}")[1] }}</p>
+                {% endfor %}
+                <p class="mb-0">{{ pricing.note }}</p>
+              </div>
+              <h3 class="h6 mt-4">{{ pricing.glossary_heading }}</h3>
+              <dl class="mb-0">
+                {% for term, definition in pricing.glossary %}
+                <dt>{{ term }}</dt>
+                <dd>{{ definition }}</dd>
+                {% endfor %}
+              </dl>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="mt-4 row g-0">
+          <div class="col-12">
+            <div class="bg-white shadow-s rounded-4 p-4">
+              <h2 class="h4 mb-3">{{ next_steps.heading }}</h2>
+              {% for paragraph in next_steps.paragraphs %}
+              <p class="mb-2">
+                {% for part in paragraph %}{% if part is string %}{{ part }}{% else %}<a
+                  href="{{ part[1] }}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >{{ part[0] }}</a
+                >{% endif %}{% endfor %}
+              </p>
+              {% endfor %}
             </div>
           </div>
         </div>
@@ -474,14 +634,10 @@
           if (value === null || value === undefined) {
             return "n/a";
           }
-          const units = ["B", "KiB", "MiB", "GiB", "TiB"];
-          let scaled = value;
-          let unitIndex = 0;
-          while (scaled >= 1024 && unitIndex < units.length - 1) {
-            scaled /= 1024;
-            unitIndex += 1;
-          }
-          return scaled.toFixed(1) + " " + units[unitIndex];
+          return (value / 1024 ** 3).toLocaleString(undefined, {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+          }) + " GiB";
         }
       </script>
 

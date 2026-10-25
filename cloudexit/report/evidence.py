@@ -27,11 +27,21 @@ def _mono_value(text):
     return Paragraph(escape(text), KV_MONO) if text else None
 
 
-def build_document_table(context, b):
+def build_document_table(
+    context, b, document_id=None, document_type=None, companion_id=None
+):
     provenance = context.provenance
     rows = [
-        (b["ev_document_id"], Paragraph(escape(context.document_id), KV_MONO)),
-        (b["ev_document_type"], b["ev_executive_report"]),
+        (
+            b["ev_document_id"],
+            Paragraph(escape(document_id or context.document_id), KV_MONO),
+        ),
+        (b["ev_document_type"], document_type or b["ev_executive_report"]),
+        *(
+            [(b["ev_companion_document"], Paragraph(escape(companion_id), KV_MONO))]
+            if companion_id
+            else []
+        ),
         (b["ev_language"], b["language_name"]),
         (
             b["ev_collected_by"],
@@ -125,11 +135,13 @@ def build_provenance_table(context, b):
     return key_value_table(rows, context.appearance)
 
 
-def build_document_information_page(context, b):
+def build_document_information_page(
+    context, b, document_id=None, document_type=None, companion_id=None
+):
     heading = _section_heading(context.appearance)
     return [
         Paragraph(b["ev_document_information_heading"], heading),
-        build_document_table(context, b),
+        build_document_table(context, b, document_id, document_type, companion_id),
         Paragraph(b["ev_assessment_scope_heading"], heading),
         build_scope_table(context, b),
         Paragraph(b["ev_provenance_heading"], heading),
