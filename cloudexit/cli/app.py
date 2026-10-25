@@ -361,7 +361,7 @@ def handle_aws(args):
 
     if args.non_interactive:
         exit_strategy = require_env_int(
-            "ESC_EXIT_STRATEGY", "exit strategy (1 or 3)", {1, 3}
+            "ESC_EXIT_STRATEGY", "exit strategy (1, 2 or 3)", {1, 2, 3}
         )
         assessment_type = require_env_int(
             "ESC_ASSESSMENT_TYPE", "assessment type (1 or 2)", {1, 2}
@@ -611,7 +611,7 @@ def handle_azure(args):
 
     if args.non_interactive:
         exit_strategy = require_env_int(
-            "ESC_EXIT_STRATEGY", "exit strategy (1 or 3)", {1, 3}
+            "ESC_EXIT_STRATEGY", "exit strategy (1, 2 or 3)", {1, 2, 3}
         )
         assessment_type = require_env_int(
             "ESC_ASSESSMENT_TYPE", "assessment type (1 or 2)", {1, 2}

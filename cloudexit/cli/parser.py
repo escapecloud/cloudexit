@@ -186,7 +186,7 @@ def parse_arguments():
         action="store_true",
         help=(
             "Run without prompts; read all inputs from environment variables "
-            "(for CI use), for example ESC_EXIT_STRATEGY (1 or 3) and "
+            "(for CI use), for example ESC_EXIT_STRATEGY (1, 2 or 3) and "
             "ESC_ASSESSMENT_TYPE (1 or 2)."
         ),
     )
@@ -246,7 +246,7 @@ def parse_arguments():
         action="store_true",
         help=(
             "Run without prompts; read all inputs from environment variables "
-            "(for CI use), for example ESC_EXIT_STRATEGY (1 or 3) and "
+            "(for CI use), for example ESC_EXIT_STRATEGY (1, 2 or 3) and "
             "ESC_ASSESSMENT_TYPE (1 or 2)."
         ),
     )
