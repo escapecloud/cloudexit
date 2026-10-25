@@ -20,7 +20,9 @@ def prompt_required_inputs() -> tuple[int, int]:
             break
         except ValueError as e:
             logger.debug(f"Invalid exit strategy input: {e}")
-            console.print(f"[red]{e} Please enter 1 or 3.[/red]")
+            console.print(
+                f"{e} Please enter 1 or 3.", style="red", markup=False, emoji=False
+            )
 
     while True:
         try:
@@ -33,7 +35,9 @@ def prompt_required_inputs() -> tuple[int, int]:
             break
         except ValueError as e:
             logger.debug(f"Invalid assessment type input: {e}")
-            console.print(f"[red]{e} Please enter 1 or 2.[/red]")
+            console.print(
+                f"{e} Please enter 1 or 2.", style="red", markup=False, emoji=False
+            )
 
     return exit_strategy, assessment_type
 

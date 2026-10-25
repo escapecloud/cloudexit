@@ -23,6 +23,7 @@ from cloudexit.catalogue.store import (
     catalogue_dir,
     catalogue_info,
 )
+from cloudexit.private_files import write_private
 from cloudexit.version import __version__
 
 from cloudexit.catalogue.db import load_data
@@ -770,13 +771,13 @@ def write_sync_document(
     digest = hashlib.sha256(data).hexdigest()
 
     path = Path(raw_data_path) / "sync.json"
-    path.write_bytes(data)
+    write_private(path, data)
 
     emitted = None
     if emit_dir:
         emitted = Path(emit_dir) / f"{document['sync']['id']}.json"
         emitted.parent.mkdir(parents=True, exist_ok=True)
-        emitted.write_bytes(data)
+        write_private(emitted, data)
 
     summary = summary_line(document, len(data), digest)
     logger.info(summary)

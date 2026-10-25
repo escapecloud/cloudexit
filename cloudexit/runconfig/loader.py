@@ -22,7 +22,9 @@ def load_config(file_path: str) -> dict[str, Any] | None:
         return config
     except Exception as e:
         logger.error(f"Error loading config file: {e}", exc_info=True)
-        console.print(f"[red]Error loading config file: {e}[/red]")
+        console.print(
+            f"Error loading config file: {e}", style="red", markup=False, emoji=False
+        )
         return None
 
 
@@ -53,8 +55,11 @@ def require_env(var: str, description: str) -> str:
     value = os.environ.get(var, "").strip()
     if not value:
         console.print(
-            f"[red]--non-interactive requires {description}. "
-            f"Set the {var} environment variable.[/red]"
+            f"--non-interactive requires {description}. "
+            f"Set the {var} environment variable.",
+            style="red",
+            markup=False,
+            emoji=False,
         )
         sys.exit(codes.CONFIG)
     return value
@@ -66,9 +71,19 @@ def require_env_int(var: str, description: str, valid: set) -> int:
     try:
         value = int(raw)
     except ValueError:
-        console.print(f"[red]{var} must be an integer, got: {raw!r}[/red]")
+        console.print(
+            f"{var} must be an integer, got: {raw!r}",
+            style="red",
+            markup=False,
+            emoji=False,
+        )
         sys.exit(codes.CONFIG)
     if value not in valid:
-        console.print(f"[red]{var} must be one of {sorted(valid)}, got: {value}[/red]")
+        console.print(
+            f"{var} must be one of {sorted(valid)}, got: {value}",
+            style="red",
+            markup=False,
+            emoji=False,
+        )
         sys.exit(codes.CONFIG)
     return value

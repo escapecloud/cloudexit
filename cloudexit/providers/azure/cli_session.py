@@ -51,7 +51,11 @@ def select_subscription(subscriptions: list[Any]) -> Any:
     # logger.info("Listing available subscriptions for selection.")
     console.print("Available Subscriptions:")
     for idx, sub in enumerate(subscriptions, start=1):
-        console.print(f"{idx}. {sub.display_name} ({sub.subscription_id})")
+        console.print(
+            f"{idx}. {sub.display_name} ({sub.subscription_id})",
+            markup=False,
+            emoji=False,
+        )
     while True:
         try:
             selection = int(ask("Select a subscription by number: ").strip())
@@ -62,14 +66,19 @@ def select_subscription(subscriptions: list[Any]) -> Any:
             return selected_subscription
         except ValueError as e:
             logger.debug(f"Invalid subscription selection: {e}")
-            console.print(f"[red]{e} Please select a valid number.[/red]")
+            console.print(
+                f"{e} Please select a valid number.",
+                style="red",
+                markup=False,
+                emoji=False,
+            )
 
 
 def select_resource_group(resource_groups: list[Any]) -> str:
     # logger.info("Listing available resource groups for selection.")
     console.print("Available Resource Groups:")
     for idx, rg in enumerate(resource_groups, start=1):
-        console.print(f"{idx}. {rg.name}")
+        console.print(f"{idx}. {rg.name}", markup=False, emoji=False)
     while True:
         try:
             selection = int(ask("Select a resource group by number: ").strip())
@@ -80,4 +89,9 @@ def select_resource_group(resource_groups: list[Any]) -> str:
             return selected_resource_group
         except ValueError as e:
             logger.debug(f"Invalid resource group selection: {e}")
-            console.print(f"[red]{e} Please select a valid number.[/red]")
+            console.print(
+                f"{e} Please select a valid number.",
+                style="red",
+                markup=False,
+                emoji=False,
+            )

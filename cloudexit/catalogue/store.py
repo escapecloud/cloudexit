@@ -21,7 +21,6 @@ from cloudexit.settings import Settings, SettingsError, normalize_host
 CATALOGUE_BASE_URL = "https://cloudexit-oss-data-eu.fsn1.your-objectstorage.com"
 SUPPORTED_SCHEMA = 1
 REQUIRED_TABLES = ("resourcetype", "risk")
-LEGACY_DATABASE = Path("datasets") / "data.db"
 PROVIDER_IDS = {"azure": 1, "aws": 2}
 GZIP_MAGIC = b"\x1f\x8b"
 # A dataset unpacks to a few times its download size. The limit is that ratio
@@ -84,7 +83,6 @@ class EnsureResult:
     version: str | None
     date: str
     reason: str | None = None
-    migrated: bool = False
 
 
 def catalogue_dir(
@@ -126,12 +124,43 @@ def catalogue_base_url(settings: Settings) -> str:
 
 
 def _open_readonly(path: Path) -> sqlite3.Connection:
-    return sqlite3.connect(f"{Path(path).resolve().as_uri()}?mode=ro", uri=True)
+    conn = sqlite3.connect(f"{Path(path).resolve().as_uri()}?mode=ro", uri=True)
+    # Nothing the file's own SQL defines is trusted to run
+    conn.execute("PRAGMA trusted_schema=OFF")
+    return conn
 
 
 def _table_names(conn: sqlite3.Connection) -> set[str]:
     rows = conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
     return {row[0] for row in rows}
+
+
+def _check_schema_objects(conn: sqlite3.Connection) -> None:
+    # A catalogue holds tables and indexes. A trigger or a view runs SQL of its
+    # own on the data a run adds to the same database, so none is accepted.
+    found = conn.execute(
+        "SELECT type, name FROM sqlite_master "
+        "WHERE type NOT IN ('table', 'index') ORDER BY type, name"
+    ).fetchall()
+    if found:
+        names = ", ".join(f"{kind} {name}" for kind, name in found[:3])
+        more = f" and {len(found) - 3} more" if len(found) > 3 else ""
+        raise CatalogueError(
+            f"the catalogue holds {names}{more}, which a catalogue does not have; "
+            "it was not used"
+        )
+
+
+def validate_schema(path: str | Path) -> None:
+    # For a database that is about to be written to, or that has been
+    try:
+        conn = _open_readonly(Path(path))
+        try:
+            _check_schema_objects(conn)
+        finally:
+            conn.close()
+    except sqlite3.DatabaseError as exc:
+        raise CatalogueError(f"not a valid catalogue database: {exc}") from exc
 
 
 def _read_meta(conn: sqlite3.Connection, tables: set[str]) -> CatalogueInfo | None:
@@ -215,6 +244,7 @@ def validate_database(
                 raise CatalogueError(
                     f"not a catalogue database: missing table(s) {', '.join(missing)}"
                 )
+            _check_schema_objects(conn)
             info = _read_meta(conn, tables)
         finally:
             conn.close()
@@ -255,32 +285,6 @@ def installed_catalogue(directory: Path | None = None) -> Installed | None:
     except CatalogueError:
         info = None
     return Installed(path, info, read_state(directory))
-
-
-def migrate_legacy_dataset(
-    directory: Path | None = None, legacy: Path | None = None
-) -> bool:
-    directory = directory or catalogue_dir()
-    legacy = legacy or LEGACY_DATABASE
-    if installed_catalogue(directory) or not legacy.is_file():
-        return False
-    try:
-        info = validate_database(legacy)
-    except CatalogueError:
-        return False
-
-    directory.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(legacy, directory / "data.db")
-    modified = datetime.fromtimestamp(legacy.stat().st_mtime, timezone.utc)
-    _write_state(
-        directory,
-        {
-            "version": info.version if info else None,
-            "sha256": None,
-            "downloaded_at": modified.isoformat(timespec="seconds"),
-        },
-    )
-    return True
 
 
 def _is_gzip(data: bytes) -> bool:

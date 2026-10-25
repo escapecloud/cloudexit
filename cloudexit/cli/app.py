@@ -3,6 +3,7 @@ import logging
 import contextlib
 import json
 import boto3
+import tempfile
 import time
 import sys
 import os
@@ -11,7 +12,6 @@ from dataclasses import replace
 from typing import Any
 from rich.console import Console
 from rich.logging import RichHandler
-from rich.markup import escape
 from datetime import datetime
 from botocore.exceptions import NoCredentialsError, ProfileNotFound
 
@@ -30,8 +30,12 @@ from cloudexit.providers.azure.clients import (
 )
 from cloudexit.egress.estimate import estimate_egress
 from cloudexit.platform.client import ApiError, check_key
-from cloudexit.platform.run_output import build_run_json, exit_code_of
-from cloudexit.platform.status import host_catalogue_lines, run_status
+from cloudexit.platform.run_output import (
+    build_run_json,
+    exit_code_of,
+    run_json_fallback,
+)
+from cloudexit.platform.status import StatusReport, host_catalogue_lines, run_status
 from cloudexit.platform.spool import (
     AUTO_FLUSH_BUDGET,
     DEFAULT_MAX_AGE_DAYS,
@@ -39,6 +43,7 @@ from cloudexit.platform.spool import (
     flush,
     format_age,
     host_id,
+    key_fingerprint,
     parse_age,
 )
 from cloudexit.platform.upload import (
@@ -93,6 +98,7 @@ from cloudexit.cli.prompts import (
     prompt_required_inputs,
     print_help_message,
 )
+from cloudexit.private_files import restrict_tree
 from cloudexit.terminal import ask, print_step
 from cloudexit.runconfig.loader import (
     build_config,
@@ -213,8 +219,11 @@ def _aws_provider_from_profile(profile: str) -> dict:
         raise ConfigError
     if not is_aws_profile_valid(profile):
         console.print(
-            f"[red]AWS profile '{profile}' is not configured. "
-            f"Use `aws configure --profile {profile}`.[/red]"
+            f"AWS profile '{profile}' is not configured. "
+            f"Use `aws configure --profile {profile}`.",
+            style="red",
+            markup=False,
+            emoji=False,
         )
         raise ConfigError
     try:
@@ -222,14 +231,20 @@ def _aws_provider_from_profile(profile: str) -> dict:
         credentials = session.get_credentials()
         if credentials is None:
             console.print(
-                f"[red]AWS profile '{profile}' has no valid credentials. "
-                f"Use `aws configure --profile {profile}`.[/red]"
+                f"AWS profile '{profile}' has no valid credentials. "
+                f"Use `aws configure --profile {profile}`.",
+                style="red",
+                markup=False,
+                emoji=False,
             )
             raise ConfigError
         region = session.region_name or "us-east-1"
     except (NoCredentialsError, ProfileNotFound) as e:
         console.print(
-            f"[red]AWS profile error: {str(e)}. Use `aws configure` to set up a profile.[/red]"
+            f"AWS profile error: {str(e)}. Use `aws configure` to set up a profile.",
+            style="red",
+            markup=False,
+            emoji=False,
         )
         raise ConfigError
 
@@ -251,7 +266,9 @@ def _aws_provider_from_env() -> dict:
     try:
         validate_region(region)
     except ValueError as e:
-        console.print(f"[red]AWS_DEFAULT_REGION: {e}[/red]")
+        console.print(
+            f"AWS_DEFAULT_REGION: {e}", style="red", markup=False, emoji=False
+        )
         raise ConfigError
 
     provider_details = {
@@ -276,9 +293,19 @@ def _aws_provider_from_prompt() -> dict:
                 validate_region(region)
                 break
             except ValueError as e:
-                console.print(f"[red]{e} Please enter a valid AWS region.[/red]")
+                console.print(
+                    f"{e} Please enter a valid AWS region.",
+                    style="red",
+                    markup=False,
+                    emoji=False,
+                )
     except Exception as e:
-        console.print(f"[red]Error during manual AWS configuration: {e}[/red]")
+        console.print(
+            f"Error during manual AWS configuration: {e}",
+            style="red",
+            markup=False,
+            emoji=False,
+        )
         raise ConfigError
 
     return {
@@ -368,7 +395,7 @@ def _require_azure_sdk() -> None:
     try:
         require_azure_sdk()
     except AzureSdkError as e:
-        console.print(f"[red]{e}[/red]")
+        console.print(f"{e}", style="red", markup=False, emoji=False)
         sys.exit(codes.CONFIG)
 
 
@@ -471,7 +498,7 @@ def _azure_provider_from_cli() -> dict:
         raise
     except Exception as e:
         logger.error(f"Error during Azure CLI processing: {e}", exc_info=True)
-        console.print(f"[red]An error occurred: {e}[/red]")
+        console.print(f"An error occurred: {e}", style="red", markup=False, emoji=False)
         raise ConfigError
 
     return {
@@ -517,7 +544,7 @@ def _azure_provider_from_prompt() -> dict:
         raise
     except Exception as e:
         logger.error(f"Error during manual Azure configuration: {e}", exc_info=True)
-        console.print(f"[red]An error occurred: {e}[/red]")
+        console.print(f"An error occurred: {e}", style="red", markup=False, emoji=False)
         raise ConfigError
 
     return {
@@ -607,16 +634,15 @@ def handle_azure(args):
 
 
 def create_directory(base_path="reports"):
-    # Generate the main directory with a timestamp
+    # The timestamp keeps the name readable; the random suffix and the exclusive
+    # creation mean two runs started in the same second never share a folder.
+    # The folder is for its owner only.
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    directory_path = os.path.join(base_path, timestamp)
+    os.makedirs(base_path, mode=0o700, exist_ok=True)
+    directory_path = tempfile.mkdtemp(prefix=f"{timestamp}-", dir=base_path)
 
-    # Create the main directory
-    os.makedirs(directory_path, exist_ok=True)
-
-    # Create the raw_data subdirectory within the main directory
     raw_data_path = os.path.join(directory_path, "raw_data")
-    os.makedirs(raw_data_path, exist_ok=True)
+    os.mkdir(raw_data_path, 0o700)
 
     return directory_path, raw_data_path
 
@@ -669,6 +695,14 @@ def _report_flush(result):
             f"{_count(len(result.failed), 'spooled sync')} could not be delivered.",
             status="warning",
             logs=", ".join(sorted(set(result.failed.values()))),
+        )
+    if result.other_key:
+        print_step(
+            f"{_count(len(result.other_key), 'spooled sync')} for another API key "
+            "left in the spool.",
+            status="warning",
+            logs="not delivered with this key; run again with that key, "
+            "or `cloudexit spool purge` removes them",
         )
     if result.pending:
         print_step(
@@ -845,7 +879,7 @@ def run_assessment(
                 print_step(f"Connecting to {provider_name}...", status="ok")
             else:
                 print_step(f"Connecting to {provider_name}...", status="error")
-                console.print(f"   ↳ {logs}", style="dim")
+                console.print(f"   ↳ {logs}", style="dim", markup=False, emoji=False)
                 logger.error(f"Credential verification failed: {logs}")
                 sys.exit(codes.CREDENTIALS)
         console.print("-------------------------------------------")
@@ -1062,7 +1096,7 @@ def run_assessment(
                 logs=str(e),
             )
             for problem in getattr(e, "problems", [])[:10]:
-                console.print(f"   ↳ {problem}", style="dim")
+                console.print(f"   ↳ {problem}", style="dim", markup=False, emoji=False)
             sync_failed = wanted
 
         RUN["sync_json"] = str(sync_output.path) if sync_output else None
@@ -1103,7 +1137,10 @@ def run_assessment(
                 )
                 if upload_result.request_id:
                     console.print(
-                        f"   ↳ request id: {upload_result.request_id}", style="dim"
+                        f"   ↳ request id: {upload_result.request_id}",
+                        style="dim",
+                        markup=False,
+                        emoji=False,
                     )
                 if upload_result.spooled:
                     print_step(
@@ -1181,25 +1218,57 @@ def run_assessment(
                     else "Uploaded to the platform."
                 ),
                 style="cyan",
+                markup=False,
+                emoji=False,
             )
             charge = billing_line(upload_result.billing)
             if charge:
                 console.print(charge, style="cyan")
         if sync_output:
-            console.print(f"Sync document: {sync_output.path}", style="cyan")
+            console.print(
+                f"Sync document: {sync_output.path}",
+                style="cyan",
+                markup=False,
+                emoji=False,
+            )
             if sync_output.emitted:
-                console.print(f"Emitted copy: {sync_output.emitted}", style="cyan")
+                console.print(
+                    f"Emitted copy: {sync_output.emitted}",
+                    style="cyan",
+                    markup=False,
+                    emoji=False,
+                )
         html_report_path = report_status.get("reports", {}).get("HTML")
         if html_report_path:
-            console.print(f"HTML Report: {html_report_path}", style="cyan")
+            console.print(
+                f"HTML Report: {html_report_path}",
+                style="cyan",
+                markup=False,
+                emoji=False,
+            )
         pdf_report_path = report_status.get("reports", {}).get("PDF")
         if pdf_report_path:
-            console.print(f"PDF Report: {pdf_report_path}", style="cyan")
+            console.print(
+                f"PDF Report: {pdf_report_path}",
+                style="cyan",
+                markup=False,
+                emoji=False,
+            )
         json_report_path = report_status.get("reports", {}).get("JSON")
         if json_report_path:
-            console.print(f"JSON Report: {json_report_path}", style="cyan")
+            console.print(
+                f"JSON Report: {json_report_path}",
+                style="cyan",
+                markup=False,
+                emoji=False,
+            )
         if egress_pdf_path:
-            console.print(f"Egress PDF: {egress_pdf_path}", style="cyan")
+            console.print(
+                f"Egress PDF: {egress_pdf_path}",
+                style="cyan",
+                markup=False,
+                emoji=False,
+            )
         console.print("-------------------------------------------")
 
         try:
@@ -1228,7 +1297,7 @@ def run_assessment(
             sys.exit(codes.UPLOAD_REJECTED)
 
     except Exception as e:
-        console.print(f"[red]Unexpected error: {e}[/red]")
+        console.print(f"Unexpected error: {e}", style="red", markup=False, emoji=False)
         # Persist the full traceback so a one-line error is actionable. Falls
         # back to the cwd when the crash happened before the report dir existed.
         target_dir = report_path or os.getcwd()
@@ -1236,7 +1305,12 @@ def run_assessment(
             log_file = os.path.join(target_dir, f"error-{int(time.time())}.log")
             with open(log_file, "w", encoding="utf-8") as fh:
                 fh.write(traceback.format_exc())
-            console.print(f"[yellow]Full traceback written to: {log_file}[/yellow]")
+            console.print(
+                f"Full traceback written to: {log_file}",
+                style="yellow",
+                markup=False,
+                emoji=False,
+            )
         except OSError:
             console.print(
                 "[yellow]Could not write a traceback file; see run.log.[/yellow]"
@@ -1246,6 +1320,9 @@ def run_assessment(
         sys.exit(codes.UNEXPECTED)
     finally:
         close_run_log_handler()
+        if report_path:
+            # Everything the run wrote, however it was written, is for its owner
+            restrict_tree(report_path)
 
 
 def _catalogue_settings(args=None):
@@ -1257,7 +1334,7 @@ def _catalogue_settings(args=None):
             settings,
         )
     except SettingsError as e:
-        console.print(f"[red]{escape(str(e))}[/red]")
+        console.print(f"{str(e)}", style="red", markup=False, emoji=False)
         sys.exit(codes.CONFIG)
 
 
@@ -1268,7 +1345,7 @@ def prepare_catalogue(args):
         try:
             path, info = use_catalogue_file(args.catalogue)
         except CatalogueError as e:
-            console.print(f"[red]{escape(str(e))}[/red]")
+            console.print(f"{str(e)}", style="red", markup=False, emoji=False)
             sys.exit(codes.CONFIG)
         set_active_catalogue(path)
         print_step(
@@ -1284,15 +1361,13 @@ def prepare_catalogue(args):
             base_url, verify=(settings.ca_bundle.value if settings else None) or True
         )
     except SettingsError as e:
-        console.print(f"[red]{escape(str(e))}[/red]")
+        console.print(f"{str(e)}", style="red", markup=False, emoji=False)
         sys.exit(codes.CONFIG)
     except CatalogueUnavailable as e:
-        console.print(f"[red]{escape(str(e))}[/red]")
+        console.print(f"{str(e)}", style="red", markup=False, emoji=False)
         sys.exit(codes.CONFIG)
 
     version = result.version or "unknown"
-    if result.migrated:
-        print_step("Catalogue copied from ./datasets to the data directory.", "ok")
     if result.status == "failed":
         print_step(
             f"Catalogue update failed, using {version} from {result.date}.",
@@ -1327,7 +1402,7 @@ def handle_catalogue(args):
             info = import_catalogue(args.file, sha256=args.sha256)
             print(f"Catalogue {info.version if info else 'unknown'} installed.")
     except (CatalogueError, OSError) as e:
-        console.print(f"[red]{escape(str(e))}[/red]")
+        console.print(f"{str(e)}", style="red", markup=False, emoji=False)
         sys.exit(codes.CONFIG)
 
 
@@ -1335,7 +1410,7 @@ def _settings_or_exit(args):
     try:
         return load_settings(flags_from_args(args))
     except SettingsError as e:
-        console.print(f"[red]{escape(str(e))}[/red]")
+        console.print(f"{str(e)}", style="red", markup=False, emoji=False)
         sys.exit(codes.CONFIG)
 
 
@@ -1354,19 +1429,21 @@ def handle_upload(args):
     try:
         check_key(settings.api_key.value)
     except ApiError as e:
-        console.print(f"[red]{escape(e.message)}[/red]")
+        console.print(f"{e.message}", style="red", markup=False, emoji=False)
         sys.exit(e.exit_code)
 
     files, problems = read_sync_files(args.paths)
     exit_code = codes.SUCCESS
     for path, message in problems:
-        console.print(f"[red]{escape(str(path))}: {escape(message)}[/red]")
+        console.print(f"{str(path)}: {message}", style="red", markup=False, emoji=False)
         exit_code = exit_code or codes.UPLOAD_REJECTED
     for path, document in files:
         try:
             validate_document(document)
         except SyncDocumentError as e:
-            console.print(f"[red]{escape(str(path))}: {escape(str(e))}[/red]")
+            console.print(
+                f"{str(path)}: {str(e)}", style="red", markup=False, emoji=False
+            )
             exit_code = exit_code or codes.UPLOAD_REJECTED
             continue
         result = upload(
@@ -1376,26 +1453,38 @@ def handle_upload(args):
             meta={"exit_strategy": args.exit_strategy},
             spool_on_error=args.spool_on_error,
         )
-        shown = escape(str(path))
+        shown = str(path)
         if result.success:
             console.print(
                 f"{shown}: {result.message}"
                 + (f" ({result.url})" if result.url else ""),
                 style="cyan",
+                markup=False,
+                emoji=False,
             )
             charge = billing_line(result.billing)
             if charge:
-                console.print(f"  {charge}", style="cyan")
+                console.print(f"  {charge}", style="cyan", markup=False, emoji=False)
             for warning in result.warnings:
-                console.print(f"  warning: {escape(warning)}", style="dim")
+                console.print(
+                    f"  warning: {warning}", style="dim", markup=False, emoji=False
+                )
             continue
         exit_code = exit_code or result.exit_code
         console.print(
-            f"[red]{shown}: {escape(result.error_code or result.reason or '')}: "
-            f"{escape(result.message)}[/red]"
+            f"{shown}: {result.error_code or result.reason or ''}: "
+            f"{result.message}",
+            style="red",
+            markup=False,
+            emoji=False,
         )
         if result.request_id:
-            console.print(f"  request id: {result.request_id}", style="dim")
+            console.print(
+                f"  request id: {result.request_id}",
+                style="dim",
+                markup=False,
+                emoji=False,
+            )
         if result.spooled:
             console.print("  spooled; run `cloudexit spool flush`", style="dim")
     if exit_code:
@@ -1410,7 +1499,7 @@ def handle_spool(args):
     try:
         only = host_id(flag_host) if flag_host else None
     except SettingsError as e:
-        console.print(f"[red]{escape(str(e))}[/red]")
+        console.print(f"{str(e)}", style="red", markup=False, emoji=False)
         sys.exit(codes.CONFIG)
 
     if command == "list":
@@ -1420,6 +1509,7 @@ def handle_spool(args):
             return
         now = time.time()
         print(f"{'SYNC ID':<38} {'HOST':<17} {'AGE':<8} {'ATTEMPTS':<9} LAST ERROR")
+        key_id = key_fingerprint(settings.api_key.value)
         for entry in entries:
             print(
                 f"{entry.sync_id:<38} {entry.host_id:<17} "
@@ -1431,6 +1521,7 @@ def handle_spool(args):
                     if now - entry.created > DEFAULT_MAX_AGE_DAYS * 86400
                     else ""
                 )
+                + ("" if entry.belongs_to(key_id) else "  not for the key in use")
             )
         return
 
@@ -1440,10 +1531,10 @@ def handle_spool(args):
             check_key(settings.api_key.value)
             result = flush(settings, spool, host=flag_host)
         except ApiError as e:
-            console.print(f"[red]{escape(e.message)}[/red]")
+            console.print(f"{e.message}", style="red", markup=False, emoji=False)
             sys.exit(e.exit_code)
         except SettingsError as e:
-            console.print(f"[red]{escape(str(e))}[/red]")
+            console.print(f"{str(e)}", style="red", markup=False, emoji=False)
             sys.exit(codes.CONFIG)
         if result.empty:
             print("Nothing to deliver for this host.")
@@ -1456,7 +1547,7 @@ def handle_spool(args):
     try:
         older_than = parse_age(args.older_than) if args.older_than else None
     except ValueError as e:
-        console.print(f"[red]{escape(str(e))}[/red]")
+        console.print(f"{str(e)}", style="red", markup=False, emoji=False)
         sys.exit(codes.CONFIG)
     now = time.time()
     due = [
@@ -1485,7 +1576,13 @@ def handle_spool(args):
 
 def handle_status(args):
     settings = _settings_or_exit(args)
-    report = run_status(settings)
+    try:
+        report = run_status(settings)
+    except Exception as e:
+        # Whatever the platform sent, the answer is still a report
+        logger.debug("The status check failed", exc_info=True)
+        report = StatusReport()
+        report.problem(codes.UNEXPECTED, f"the status check failed: {type(e).__name__}")
     if args.output == "json":
         print(json.dumps(report.as_json(), indent=2))
     else:
@@ -1503,7 +1600,7 @@ def handle_config(args):
     try:
         settings = load_settings(flags_from_args(args))
     except SettingsError as e:
-        console.print(f"[red]{escape(str(e))}[/red]")
+        console.print(f"{str(e)}", style="red", markup=False, emoji=False)
         sys.exit(codes.CONFIG)
     for line in describe(settings):
         print(line)
@@ -1543,7 +1640,7 @@ def _dispatch(args):
             try:
                 args.settings = load_settings(flags_from_args(args))
             except SettingsError as e:
-                console.print(f"[red]{escape(str(e))}[/red]")
+                console.print(f"{str(e)}", style="red", markup=False, emoji=False)
                 sys.exit(codes.CONFIG)
 
             # Make sure a catalogue is available before any work starts
@@ -1577,15 +1674,27 @@ def _absolute(path):
 
 def _emit_run_json(stream, exit_code):
     # Absolute, so a script can use them from any directory
-    summary = build_run_json(
-        exit_code=exit_code,
-        report_dir=_absolute(RUN.get("report_dir")),
-        sync_json=_absolute(RUN.get("sync_json")),
-        upload=RUN.get("upload"),
-        skipped_reason=RUN.get("skipped_reason"),
-        catalogue_version=RUN.get("catalogue_version"),
-    )
-    stream.write(json.dumps(summary, indent=2) + "\n")
+    try:
+        summary = build_run_json(
+            exit_code=exit_code,
+            report_dir=_absolute(RUN.get("report_dir")),
+            sync_json=_absolute(RUN.get("sync_json")),
+            upload=RUN.get("upload"),
+            skipped_reason=RUN.get("skipped_reason"),
+            catalogue_version=RUN.get("catalogue_version"),
+        )
+        text = json.dumps(summary, indent=2, allow_nan=False)
+    except Exception as e:
+        # One object on stdout whatever happened, so a script can always read it
+        logger.debug("The run summary could not be built", exc_info=True)
+        summary = run_json_fallback(
+            exit_code=exit_code,
+            report_dir=_absolute(RUN.get("report_dir")),
+            sync_json=_absolute(RUN.get("sync_json")),
+            error=f"the run summary could not be built: {type(e).__name__}",
+        )
+        text = json.dumps(summary, indent=2)
+    stream.write(text + "\n")
     stream.flush()
 
 
@@ -1603,7 +1712,12 @@ def _dispatch_json(args):
                 exit_code = exit_code_of(e.code)
                 raise
             except Exception as e:
-                console.print(f"[red]Unexpected error: {escape(str(e))}[/red]")
+                console.print(
+                    f"Unexpected error: {str(e)}",
+                    style="red",
+                    markup=False,
+                    emoji=False,
+                )
                 sys.exit(codes.UNEXPECTED)
     finally:
         _emit_run_json(stdout, exit_code)
@@ -1645,5 +1759,5 @@ def run():
         main()
     except Exception as e:
         # logger.error(f"An unexpected error occurred: {e}", exc_info=True)
-        console.print(f"[red]Unexpected error: {e}[/red]")
+        console.print(f"Unexpected error: {e}", style="red", markup=False, emoji=False)
         sys.exit(1)

@@ -44,6 +44,15 @@ def host_id(host: str) -> str:
     return hashlib.sha256(f"{parts.scheme}://{netloc}".encode("utf-8")).hexdigest()[:16]
 
 
+def key_fingerprint(key: str | None) -> str | None:
+    # Which API key spooled a sync, without keeping the key: a hash, never the key
+    if not key:
+        return None
+    return hashlib.sha256(b"cloudexit spool key\0" + key.encode("utf-8")).hexdigest()[
+        :16
+    ]
+
+
 def state_dir(
     environ: Mapping[str, str] | None = None, *, platform: str = sys.platform
 ) -> Path:
@@ -90,6 +99,15 @@ class SpoolEntry:
     def created(self) -> float:
         return float(self.meta.get("created") or 0)
 
+    @property
+    def key_id(self) -> str | None:
+        value = self.meta.get("key_id")
+        return value if isinstance(value, str) and value else None
+
+    def belongs_to(self, key_id: str | None) -> bool:
+        # An entry without a recorded key cannot be matched to any key
+        return key_id is not None and self.key_id == key_id
+
 
 @dataclass
 class FlushResult:
@@ -98,10 +116,18 @@ class FlushResult:
     rejected: list[str] = field(default_factory=list)
     failed: dict[str, str] = field(default_factory=dict)
     stopped: str | None = None
+    # Spooled with another API key: left where they are
+    other_key: list[str] = field(default_factory=list)
 
     @property
     def empty(self) -> bool:
-        return not (self.uploaded or self.pending or self.rejected or self.failed)
+        return not (
+            self.uploaded
+            or self.pending
+            or self.rejected
+            or self.failed
+            or self.other_key
+        )
 
 
 class Spool:
@@ -140,6 +166,7 @@ class Spool:
         name: str | None,
         exit_strategy: int | None,
         assessment_id: str | None,
+        key_id: str | None = None,
     ) -> SpoolEntry:
         sync_id = ((document.get("sync") or {}).get("id")) or ""
         if not isinstance(sync_id, str) or not SYNC_ID.match(sync_id):
@@ -164,6 +191,7 @@ class Spool:
             "name": name,
             "exit_strategy": exit_strategy,
             "assessment_id": assessment_id,
+            "key_id": key_id,
         }
         # The document only: never the key, never a response
         self._write(
@@ -283,7 +311,11 @@ def flush(
     # for the whole flush; without it every entry gets the upload budget.
     host = host or settings.host.value
     result = FlushResult()
-    entries = spool.entries(host_id(host))
+    key_id = key_fingerprint(settings.api_key.value)
+    found = spool.entries(host_id(host))
+    # A sync goes out only with the key it was spooled with
+    entries = [entry for entry in found if entry.belongs_to(key_id)]
+    result.other_key = [entry.sync_id for entry in found if entry not in entries]
     if not entries:
         return result
 

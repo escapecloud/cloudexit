@@ -21,6 +21,7 @@ from cloudexit.providers.azure.costs import (
 from cloudexit.providers.azure.inventory import build_azure_resource_inventory
 from cloudexit.providers.azure.sdk import azure_import
 from cloudexit.catalogue.db import connect, load_data
+from cloudexit.catalogue.store import CatalogueError
 from cloudexit.tfstate import build_tfstate_resource_inventory
 from cloudexit.report.context import (
     EGRESS_DOCUMENT_CODE,
@@ -268,7 +269,11 @@ def create_resource_inventory(
     raw_data_path: str,
 ) -> dict[str, Any]:
     # Copy assets and datasets folders data
-    copy_assets(report_path, cloud_service_provider)
+    try:
+        copy_assets(report_path, cloud_service_provider)
+    except CatalogueError as e:
+        logger.error(f"The catalogue cannot be used: {str(e)}")
+        return {"success": False, "logs": str(e)}
 
     try:
 

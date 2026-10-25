@@ -27,8 +27,15 @@ from cloudexit.platform.client import (
     client_policy,
     resolve_ca_bundle,
 )
-from cloudexit.platform.spool import DEFAULT_MAX_AGE_DAYS, Spool, format_age, host_id
+from cloudexit.platform.spool import (
+    DEFAULT_MAX_AGE_DAYS,
+    Spool,
+    format_age,
+    host_id,
+    key_fingerprint,
+)
 from cloudexit.platform.document import SCHEMA_VERSION
+from cloudexit.platform.shape import as_dict, as_list, as_text
 
 STATUS_BUDGET = 15.0
 KEY_EXPIRY_WARNING_DAYS = 14
@@ -316,18 +323,30 @@ def host_catalogue_lines(
     make_client = make_client or ApiClient.from_settings
     try:
         client = make_client(settings, budget=status_budget(settings))
-        host = ((client.meta(fresh=True).get("catalogue") or {}).get("version")) or None
+        host = as_text(as_dict(client.meta(fresh=True).get("catalogue")).get("version"))
     except ApiError as error:
         return [f"platform:  unavailable ({error.message})"]
     return [f"platform:  {catalogue_standing(local, host)}"]
 
 
+def _finite(value: Any) -> Any:
+    # JSON output has no NaN or infinity
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return value if value == value and abs(value) != float("inf") else None
+
+
 def _expiry_lines(key: Mapping[str, Any], now: float, report: StatusReport) -> str:
     expires = key.get("expires_at")
-    if not isinstance(expires, (int, float)):
+    if isinstance(expires, bool) or not isinstance(expires, (int, float)):
         return "unknown"
-    when = datetime.fromtimestamp(expires, tz=timezone.utc).strftime("%Y-%m-%d")
-    days = (expires - now) / 86400
+    try:
+        when = datetime.fromtimestamp(expires, tz=timezone.utc).strftime("%Y-%m-%d")
+        days = (expires - now) / 86400
+        int(days)
+    except (OverflowError, OSError, ValueError):
+        # A time no calendar holds, or not a number at all
+        return "unknown"
     if days < KEY_EXPIRY_WARNING_DAYS:
         report.warnings.append(
             f"the API key expires in {max(0, int(days))} days ({when}); "
@@ -422,12 +441,13 @@ def run_status(
         report.problem(error.exit_code, f"{error.code}: {error.message}")
         return report
 
-    host_info = meta.get("host") or {}
-    contract = meta.get("contract") or {}
-    catalogue = meta.get("catalogue") or {}
-    limits = meta.get("limits") or {}
+    host_info = as_dict(meta.get("host"))
+    contract = as_dict(meta.get("contract"))
+    catalogue = as_dict(meta.get("catalogue"))
+    limits = as_dict(meta.get("limits"))
+    catalogue_version = as_text(catalogue.get("version"))
     state, message = client_policy(meta)
-    versions = contract.get("schema_versions") or []
+    versions = as_list(contract.get("schema_versions"))
     report.add(
         "Platform (GET /meta)",
         [
@@ -440,7 +460,7 @@ def run_status(
             ),
             f"schema:    {', '.join(map(str, versions)) or 'unknown'}"
             + (f" (current {contract['current']})" if contract.get("current") else ""),
-            f"catalogue: {catalogue.get('version') or 'unknown'}",
+            f"catalogue: {catalogue_version or 'unknown'}",
             "limits:    "
             + ", ".join(f"{k}={limits[k]}" for k in LIMITS_SHOWN if k in limits),
             f"client:    {message}",
@@ -451,7 +471,7 @@ def run_status(
         "region": host_info.get("region"),
         "app_version": host_info.get("app_version"),
         "schema_versions": versions,
-        "catalogue_version": catalogue.get("version"),
+        "catalogue_version": catalogue_version,
         "limits": {k: limits[k] for k in LIMITS_SHOWN if k in limits},
         "client_policy": {"status": state, "message": message},
     }
@@ -474,8 +494,9 @@ def run_status(
         report.problem(error.exit_code, f"{error.code}: {error.message}")
         finish_spool(days)
         return report
-    key_info = whoami.get("key") or {}
-    tenant = whoami.get("tenant") or {}
+    key_info = as_dict(whoami.get("key"))
+    tenant = as_dict(whoami.get("tenant"))
+    scopes = [str(scope) for scope in as_list(key_info.get("scopes"))]
     expiry = _expiry_lines(key_info, now(), report)
     report.add(
         "Key (GET /whoami)",
@@ -484,19 +505,19 @@ def run_status(
             f"key:          {key_info.get('display')} \"{key_info.get('name')}\", "
             f"{key_info.get('kind')}",
             f"assessment:   {key_info.get('assessment_id') or 'any (not bound)'}",
-            f"scopes:       {', '.join(key_info.get('scopes') or []) or 'none'}",
+            f"scopes:       {', '.join(scopes) or 'none'}",
             f"expires:      {expiry}",
         ],
     )
-    for item in whoami.get("warnings") or []:
+    for item in as_list(whoami.get("warnings")):
         if isinstance(item, dict) and item.get("message"):
             report.warnings.append(str(item["message"]))
     report.data["key"] = {
         "organisation": tenant.get("name"),
         "kind": key_info.get("kind"),
         "assessment_id": key_info.get("assessment_id"),
-        "scopes": key_info.get("scopes") or [],
-        "expires_at": key_info.get("expires_at"),
+        "scopes": scopes,
+        "expires_at": _finite(key_info.get("expires_at")),
     }
 
     finish_spool(days)
@@ -504,13 +525,13 @@ def run_status(
         "Catalogue",
         [
             f"installed: {local or 'none'}",
-            f"platform:  {catalogue_standing(local, catalogue.get('version'))}",
+            f"platform:  {catalogue_standing(local, catalogue_version)}",
         ],
     )
     report.data["catalogue"] = {
         "local": local,
-        "platform": catalogue.get("version"),
-        "standing": compare_catalogue_versions(local, catalogue.get("version")),
+        "platform": catalogue_version,
+        "standing": compare_catalogue_versions(local, catalogue_version),
     }
     return report
 
@@ -519,15 +540,19 @@ def _spool_lines(
     settings: Any, spool: Spool | None, days: int, now: float, report: StatusReport
 ) -> list[str]:
     spool = spool or Spool.from_settings(settings)
-    mine = spool.entries(host_id(settings.host.value))
-    others = len(spool.entries()) - len(mine)
+    on_host = spool.entries(host_id(settings.host.value))
+    key_id = key_fingerprint(settings.api_key.value)
+    mine = [e for e in on_host if e.belongs_to(key_id)]
+    other_keys = len(on_host) - len(mine)
+    others = len(spool.entries()) - len(on_host)
     stale = [e for e in mine if now - e.created > days * 86400]
     report.data["spool"] = {
         "pending": len(mine),
         "too_old": len(stale),
         "other_hosts": others,
+        "other_keys": other_keys,
     }
-    if not mine and not others:
+    if not on_host and not others:
         return ["empty"]
     lines = []
     if mine:
@@ -538,6 +563,8 @@ def _spool_lines(
         )
     if stale:
         lines.append(f"{len(stale)} will be rejected: older than {days} days")
+    if other_keys:
+        lines.append(f"{other_keys} for another API key (not delivered with this one)")
     if others:
         lines.append(f"{others} for other hosts")
     return lines

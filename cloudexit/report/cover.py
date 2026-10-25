@@ -1,5 +1,4 @@
 import logging
-import os
 from dataclasses import dataclass
 from xml.sax.saxutils import escape
 
@@ -29,7 +28,8 @@ LOGO_TOP = 2.2 * cm
 TITLE_TOP = 8.1 * cm
 FOOTER_Y = 1.5 * cm
 ROW_SPACING = 14
-LOGO_FILE = os.path.join("img", "logo", "report_logo.png")
+# Written with forward slashes on every system: asset paths are not file system paths
+LOGO_FILE = "img/logo/report_logo.png"
 
 TITLE_STYLE = ParagraphStyle(
     "CoverTitle",

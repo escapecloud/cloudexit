@@ -1,8 +1,10 @@
 import copy
 import inspect
+import io
 import json
 import os
 import sqlite3
+import sys
 import tempfile
 import unittest
 from dataclasses import replace
@@ -11,6 +13,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import requests
+from rich.console import Console
 
 from cloudexit.cli import app
 from cloudexit.engine import generate_report, perform_risk_assessment
@@ -31,6 +34,7 @@ from tests.support.api import (
     KEY,
     URL,
     corrupt,
+    created_reply,
     error_body,
     meta_reply,
     minimal_document,
@@ -419,9 +423,11 @@ class RunFlowTests(FlowTestCase):
         replies=None,
         egress_ok=None,
         assessment_type=2,
+        real_terminal=False,
         **kwargs,
     ):
         self.steps = []
+        self.output = io.StringIO()
         raw_data = os.path.join(report, "raw_data")
         console_patch = patch("cloudexit.cli.app.console.print")
         patches = [
@@ -443,12 +449,22 @@ class RunFlowTests(FlowTestCase):
                 return_value={"success": True, "logs": ""},
             ),
             patch("cloudexit.cli.app.add_run_log_handler"),
-            patch(
-                "cloudexit.cli.app.print_step",
-                side_effect=lambda *a, **k: self.steps.append((a, k)),
-            ),
-            console_patch,
         ]
+        if real_terminal:
+            # The real printing, into a buffer: what the user would read
+            shown = Console(file=self.output, width=200, color_system=None)
+            patches += [
+                patch("cloudexit.cli.app.console", shown),
+                patch("cloudexit.terminal.console", shown),
+            ]
+        else:
+            patches += [
+                patch(
+                    "cloudexit.cli.app.print_step",
+                    side_effect=lambda *a, **k: self.steps.append((a, k)),
+                ),
+                console_patch,
+            ]
         if egress_ok is not None:
             patches += [
                 patch(
@@ -558,6 +574,74 @@ class RunFlowTests(FlowTestCase):
         self.assertEqual(self.json_report(report)["meta"]["assessment_type"], 1)
         messages = [args[0] for args, _ in self.steps]
         self.assertEqual([m for m in messages if m.startswith("Forcing Basic")], [])
+
+    def test_platform_text_with_brackets_is_shown_literally_and_the_run_goes_on(self):
+        message = "rejected [/bold] [red]x[/red] :warning: [1, 2]"
+        report = self.report()
+        replies = [
+            meta_reply(),
+            whoami_reply(),
+            reply(422, error_body("validation_failed", message)),
+        ]
+
+        with self.assertRaises(SystemExit) as ctx:
+            self.run_assessment(
+                report, settings=CONFIGURED, replies=replies, real_terminal=True
+            )
+
+        self.assertEqual(ctx.exception.code, codes.UPLOAD_REJECTED)
+        self.assertIn(message, self.output.getvalue())
+        self.assertNotIn("Unexpected error", self.output.getvalue())
+        self.assert_local_report(report)
+
+    def test_platform_capabilities_of_the_wrong_shape_do_not_stop_an_upload(self):
+        report = self.report()
+        replies = [
+            meta_reply(contract="v2", clients=["x"], limits="none", host=7),
+            whoami_reply(),
+            created_reply(),
+        ]
+
+        self.run_assessment(report, settings=CONFIGURED, replies=replies)
+
+        self.assert_local_report(report)
+        record = json.loads(self.raw(report, "upload.json").read_text())
+        self.assertEqual(record["status"], "uploaded")
+
+    @unittest.skipIf(sys.platform == "win32", "POSIX file modes")
+    def test_a_finished_run_leaves_nothing_readable_by_others(self):
+        for replies, settings in ((None, None), (success_replies(), CONFIGURED)):
+            with self.subTest(uploaded=settings is not None):
+                report = self.report()
+                for path in Path(report).rglob("*"):
+                    path.chmod(0o777 if path.is_dir() else 0o666)
+
+                self.run_assessment(report, settings=settings, replies=replies)
+
+                self.assert_local_report(report)
+                loose = [
+                    str(path.relative_to(report))
+                    for path in [Path(report), *Path(report).rglob("*")]
+                    if not path.is_symlink() and path.stat().st_mode & 0o077
+                ]
+                self.assertEqual(loose, [])
+                self.assertEqual(
+                    self.raw(report, "sync.json").stat().st_mode & 0o777, 0o600
+                )
+
+    def test_an_unexpected_error_with_brackets_is_shown_literally(self):
+        report = self.report()
+        with (
+            patch(
+                "cloudexit.cli.app.prepare_sync_document",
+                side_effect=RuntimeError("bad [/bold] text"),
+            ),
+            self.assertRaises(SystemExit) as ctx,
+        ):
+            self.run_assessment(report, real_terminal=True)
+
+        self.assertEqual(ctx.exception.code, codes.UNEXPECTED)
+        self.assertIn("Unexpected error: bad [/bold] text", self.output.getvalue())
 
     def test_a_failed_upload_still_writes_the_report_and_exits_with_an_upload_code(
         self,

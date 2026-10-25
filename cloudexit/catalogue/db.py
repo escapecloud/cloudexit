@@ -39,6 +39,8 @@ def connect(db_path=None):
     db_path = db_path or active_catalogue_path()
     try:
         conn = sqlite3.connect(db_path, factory=_Connection)
+        # Nothing the file's own SQL defines is trusted to run
+        conn.execute("PRAGMA trusted_schema=OFF")
         return conn
     except sqlite3.Error as e:
         logger.debug(f"Error connecting to database: {e}")
