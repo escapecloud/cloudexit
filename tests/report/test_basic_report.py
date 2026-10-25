@@ -6,7 +6,6 @@ import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import patch
 
 from pypdf import PdfReader
 
@@ -14,7 +13,6 @@ from cloudexit.engine import generate_report, perform_risk_assessment
 from cloudexit.report import fonts
 from cloudexit.report.context import Provenance
 from cloudexit.report.executive_summary import generate_executive_summary
-from cloudexit.report.egress import generate_egress_html_report
 from cloudexit.report.notices import notices_html
 from cloudexit.report.palette import (
     DEFAULT_APPEARANCE,
@@ -31,8 +29,6 @@ from cloudexit.report.sections import (
     REPOSITORY_URL,
 )
 from cloudexit.report.wording import BLOCKS, TITLE_CASE_KEYS
-from tests.report import test_egress as egress_helpers
-from tests.report.test_no_credentials import pricing_for_both_clouds
 from tests.support.flow import build_flow_run
 from tests.support.html import html_text
 from tests.support.report import (
@@ -584,66 +580,6 @@ class BasicOnlyTests(BasicReportTestCase):
         )
         self.assertNotRegex(closing, r"\d+ / (100|5)")
 
-    def test_the_html_report_has_no_scores_before_the_closing_section(self):
-        report = build_flow_run(
-            self.tmp / "html",
-            resources=[(1, "eu-central-1", 3)],
-            costs=[("2026-09-01", 10.0, "USD")],
-        )
-        perform_risk_assessment(1, report)
-        generate_report(
-            2,
-            {"region": "eu-central-1"},
-            1,
-            1,
-            "Flow",
-            report,
-            str(Path(report) / "raw_data"),
-            sync_id=SYNC_ID,
-        )
-        text = html_text((Path(report) / "index.html").read_text(encoding="utf-8"))
-        before = text[: text.index("What the Full Assessment Adds")]
-
-        for pattern in SCORE_PATTERNS:
-            self.assertIsNone(re.search(pattern, before, re.IGNORECASE), pattern)
-
-    def test_the_html_follows_the_same_sections(self):
-        report = build_flow_run(
-            self.tmp / "html2",
-            resources=[(1, "eu-central-1", 3)],
-            costs=[("2026-09-01", 10.0, "USD")],
-        )
-        perform_risk_assessment(1, report)
-        generate_report(
-            2,
-            {"region": "eu-central-1"},
-            1,
-            1,
-            "Flow",
-            report,
-            str(Path(report) / "raw_data"),
-            sync_id=SYNC_ID,
-        )
-        text = html_text((Path(report) / "index.html").read_text(encoding="utf-8"))
-
-        # The findings table names the sections too, so each heading is searched
-        # for after the one before it.
-        position = 0
-        for heading in (
-            "Brief Summary",
-            "Provenance",
-            "Introduction",
-            "Risk Inventory",
-            "Costs Overview",
-            "Resource Inventory",
-            "Alternative Technologies",
-            "Risk Severity Levels",
-            "Glossary",
-            "What the Full Assessment Adds",
-            "Legal Notices",
-        ):
-            position = text.index(heading, position)
-
 
 class TermGuardTests(BasicReportTestCase):
     def test_no_regulatory_word_or_foreign_brand_in_pdf_html_or_metadata(self):
@@ -835,109 +771,6 @@ class NoticesDataTests(unittest.TestCase):
             self.assertEqual(notices["copyright"], f"© 2024–{year} EscapeCloud")
 
 
-class NoticesHtmlTests(BasicReportTestCase):
-    def index_text(self, provider, resources):
-        report = build_flow_run(
-            self.tmp / f"html-{provider}",
-            resources=resources,
-            costs=[("2026-09-01", 10.0, "USD")],
-        )
-        perform_risk_assessment(1, report)
-        details = (
-            {"region": "eu-central-1"} if provider == 2 else {"resourceGroupName": "rg"}
-        )
-        generate_report(
-            provider,
-            details,
-            1,
-            1,
-            "Flow",
-            report,
-            str(Path(report) / "raw_data"),
-            sync_id=SYNC_ID,
-        )
-        return html_text((Path(report) / "index.html").read_text(encoding="utf-8"))
-
-    def test_index_html_ends_with_the_notices_and_the_providers_icon_notice(self):
-        for provider, resources, own, other in (
-            (2, [(1, "eu-central-1", 3)], "Amazon.com", "Microsoft group"),
-            (1, [(3, "westeurope", 3)], "Microsoft group", "Amazon.com"),
-        ):
-            with self.subTest(provider=provider):
-                text = self.index_text(provider, resources)
-
-                self.assertGreater(
-                    text.index("Legal Notices"),
-                    text.index("What the Full Assessment Adds"),
-                )
-                tail = text[text.index("Legal Notices") :]
-                self.assertIn(BLOCKS["notices_disclaimer"], tail)
-                self.assertIn(own, tail)
-                self.assertNotIn(other, text)
-                self.assertIn(REPOSITORY_URL, tail)
-                self.assertRegex(tail.rstrip(), r"© 2024–\d{4} EscapeCloud$")
-                self.assertEqual(find_terms(text), [])
-
-    def test_the_links_in_index_html_are_real_links(self):
-        report = build_flow_run(
-            self.tmp / "html-links", resources=[(1, "eu-central-1", 3)], costs=[]
-        )
-        perform_risk_assessment(1, report)
-        generate_report(
-            2,
-            {"region": "eu-central-1"},
-            1,
-            1,
-            "Flow",
-            report,
-            str(Path(report) / "raw_data"),
-            sync_id=SYNC_ID,
-        )
-        html = (Path(report) / "index.html").read_text(encoding="utf-8")
-
-        for url in (REPOSITORY_URL, LICENCE_URL, AWS_ICONS_URL, AWS_TRADEMARK_URL):
-            self.assertIn(f'href="{url}"', html)
-
-    def egress_text(self, provider):
-        rows = [
-            egress_helpers._row(
-                "proddata", "Storage", "object", 2048 * egress_helpers.GIB
-            )
-        ]
-        payload = egress_helpers._payload(rows)
-        payload["meta"]["cloud_service_provider"] = provider
-        folder = self.report_dir()
-        json_path = folder / "egress_inventory_raw_data.json"
-        json_path.write_text(json.dumps(payload), encoding="utf-8")
-        egress_helpers._seed_egress_inventory(
-            str(folder), rows, egress_helpers._archive_tiers(rows)
-        )
-        with patch(
-            "cloudexit.report.egress.load_data", side_effect=pricing_for_both_clouds
-        ):
-            result = generate_egress_html_report(str(folder), str(json_path))
-        self.assertTrue(result["success"], result["logs"])
-        html = Path(result["html_path"]).read_text(encoding="utf-8")
-        return html, html_text(html)
-
-    def test_egress_html_ends_with_the_same_notices(self):
-        for provider, own, other in (
-            (1, "Microsoft group", "Amazon.com"),
-            (2, "Amazon.com", "Microsoft group"),
-        ):
-            with self.subTest(provider=provider):
-                html, text = self.egress_text(provider)
-                tail = text[text.index("Legal Notices") :]
-
-                self.assertIn(BLOCKS["notices_disclaimer"], tail)
-                self.assertIn(own, tail)
-                self.assertNotIn(other, text)
-                # The timestamp of the estimate gives the year
-                self.assertTrue(tail.rstrip().endswith("© 2024–2026 EscapeCloud"))
-                self.assertIn(f'href="{LICENCE_URL}"', html)
-                self.assertEqual(find_terms(text), [])
-
-
 class WordingGuardTests(unittest.TestCase):
     def test_the_licence_name_is_a_proper_name_and_other_license_is_not(self):
         self.assertEqual(
@@ -1015,8 +848,9 @@ class WordingTests(unittest.TestCase):
 
     def test_no_wording_carries_regulatory_words_or_scores(self):
         for key, text in self.strings():
-            # The pages that point to the platforms name what they add
-            if key.startswith(("fa_", "eg_next_")):
+            # The pages that point to the platforms name what they add, and the
+            # Scores row of the HTML report names the results they compute
+            if key.startswith(("fa_", "eg_next_", "html_scores_", "html_tour_")):
                 continue
             with self.subTest(key):
                 self.assertEqual(find_terms(text), [])

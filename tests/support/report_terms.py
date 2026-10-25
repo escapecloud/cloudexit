@@ -93,6 +93,9 @@ AMERICAN_ALLOWED = (
     "GNU Affero General Public License",
     # The path of the licence file in the repository link
     "blob/main/LICENSE",
+    # The proper names of the licences of the bundled font and script
+    "SIL Open Font License",
+    "MIT License",
 )
 
 # Words that stay lower case inside an English Title Case label.

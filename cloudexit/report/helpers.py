@@ -1,3 +1,5 @@
+import os
+
 CURRENCY_SYMBOLS = {"USD": "$", "EUR": "€", "GBP": "£"}
 
 
@@ -19,10 +21,13 @@ def format_money(value, currency):
     return f"{symbol}{amount}" if symbol else f"{currency} {amount}"
 
 
-def gib_number(size_bytes):
-    # One decimal; a size that is not zero never reads as 0.0
+def gib_number(size_bytes, places=1):
+    # A size that is not zero never reads as 0.0
     gib = size_bytes / 2**30
-    return "<0.1" if 0 < gib < 0.1 else f"{gib:,.1f}"
+    smallest = 10**-places
+    if 0 < gib < smallest:
+        return f"<{smallest:.{places}f}"
+    return f"{gib:,.{places}f}"
 
 
 def format_gib(size_bytes):
@@ -71,3 +76,19 @@ def initials(name):
         if len(letters) == 2:
             break
     return "".join(letters) or "?"
+
+
+REPORT_ASSETS = "assets"
+
+
+def report_icon(report_path, icon_rel):
+    # The page only points at files in its own folder: an icon the report
+    # folder does not hold is left out, and the page draws a placeholder
+    if icon_rel and os.path.isfile(os.path.join(report_path, REPORT_ASSETS, icon_rel)):
+        return f"{REPORT_ASSETS}/{icon_rel}"
+    return None
+
+
+def percent(share):
+    # With a no-break space, so a figure and its sign stay together
+    return share_label(share).replace(" ", " ")

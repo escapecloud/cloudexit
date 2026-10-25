@@ -1,10 +1,5 @@
 import unittest
 
-from cloudexit.report.html_data import (
-    transform_alt_tech_for_html,
-    transform_cost_inventory_for_html,
-    transform_risk_inventory_for_html,
-)
 from cloudexit.report.json_data import (
     transform_alt_tech_for_json,
     transform_resource_inventory_for_json,
@@ -118,62 +113,6 @@ def build_alternative_technology_organizations():
             "country_code": "DE",
         },
     ]
-
-
-class HtmlTransformTests(unittest.TestCase):
-    def test_transform_cost_inventory_for_html_sorts_and_sums_costs(self):
-        months, cost_values, total_cost, currency_code, currency_symbol = (
-            transform_cost_inventory_for_html(
-                [
-                    {"month": "2026-02-01", "cost": 11.25, "currency": "USD"},
-                    {"month": "2026-01-01", "cost": 14.75, "currency": "USD"},
-                ]
-            )
-        )
-
-        self.assertEqual(months, ["Jan", "Feb"])
-        self.assertEqual(cost_values, [14.75, 11.25])
-        self.assertEqual(total_cost, 26.0)
-        self.assertEqual(currency_code, "USD")
-        self.assertEqual(currency_symbol, "$")
-
-    def test_transform_risk_inventory_for_html_counts_overall_and_resource_risks(self):
-        resource_inventory = {
-            "101": {"name": "EC2 Instance"},
-            "202": {"name": "S3 Bucket"},
-        }
-
-        risks, severity_counts = transform_risk_inventory_for_html(
-            build_risk_data(),
-            build_risk_definitions(),
-            resource_inventory,
-        )
-
-        self.assertEqual([risk["severity"] for risk in risks], ["high", "medium"])
-        self.assertEqual(risks[0]["impacted_resources_count"], 2)
-        self.assertCountEqual(
-            risks[0]["impacted_resources"], ["EC2 Instance", "S3 Bucket"]
-        )
-        self.assertIsNone(risks[1]["impacted_resources_count"])
-        self.assertEqual(severity_counts, {"high": 1, "medium": 1, "low": 0})
-
-    def test_transform_alt_tech_for_html_filters_by_strategy_and_status(self):
-        transformed = transform_alt_tech_for_html(
-            build_resource_inventory(),
-            build_alternatives(),
-            build_alternative_technologies(),
-            exit_strategy=1,
-            alternative_technology_organizations=build_alternative_technology_organizations(),
-        )
-
-        self.assertEqual(len(transformed), 2)
-        self.assertEqual(transformed[0]["product_name"], "OpenStack")
-        self.assertEqual(transformed[1]["product_name"], "MinIO")
-        self.assertTrue(transformed[0]["open_source"])
-        self.assertFalse(transformed[1]["support_plan"])
-        self.assertEqual(transformed[0]["organization_name"], "OpenInfra Foundation")
-        self.assertEqual(transformed[0]["organization_region"], "united-states")
-        self.assertEqual(transformed[1]["organization_region"], "european-union")
 
 
 class JsonTransformTests(unittest.TestCase):

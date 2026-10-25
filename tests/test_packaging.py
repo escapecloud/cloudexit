@@ -82,16 +82,31 @@ class WheelContentsTests(unittest.TestCase):
             "cloudexit/assets/fonts/IBMPlexMono-SemiBold.ttf",
             "cloudexit/assets/fonts/OFL.txt",
             "cloudexit/assets/template/index.html",
-            "cloudexit/assets/template/egress.html",
-            "cloudexit/assets/css/style.css",
+            "cloudexit/assets/css/report.css",
+            "cloudexit/assets/css/driver.css",
+            "cloudexit/assets/js/driver.js.iife.js",
+            "cloudexit/assets/js/driver.js.LICENSE.txt",
+            "cloudexit/assets/img/csp/aws.svg",
+            "cloudexit/assets/img/csp/azure.svg",
+            "cloudexit/assets/img/csp/gcp.svg",
+            "cloudexit/assets/img/csp/alibaba.svg",
             "cloudexit/assets/img/logo/report_logo.png",
+            "cloudexit/assets/img/logo/README.md",
             "cloudexit/assets/icons/aws/Compute/EC2.png",
         ):
             with self.subTest(name):
                 self.assertIn(name, self.names)
 
     def test_the_wheel_ships_no_svg_icons_and_no_unused_assets(self):
-        self.assertEqual([n for n in self.names if n.endswith(".svg")], [])
+        # The four provider logos are the only SVG files; the service icons are PNG
+        svgs = [n for n in self.names if n.endswith(".svg")]
+        self.assertEqual(
+            [n for n in svgs if not n.startswith("cloudexit/assets/img/csp/")], []
+        )
+        self.assertEqual([n for n in svgs if "/icons/" in n], [])
+        self.assertEqual(len(svgs), 4)
+        self.assertNotIn("cloudexit/assets/template/egress.html", self.names)
+        self.assertNotIn("cloudexit/assets/css/style.css", self.names)
         self.assertNotIn("cloudexit/assets/img/logo/favicon.ico", self.names)
         self.assertNotIn("cloudexit/assets/fonts/IBMPlexSans-Medium.ttf", self.names)
 
@@ -117,7 +132,9 @@ class AssetLookupTests(unittest.TestCase):
     def test_the_bundled_files_exist(self):
         for parts in (
             ("template", "index.html"),
-            ("template", "egress.html"),
+            ("css", "report.css"),
+            ("js", "driver.js.iife.js"),
+            ("img", "csp", "azure.svg"),
             ("fonts", "IBMPlexSans-Regular.ttf"),
             ("img", "logo", "report_logo.png"),
         ):
@@ -199,7 +216,10 @@ class RunFromAnotherDirectoryTests(unittest.TestCase):
             copy_assets(str(report), 2)
 
         assets = report / "assets"
-        self.assertTrue((assets / "css" / "style.css").is_file())
+        self.assertTrue((assets / "css" / "report.css").is_file())
+        self.assertTrue((assets / "fonts" / "IBMPlexSans-Regular.ttf").is_file())
+        self.assertTrue((assets / "fonts" / "OFL.txt").is_file())
+        self.assertTrue((assets / "js" / "driver.js.iife.js").is_file())
         self.assertTrue((assets / "img" / "logo" / "report_logo.png").is_file())
         self.assertTrue(list((assets / "icons" / "aws").rglob("*.png")))
         self.assertFalse((assets / "icons" / "azure").exists())
@@ -232,7 +252,7 @@ class NoCurrentDirectoryLookupTests(unittest.TestCase):
         re.compile(r"parents\[\d\]\s*/\s*[\"']assets[\"']"),
     )
     # Paths inside the report folder, or links inside the HTML report.
-    ALLOWED = ()
+    ALLOWED = ('"logo": f"assets/img/csp/',)
 
     def sources(self):
         for name in SOURCE_DIRS:

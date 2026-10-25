@@ -118,7 +118,8 @@ class AcceptedShapeTests(ShapeTestCase):
         result = self.run_shape("legacy")
 
         self.assert_a_complete_offline_run(result)
-        self.assertIn("High: R2 No alternatives", result.text())
+        self.assertRegex(result.text(), r"R2 No alternatives High")
+        self.assertIn("High · 1", result.text())
         self.assertIn("unknown", result.html().lower())
         self.assertIsNone(result.report_json()["provenance"]["catalogue_version"])
         # Without catalogue_meta the sync document makes no claim about a version
@@ -130,7 +131,8 @@ class AcceptedShapeTests(ShapeTestCase):
         self.assert_a_complete_offline_run(result)
         text = result.text()
         # catalogue_severity wins over severity, and risk.code over R<id>
-        self.assertIn("Critical: LOCK-002 No alternatives", text)
+        self.assertRegex(text, r"LOCK-002 No alternatives Critical")
+        self.assertIn("Critical · 1", text)
         self.assertNotIn("R2 No alternatives", text)
         self.assertIn(VERSION, text)
         provenance = result.report_json()["provenance"]
@@ -159,7 +161,7 @@ class AcceptedShapeTests(ShapeTestCase):
             future.report_json()["data"]["resource_inventory"],
             current.report_json()["data"]["resource_inventory"],
         )
-        self.assertIn("Critical: LOCK-002 No alternatives", future.text())
+        self.assertRegex(future.text(), r"LOCK-002 No alternatives Critical")
 
 
 class RejectedShapeTests(ShapeTestCase):

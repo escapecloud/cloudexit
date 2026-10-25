@@ -4,12 +4,9 @@ import logging
 import os
 import sqlite3
 from collections import Counter
-from datetime import datetime
 from typing import Any
-from jinja2 import Environment
 
 from cloudexit.report.helpers import format_gib, gib_number, initials, share_label
-from cloudexit.resources import asset_path
 from cloudexit.catalogue.db import load_data
 from cloudexit.egress.model import (
     GIB,
@@ -18,14 +15,8 @@ from cloudexit.egress.model import (
 )
 from cloudexit.providers.aws.egress import ARCHIVE_TIERS as AWS_ARCHIVE_TIERS
 from cloudexit.providers.azure.egress import ARCHIVE_TIERS as AZURE_ARCHIVE_TIERS
-from cloudexit.report.context import (
-    DOCUMENT_CODE,
-    EGRESS_DOCUMENT_CODE,
-    PROVIDER_NAMES,
-    format_document_id,
-    scope_facts,
-)
-from cloudexit.report.notices import notices_html, text_parts
+from cloudexit.report.context import PROVIDER_NAMES
+from cloudexit.report.notices import text_parts
 from cloudexit.report.sections import BOOK_DEMO_URL, PRODUCT_SITES
 from cloudexit.report.wording import BLOCKS
 
@@ -36,39 +27,6 @@ UNIT_DIVISORS = {"GB": 10**9, "GiB": 2**30}
 COMPONENTS = ("internet_egress", "archive_retrieval")
 
 ARCHIVE_TIERS_BY_CSP = {1: AZURE_ARCHIVE_TIERS, 2: AWS_ARCHIVE_TIERS}
-
-CATEGORIES = {
-    "object": {
-        "label": "Object Storage",
-        "badge": "Object",
-        "color": "rgba(34, 197, 94, 1)",
-        "in_allocation": True,
-    },
-    "block": {
-        "label": "Block (allocated)",
-        "badge": "Block",
-        "color": "rgba(83, 155, 255, 1)",
-        "in_allocation": True,
-    },
-    "file": {
-        "label": "File Storage",
-        "badge": "File",
-        "color": "rgba(245, 158, 11, 1)",
-        "in_allocation": True,
-    },
-    "database": {
-        "label": "Databases",
-        "badge": "Database",
-        "color": "rgba(168, 85, 247, 1)",
-        "in_allocation": True,
-    },
-    "backup": {
-        "label": None,
-        "badge": "Backup",
-        "color": None,
-        "in_allocation": False,
-    },
-}
 
 PRICING_SOURCE_LINKS = {
     1: {
@@ -183,7 +141,11 @@ def build_fee_estimate(
 def format_fee(fee: float | None) -> str:
     if fee is None:
         return "n/a"
-    return f"${fee:,.2f}"
+    return f"${fee_number(fee)}"
+
+
+def fee_number(fee: float) -> str:
+    return f"{fee:,.2f}"
 
 
 def _free_tier(
@@ -216,6 +178,23 @@ def free_allowance_bytes(
 ) -> float | None:
     tier = _free_tier(prices, cloud_service_provider)
     return tier["tier_to"] * _unit_divisor(tier["unit"]) if tier else None
+
+
+def free_tier_headroom(
+    prices: list[dict[str, Any]], cloud_service_provider: int, known_bytes: int
+) -> dict[str, Any] | None:
+    tier = _free_tier(prices, cloud_service_provider)
+    if tier is None:
+        return None
+    limit = tier["tier_to"]
+    used = known_bytes / _unit_divisor(tier["unit"])
+    return {
+        "unit": tier["unit"],
+        "limit": limit,
+        "used": used,
+        "left": max(0.0, limit - used),
+        "used_share": min(100.0, used / limit * 100) if limit else 100.0,
+    }
 
 
 def _summarize_totals(
@@ -271,29 +250,6 @@ def _resolve_icon(resource_type: str, icon_lookup: dict[str, str]) -> str | None
     return FALLBACK_ICONS.get(code)
 
 
-def _build_allocation(rows: list[dict[str, Any]]) -> tuple[list, list, list]:
-    allocation_categories = {
-        key: info for key, info in CATEGORIES.items() if info["in_allocation"]
-    }
-    totals_by_category: dict[str, int] = {}
-    for row in rows:
-        if row["size_bytes"] is not None:
-            category = row.get("category")
-            if category in allocation_categories:
-                totals_by_category[category] = (
-                    totals_by_category.get(category, 0) + row["size_bytes"]
-                )
-
-    labels, values, colors = [], [], []
-    for category, info in allocation_categories.items():
-        size_bytes = totals_by_category.get(category, 0)
-        if size_bytes > 0:
-            labels.append(info["label"])
-            values.append(size_bytes)
-            colors.append(info["color"])
-    return labels, values, colors
-
-
 def _build_type_groups(
     rows: list[dict[str, Any]],
     fees_by_id: dict[str, float | None],
@@ -307,10 +263,6 @@ def _build_type_groups(
                 "label": row["label"],
                 "icon": _resolve_icon(row["type"], icon_lookup),
                 "initials": initials(row["label"]),
-                "category": row["category"],
-                "category_label": (
-                    CATEGORIES.get(row["category"], {}).get("badge") or row["category"]
-                ),
                 "size_bytes": None,
                 "fee": None,
                 "resources": [],
@@ -381,14 +333,6 @@ def load_egress_estimate(report_path: str, json_path: str) -> dict[str, Any]:
             totals, total_fee, pricing, meta["cloud_service_provider"]
         ),
     }
-
-
-def _generated_at(timestamp):
-    # The run's own time, as the estimate stored it; now when it cannot be read
-    try:
-        return datetime.strptime(str(timestamp), "%Y-%m-%d %H:%M:%S UTC")
-    except ValueError:
-        return datetime.now()
 
 
 def _share(part, whole):
@@ -765,78 +709,3 @@ def next_steps_facts(
             )
         )
     return {"heading": b["eg_heading_next_steps"], "paragraphs": paragraphs}
-
-
-def generate_egress_html_report(
-    report_path: str,
-    json_path: str,
-    provider_details: dict[str, Any] | None = None,
-    run_id: str | None = None,
-) -> dict[str, Any]:
-    try:
-        estimate = load_egress_estimate(report_path, json_path)
-        meta, rows = estimate["meta"], estimate["rows"]
-        csp = meta["cloud_service_provider"]
-        summary = estimate["summary"]
-        b = BLOCKS
-
-        allocation_labels, allocation_values, allocation_colors = _build_allocation(
-            rows
-        )
-
-        type_groups = estimate["type_groups"]
-        fee_groups = [group for group in type_groups if (group["fee"] or 0.0) > 0]
-        fee_labels = [group["label"] for group in fee_groups]
-        fee_values = [round(group["fee"], 2) for group in fee_groups]
-
-        template_content = asset_path("template", "egress.html").read_text(
-            encoding="utf-8"
-        )
-
-        scope = scope_facts(provider_details or {}, csp, None)
-        executive_id = format_document_id(DOCUMENT_CODE, run_id)
-        env = Environment(autoescape=True)
-        template = env.from_string(template_content)
-        html_content = template.render(
-            page_title=f"{b['cover_title_egress']} – {meta['name']}",
-            document_id=format_document_id(EGRESS_DOCUMENT_CODE, run_id),
-            name=meta["name"],
-            cloud_service_provider=csp,
-            assessment_type=meta["assessment_type"],
-            timestamp=meta["timestamp"],
-            total_data_display=summary["total_data_display"],
-            total_fee_display=summary["total_fee_display"],
-            unknown_count=summary["unknown_count"],
-            has_allocation=bool(allocation_values),
-            allocation_labels_json=json.dumps(allocation_labels),
-            allocation_values_json=json.dumps(allocation_values),
-            allocation_colors_json=json.dumps(allocation_colors),
-            has_fees=bool(fee_values),
-            fee_labels_json=json.dumps(fee_labels),
-            fee_values_json=json.dumps(fee_values),
-            free_tier=summary["free_tier"],
-            free_tier_limit_display=summary["free_tier_limit"],
-            known_data_display=format_gib(estimate["totals"]["known_size_bytes"]),
-            type_groups=type_groups,
-            introduction=introduction_facts(scope, b),
-            coverage=coverage_facts(csp, b),
-            landscape=landscape_facts(estimate, b),
-            costs=cost_facts(estimate, b),
-            pricing=pricing_facts(estimate, b),
-            next_steps=next_steps_facts(executive_id, b=b),
-            notices=notices_html(csp, _generated_at(meta["timestamp"]), b, egress=True),
-        )
-
-        html_path = os.path.join(report_path, "egress.html")
-        with open(html_path, "w", encoding="utf-8") as report_file:
-            report_file.write(html_content)
-
-        return {
-            "success": True,
-            "logs": "Egress report generated successfully.",
-            "html_path": html_path,
-        }
-
-    except Exception as e:
-        logger.error(f"Error generating egress report: {str(e)}", exc_info=True)
-        return {"success": False, "logs": str(e)}

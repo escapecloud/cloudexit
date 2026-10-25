@@ -29,7 +29,6 @@ from cloudexit.providers.azure.clients import (
     create_subscription_client,
 )
 from cloudexit.egress.estimate import estimate_egress
-from cloudexit.report.egress import generate_egress_html_report
 from cloudexit.platform.client import ApiError, check_key
 from cloudexit.platform.run_output import build_run_json, exit_code_of
 from cloudexit.platform.status import host_catalogue_lines, run_status
@@ -988,7 +987,6 @@ def run_assessment(
         egress_failed = False
         egress_collected = False
         egress_json_path = None
-        egress_html_path = None
         if egress:
             console.print("Stage #5 – Egress Estimation", style="bold")
 
@@ -1007,25 +1005,6 @@ def run_assessment(
                 print_step("Estimating egress data...", status="ok")
                 egress_json_path = egress_result.get("json_path")
                 egress_collected = True
-
-                with console.status("Generating egress report...", spinner="dots"):
-                    egress_report_result = generate_egress_html_report(
-                        report_path,
-                        egress_json_path,
-                        config["providerDetails"],
-                        sync_id,
-                    )
-
-                if egress_report_result["success"]:
-                    print_step("Generating egress report...", status="ok")
-                    egress_html_path = egress_report_result.get("html_path")
-                else:
-                    print_step(
-                        "Generating egress report...",
-                        status="error",
-                        logs=egress_report_result["logs"],
-                    )
-                    egress_failed = True
             else:
                 print_step(
                     "Estimating egress data...",
@@ -1219,8 +1198,6 @@ def run_assessment(
         json_report_path = report_status.get("reports", {}).get("JSON")
         if json_report_path:
             console.print(f"JSON Report: {json_report_path}", style="cyan")
-        if egress_html_path:
-            console.print(f"Egress Report: {egress_html_path}", style="cyan")
         if egress_pdf_path:
             console.print(f"Egress PDF: {egress_pdf_path}", style="cyan")
         console.print("-------------------------------------------")

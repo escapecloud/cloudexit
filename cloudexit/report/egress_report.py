@@ -48,10 +48,10 @@ def build_egress_content(context, estimate, styles, b):
     return content
 
 
-def generate_egress_report(context, json_path, path=None):
+def generate_egress_report(context, json_path, path=None, estimate=None):
     path = path or os.path.join(context.report_path, "egress.pdf")
     b = BLOCKS
-    estimate = load_egress_estimate(context.report_path, json_path)
+    estimate = estimate or load_egress_estimate(context.report_path, json_path)
     cover = RecordCover(
         b["cover_title_egress"],
         context,

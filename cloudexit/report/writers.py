@@ -5,16 +5,9 @@ import logging
 from typing import Any
 from jinja2 import Environment
 
-# ReportLab
-
-# Utils
-from cloudexit.report.helpers import initials
+from cloudexit.report.context import ReportContext
+from cloudexit.report.html_sections import html_sections
 from cloudexit.resources import asset_path
-from cloudexit.report.html_data import (
-    transform_cost_inventory_for_html,
-    transform_risk_inventory_for_html,
-    transform_alt_tech_for_html,
-)
 from cloudexit.report.json_data import (
     transform_resource_inventory_for_json,
     transform_cost_inventory_for_json,
@@ -27,114 +20,15 @@ logger = logging.getLogger(__name__)
 
 
 def generate_html_report(
-    report_path: str,
-    metadata: dict[str, Any],
-    resource_type_mapping: dict[str, dict[str, Any]],
-    resource_inventory: list[dict[str, Any]],
-    cost_data: list[dict[str, Any]],
-    scoring_data: dict[str, Any] | None,
-    risk_data: list[dict[str, Any]],
-    risk_definitions: list[dict[str, Any]],
-    alternatives: list[dict[str, Any]],
-    alternative_technologies: list[dict[str, Any]],
-    exit_strategy: int,
-    alternative_technology_organizations: list[dict[str, Any]] | None = None,
-    summary: dict[str, Any] | None = None,
+    context: ReportContext, egress_estimate: dict[str, Any] | None = None
 ) -> str:
-
-    # Transform resource inventory
-    resource_inventory_dict = {
-        str(item["resource_type"]): {
-            **item,
-            "name": resource_type_mapping.get(str(item["resource_type"]), {}).get(
-                "name", "Unknown Resource"
-            ),
-            "icon": (
-                "/assets" + icon
-                if (
-                    icon := resource_type_mapping.get(
-                        str(item["resource_type"]), {}
-                    ).get("icon")
-                )
-                else ""
-            ),
-        }
-        for item in resource_inventory
-    }
-
-    # Transform risks
-    risks, severity_counts = transform_risk_inventory_for_html(
-        risk_data, risk_definitions, resource_inventory_dict
-    )
-
-    # Transform costs
-    months, cost_values, total_cost, currency, currency_symbol = (
-        transform_cost_inventory_for_html(cost_data)
-    )
-
-    # Transform resource data with names and icons
-    resource_counts = []
-    for resource_type, resource in resource_inventory_dict.items():
-        count = resource.get("count", 0)
-        resource_info = resource_type_mapping.get(str(resource_type), {})
-        name = resource_info.get("name", "Unknown Resource")
-        icon = (resource_info.get("icon") or "").lstrip("/")
-
-        resource_counts.append(
-            {
-                "resource_type": resource_type,
-                "name": name,
-                "icon": icon,
-                "initials": initials(name),
-                "count": count,
-            }
-        )
-
-    # Calculate total resources
-    total_resources = sum(item["count"] for item in resource_counts)
-
-    # Transform alternative technologies
-    alternative_technologies_data = transform_alt_tech_for_html(
-        resource_inventory,
-        alternatives,
-        alternative_technologies,
-        exit_strategy,
-        alternative_technology_organizations=alternative_technology_organizations,
-    )
-
-    # Scoring Data
-    scoring_context = {
-        "scoring_data": bool(scoring_data),
-        "exit_score": scoring_data.get("exit_score", 0) if scoring_data else 0,
-        "human": scoring_data.get("human_score", 0) if scoring_data else 0,
-        "technology": scoring_data.get("technology_score", 0) if scoring_data else 0,
-        "operational": scoring_data.get("operational_score", 0) if scoring_data else 0,
-    }
-
-    # Render the HTML template
     template_content = asset_path("template", "index.html").read_text(encoding="utf-8")
 
     env = Environment(autoescape=True)
     template = env.from_string(template_content)
-    html_content = template.render(
-        **metadata,
-        **scoring_context,
-        risks=risks,
-        high_risk_count=severity_counts["high"],
-        medium_risk_count=severity_counts["medium"],
-        low_risk_count=severity_counts["low"],
-        total_cost=total_cost,
-        months_json=json.dumps(months),
-        costs_json=json.dumps(cost_values),
-        currency_symbol=currency_symbol,
-        total_resources=total_resources,
-        resource_inventory=resource_counts,
-        alternative_technologies=alternative_technologies_data,
-        summary=summary,
-    )
+    html_content = template.render(page=html_sections(context, egress_estimate))
 
-    # Save HTML report
-    html_path = os.path.join(report_path, "index.html")
+    html_path = os.path.join(context.report_path, "index.html")
     with open(html_path, "w", encoding="utf-8") as report_file:
         report_file.write(html_content)
 

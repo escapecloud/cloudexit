@@ -2,6 +2,7 @@ import copy
 import json
 import os
 import re
+import shutil
 import tempfile
 import unittest
 from io import BytesIO
@@ -19,8 +20,8 @@ from cloudexit.report.palette import contrast_failures
 from cloudexit.report.placeholder import IconPlaceholder, LabelWithPlaceholder
 from cloudexit.report.sections import ALT_BODY
 from cloudexit.egress.model import GIB
+from cloudexit.resources import asset_path
 from cloudexit.report.writers import generate_html_report
-from cloudexit.report.egress import generate_egress_html_report
 from cloudexit.report.egress_report import generate_egress_report
 from cloudexit.report.egress_sections import _type_cell
 from cloudexit.report.aggregate import enrich_resource_inventory
@@ -40,7 +41,7 @@ from tests.report.test_egress import (
 
 EC2_ICON = "/icons/aws/Compute/EC2.png"
 LAMBDA_ICON = "/icons/aws/Compute/Lambda.png"
-PLACEHOLDER = '<span class="resource-icon-placeholder" aria-hidden="true">{}</span>'
+PLACEHOLDER = '<span class="ph" aria-hidden="true">{}</span>'
 
 
 def with_initials(initials_text, name):
@@ -231,23 +232,15 @@ class BasicPdfTests(TempDirTestCase):
 
 
 class HtmlReportTests(TempDirTestCase):
-    def render(self, fixture):
+    def render(self, fixture, with_icon=True):
         directory = self.directory()
-        html_path = generate_html_report(
-            str(directory),
-            fixture["metadata"],
-            fixture["resource_type_mapping"],
-            fixture["resource_inventory"],
-            fixture["cost_data"],
-            None,
-            fixture["risk_data"],
-            fixture["risk_definitions"],
-            fixture["alternatives"],
-            fixture["alternative_technologies"],
-            fixture["exit_strategy"],
-            fixture["alternative_technology_organizations"],
-        )
-        return Path(html_path).read_text(encoding="utf-8")
+        if with_icon:
+            # The page points only at files in its own folder
+            icon = directory / "assets" / EC2_ICON.lstrip("/")
+            icon.parent.mkdir(parents=True)
+            shutil.copyfile(asset_path("icons", "aws", "Compute", "EC2.png"), icon)
+        context = build_fixture_context(fixture, directory)
+        return Path(generate_html_report(context)).read_text(encoding="utf-8")
 
     def test_a_type_without_an_icon_renders_the_placeholder_not_a_broken_image(self):
         fixture = fixture_with(
@@ -265,8 +258,8 @@ class HtmlReportTests(TempDirTestCase):
         html = self.render(fixture)
 
         self.assertIn(PLACEHOLDER.format("VM"), html)
-        # A type missing from the mapping is named "Unknown Resource"
-        self.assertIn(PLACEHOLDER.format("UR"), html)
+        # A type missing from the mapping has no name, so its initials are "?"
+        self.assertIn(PLACEHOLDER.format("?"), html)
         self.assertNotIn("default.png", html)
         self.assertNotIn('src="assets/"', html)
         self.assertNotIn("None", re.findall(r'src="assets/[^"]*"', html))
@@ -275,7 +268,14 @@ class HtmlReportTests(TempDirTestCase):
         html = self.render(fixture_with({}))
 
         self.assertIn(f'src="assets{EC2_ICON}"', html)
-        self.assertNotIn('resource-icon-placeholder" aria-hidden', html)
+        self.assertNotIn(PLACEHOLDER.format("EI"), html)
+
+    def test_an_icon_the_report_folder_does_not_hold_is_a_placeholder(self):
+        # The page never points outside the report folder
+        html = self.render(fixture_with({}), with_icon=False)
+
+        self.assertNotIn(f'src="assets{EC2_ICON}"', html)
+        self.assertIn(PLACEHOLDER.format("EI"), html)
 
     def test_both_kinds_appear_side_by_side(self):
         fixture = fixture_with(
@@ -294,10 +294,8 @@ class HtmlReportTests(TempDirTestCase):
         self.assertIn(PLACEHOLDER.format("VM"), html)
 
     def test_the_stylesheet_styles_the_placeholder(self):
-        from cloudexit.resources import asset_path
-
-        css = asset_path("css", "style.css").read_text(encoding="utf-8")
-        self.assertIn(".resource-icon-placeholder", css)
+        css = asset_path("css", "report.css").read_text(encoding="utf-8")
+        self.assertIn(".rt .ph", css)
 
 
 class EnrichedInventoryTests(unittest.TestCase):
@@ -389,15 +387,6 @@ class EgressReportTests(TempDirTestCase):
         count_both = image_count(self.run_pdf(both))
 
         self.assertEqual(image_count(self.run_pdf(one)), count_both - 1)
-
-    def test_the_html_shows_a_placeholder_and_keeps_the_images(self):
-        icons = {"microsoft.storage/storageaccounts": EC2_ICON}
-        result = self.run_report(generate_egress_html_report, icons)
-
-        html = Path(result["html_path"]).read_text(encoding="utf-8")
-        self.assertRegex(html, rf'src="assets/+{EC2_ICON.lstrip("/")}"')
-        self.assertIn(PLACEHOLDER.format("MD"), html)
-        self.assertNotIn("no_image", html)
 
 
 if __name__ == "__main__":

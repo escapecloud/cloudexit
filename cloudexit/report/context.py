@@ -38,6 +38,8 @@ class Provenance:
     uploaded: bool = False
     platform_url: str | None = None
     assessment_id: str | None = None
+    # Why a requested upload did not happen, when it did not
+    upload_reason: str | None = None
 
     @property
     def run_short_id(self):
@@ -77,6 +79,9 @@ def collect_provenance(db_path, *, run_id=None, upload=None, collected_at=None):
         uploaded=upload.get("status") == "uploaded",
         platform_url=upload.get("url") if upload.get("status") == "uploaded" else None,
         assessment_id=upload.get("assessment_id"),
+        upload_reason=(
+            upload.get("reason") if upload.get("status") != "uploaded" else None
+        ),
     )
 
 
@@ -87,6 +92,9 @@ class ResourceTypeEntry:
     icon: str | None
     resources: int = 0
     locations: set = field(default_factory=set)
+    location_counts: dict = field(default_factory=dict)
+    # The icon as the catalogue names it, relative to the report's assets
+    icon_rel: str = ""
 
 
 @dataclass(frozen=True)
@@ -127,6 +135,7 @@ class AlternativesEntry:
     icon: str | None
     resources: int
     alternatives: list = field(default_factory=list)
+    icon_rel: str = ""
 
 
 @dataclass(frozen=True)
@@ -197,11 +206,16 @@ def _resource_entries(resource_inventory, resource_type_mapping, report_path):
                 key,
                 (info.get("name") or "").strip() or "–",
                 _icon_path(report_path, info.get("icon")),
+                icon_rel=str(info.get("icon") or "").lstrip("/"),
             ),
         )
-        entry.resources += int(row.get("count") or 0)
+        count = int(row.get("count") or 0)
+        entry.resources += count
         if row.get("location"):
             entry.locations.add(row["location"])
+            entry.location_counts[row["location"]] = (
+                entry.location_counts.get(row["location"], 0) + count
+            )
     return sorted(
         entries.values(), key=lambda entry: (-entry.resources, entry.name.lower())
     )
@@ -296,6 +310,7 @@ def _alternative_entries(
                 resource.icon,
                 resource.resources,
                 found,
+                icon_rel=resource.icon_rel,
             )
         )
     return entries

@@ -1,2 +1,7 @@
 # The definition copy is compared by file hash, so it must not get CRLF line endings
 docs/api-v2/** text eol=lf
+
+# The bundled driver.js files are checked against a pinned hash and shipped
+# unmodified, so no line ending conversion may touch them
+cloudexit/assets/js/** -text
+cloudexit/assets/css/driver.css -text

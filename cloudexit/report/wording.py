@@ -280,10 +280,10 @@ BLOCKS = {
     "alt_hotspot_short": "<b>No alternative in the data catalogue</b> — lock-in hot-spot",
     "alt_more": "+{k} more",
     "alt_flag_open_source": "Open source",
-    "alt_flag_support_plan": "Support plan",
+    "alt_flag_support_plan": "Enterprise support",
     "alt_no_resources": "No resources were discovered in this assessment, so there are no alternatives to show.",
     "alt_empty_set": "No alternative technologies were found for the discovered resource types.",
-    "es_alttech_caption": "Examples are listed alphabetically; this report does not rank the alternatives. Open source and support plan as recorded in the data catalogue.",
+    "es_alttech_caption": "Examples are listed alphabetically; this report does not rank the alternatives. Open source and enterprise support as recorded in the data catalogue.",
     "es_heading_severity": "Risk Severity Levels",
     "es_severity_lead": (
         "Severity expresses the expected impact of a risk on the effort and "
@@ -639,14 +639,17 @@ BLOCKS = {
     ),
     "notices_trademarks_heading": "Trademarks",
     "notices_trademark_own": (
-        "EscapeCloud, cloudexit and the EscapeCloud logo are trademarks. The "
-        "AGPL-3.0 licence does not grant any right to use them; modified "
-        "versions must not use them in a way that suggests they are official."
+        "EscapeCloud® is a registered trademark in the European Union and the "
+        "United States. The AGPL-3.0 licence applies solely to the cloudexit "
+        "software, not to the EscapeCloud name, logo, or brand assets. You may "
+        "not use EscapeCloud trademarks in connection with modified versions or "
+        "downstream distributions in any manner that implies endorsement, "
+        "affiliation, or origin with EscapeCloud."
     ),
     "notices_trademark_others": (
-        "Other product and company names in this report, including those of "
-        "alternative technologies, are trademarks of their respective owners. "
-        "Naming them does not imply endorsement or affiliation."
+        "Other product and company names and logos are trademarks of their "
+        "respective owners; naming them does not imply endorsement or "
+        "affiliation."
     ),
     "notices_icons_aws": (
         "AWS service icons are taken from the AWS Architecture Icons "
@@ -671,6 +674,365 @@ BLOCKS = {
         "licence."
     ),
     "notices_copyright": "© 2024–{year} EscapeCloud",
+    "html_help": "Help",
+    "html_help_aria": "Help: how to read this report",
+    "html_logo_link": "EscapeCloud website (opens in a new tab)",
+    "html_chip_self": "Self-collected",
+    "html_chip_self_title": "Collected and evaluated on this machine; not uploaded",
+    "html_chip_uploaded": "Uploaded",
+    "html_chip_uploaded_title": "Collected on this machine and uploaded to the platform",
+    "html_download": "Download",
+    "html_download_summary": "Executive Summary (PDF)",
+    "html_download_egress": "Egress & Data Landscape (PDF)",
+    "html_open_platform": "Open on the platform",
+    "html_nav_label": "Sections",
+    "html_nav_overview": "Overview",
+    "html_nav_scores": "Scores",
+    "html_nav_risks": "Risks",
+    "html_nav_about": "About This Report",
+    "html_lock_label": "Light and Enterprise",
+    "html_scope_label": "Scope",
+    "html_run_label": "Run",
+    "html_run_small": "run {run} · {source}",
+    "html_run_live": "provider APIs",
+    "html_run_tfstate": "Terraform state",
+    "html_scope_no_resources": "no resources found",
+    "html_scope_serial": "serial {serial}",
+    "html_catalogue_sha": "sha256 {sha}",
+    "html_risks_label": "Unique Risks",
+    "html_sev_aria": "Risks by severity: {counts}",
+    "html_costs_label": "Costs, Last 6 Months",
+    "html_costs_label_short": "Costs",
+    "html_costs_average": "{amount} per month on average",
+    "html_costs_none": "no costs in the last six months",
+    "html_costs_change": "{latest} vs. {previous}",
+    "html_costs_aria": "Monthly costs: {parts}",
+    "html_costs_aria_part": "{month} {amount}",
+    "html_costs_aria_provisional": "{month} {amount} provisional",
+    "html_costs_provisional": (
+        "* {month} is provisional: the month was still accruing. Costs are "
+        "context only; they are not an exit-cost estimate."
+    ),
+    "html_costs_context": "Costs are context only; they are not an exit-cost estimate.",
+    "html_costs_tfstate_hint": (
+        "Run cloudexit against the provider APIs to include the last six "
+        "months of costs."
+    ),
+    "html_months": [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+    ],
+    "html_scores_grade": "Exit Readiness Grade",
+    "html_scores_lock": "Vendor Lock-in Score",
+    "html_scores_pill": "Light & Enterprise",
+    "html_scores_scale": "of 100",
+    "html_scores_bands": ["F", "E", "D", "C", "B", "A"],
+    "html_scores_dims": ["Human", "Technology", "Operational"],
+    "html_scores_dim_value": "{dash} / 5",
+    "html_scores_grade_text": (
+        "A grade from A to F for how ready this scope is for an exit, computed "
+        "from the risks in this report."
+    ),
+    "html_scores_lock_text": (
+        "How easily each resource type can be replaced, in skills, technology "
+        "and operations, with the {alternatives} rated and ranked."
+    ),
+    "html_scores_lock_text_plain": (
+        "How easily each resource type can be replaced, in skills, technology "
+        "and operations, with the alternatives rated and ranked."
+    ),
+    "html_scores_on_platform": "For this run it is on the platform.",
+    "html_platform_not_uploaded": "Not uploaded: {reason}",
+    "html_hint_title": "EscapeCloud Light & Enterprise",
+    "html_hint_text": (
+        "EscapeCloud's scoring engine offers several scoring methods to assess "
+        "how feasible an exit is, and tracks the continuously changing vendor "
+        "landscape of alternative technologies."
+    ),
+    "html_site_exitcloud": "exitcloud.io",
+    "html_site_escapecloud": "escapecloud.io",
+    "html_risks_caption": "{count} · {scope} · ordered by severity",
+    "html_risks_caption_only_count": "{count} · ordered by severity",
+    "html_risks_count_one": "1 unique risk",
+    "html_risks_count_many": "{n} unique risks",
+    "html_risks_wide_sole": "applies to the scope as a whole",
+    "html_risks_wide_all": "all apply to the scope as a whole",
+    "html_risks_wide_one": "1 applies to the scope as a whole",
+    "html_risks_wide_many": "{n} apply to the scope as a whole",
+    "html_risks_none_caption": "No exit risks",
+    "html_risks_th_affected": "Affected Resource Types",
+    "html_risks_more": "+{n} more",
+    "html_risks_footnote": (
+        "Risk codes are stable across runs. Severity levels and their meaning: "
+        "{link}."
+    ),
+    "html_risks_empty_scope": (
+        "With no resources in the scope, no risk from the data catalogue applies."
+    ),
+    "html_risks_empty_clean": (
+        "Every resource type has enough alternatives with enterprise support, "
+        "and the size of the scope is below the thresholds."
+    ),
+    "html_inv_caption": "{resources} · {types} · {regions}",
+    "html_inv_regions": "{regions} ({shares})",
+    "html_inv_not_managed": "resources that Terraform does not manage are not assessed",
+    "html_inv_th_locations": "Locations",
+    "html_inv_empty_title": "No resources were found in the defined scope.",
+    "html_inv_empty_resource_group": (
+        "Check that the resource group {scope} is the intended scope and that "
+        "the credentials can read it. Resource types not in the data catalogue "
+        "are not counted."
+    ),
+    "html_inv_empty_region": (
+        "Check that the region {scope} is the intended scope and that the "
+        "credentials can read it. Resource types not in the data catalogue are "
+        "not counted."
+    ),
+    "html_inv_empty_tfstate": (
+        "Check that the state file {scope} holds resources of this provider. "
+        "Resource types not in the data catalogue are not counted."
+    ),
+    "html_alt_caption": "{alternatives} for {with_alternatives} of {types} resource types",
+    "html_alt_caption_one_type": "{alternatives} for {with_alternatives} of 1 resource type",
+    "html_alt_n_one": "1 alternative",
+    "html_alt_n_many": "{n} alternatives",
+    "html_alt_search": "Search alternatives",
+    "html_filter_os": "Open Source",
+    "html_filter_sp": "Enterprise Support",
+    "html_filter_eu": "European Vendors",
+    "html_alt_th_name": "Alternative",
+    "html_alt_meta": "{resources} · {alternatives}",
+    "html_alt_meta_none": "{resources} · no alternative in the data catalogue",
+    "html_alt_more_one": "Show 1 more alternative",
+    "html_alt_more_many": "Show {n} more alternatives",
+    "html_alt_no_match": "No alternative matches the search and filters.",
+    "html_alt_footnote": (
+        "Alternatives are listed alphabetically from the data catalogue "
+        "({version}); this report doesn't rank them. Open source and "
+        "enterprise support as recorded in the data catalogue. Country = "
+        "vendor's registered country."
+    ),
+    "html_alt_empty_title": "No resource types to list alternatives for.",
+    "html_alt_empty_text": (
+        "Alternatives appear here for each resource type found in the scope."
+    ),
+    "html_yes": "Yes",
+    "html_no": "No",
+    "html_eg_caption": (
+        "Data held by the data-bearing resources, and the one-off fee to "
+        "transfer it out at list prices · also as PDF {document_id}"
+    ),
+    "html_eg_kpi_fee": "Estimated Transfer Fee",
+    "html_eg_kpi_headroom": "Free-Tier Headroom",
+    "html_eg_fee_free": "within the monthly free tier · USD list prices",
+    "html_eg_fee_paid": "at list prices · USD",
+    "html_eg_types_sized": "{sized} of {types} types sized",
+    "html_eg_headroom_left": "of {limit} per month left",
+    "html_eg_headroom_aria": "{share} of the free tier used",
+    "html_eg_billable_caption": "no free tier in the prices used",
+    "html_eg_not_sized_caption": "listed, not in the fee",
+    "html_eg_not_sized": "not sized",
+    "html_eg_vol_aria": "Share of data volume: {parts}",
+    "html_eg_vol_part": "{type} {share}",
+    "html_eg_vol_other": "Other types",
+    "html_eg_vol_unsized": "{types} not sized",
+    "html_eg_units_gb": (
+        "Data is shown in GiB; {provider} prices egress per GB (1 GiB = 1.074 "
+        "GB), so {gib} GiB is {gb} GB of the {limit} monthly free tier."
+    ),
+    "html_eg_units_gb_plain": (
+        "Data is shown in GiB; {provider} prices egress per GB (1 GiB = 1.074 GB)."
+    ),
+    "html_eg_units_gib": "Data is shown in GiB; {provider} prices egress per GiB.",
+    "html_eg_amounts": "Amounts in USD list prices; not converted.",
+    "html_eg_amounts_costs": (
+        "Amounts in USD list prices; not converted and not added to the costs "
+        "above ({currency}, monthly)."
+    ),
+    "html_eg_scope_note": (
+        "Network transfer fees only: request charges, cross-region traffic, "
+        "private connections and negotiated discounts are not included. Some "
+        "types report provisioned rather than used capacity. Not an estimate "
+        "of the full cost of an exit."
+    ),
+    "html_eg_sized_summary": "What is sized, and how",
+    "html_eg_prices_summary": "Prices used ({provider}, zone 1, public internet routing)",
+    "html_about_caption": (
+        "Document, scope and provenance · method, limitations, severity levels "
+        "and terms"
+    ),
+    "html_about_document": "Document",
+    "html_about_purpose": "Purpose and Method",
+    "html_about_phases_meta": "{n} phases",
+    "html_about_levels_meta": "{n} levels",
+    "html_about_terms_meta": "{n} terms",
+    "html_method_lead": (
+        "The assessment was collected and evaluated locally with cloudexit. "
+        "Once the scope is defined, it runs three phases:"
+    ),
+    "html_method_discovery_tfstate": (
+        "reads the resources managed in the Terraform state and classifies "
+        "them by type and region; a state file holds no costs."
+    ),
+    "html_method_catalogue": (
+        "Risks and alternatives are taken from the data catalogue version shown "
+        "above, so the results of this run can be reproduced."
+    ),
+    "html_limitations_data": (
+        "The analysis assumes that the discovered resources are correctly "
+        "configured and accessible. Dependencies outside the defined scope, "
+        "such as on-premises systems or other cloud accounts, are not covered; "
+        "results are indicative, not exhaustive."
+    ),
+    "html_glossary": [
+        {
+            "id": "aws",
+            "term": "AWS",
+            "definition": "Amazon Web Services",
+        },
+        {
+            "id": "data_catalogue",
+            "term": "Data catalogue",
+            "definition": "The catalogue of resource types, exit risks and alternative technologies used for this assessment.",
+        },
+        {
+            "id": "hotspot",
+            "term": "Lock-in hot-spot",
+            "definition": "A discovered resource type for which the data catalogue lists no alternative.",
+        },
+        {
+            "id": "run",
+            "term": "Run",
+            "definition": "One completed assessment of the defined scope, identified by its run ID.",
+        },
+        {
+            "id": "egress",
+            "term": "Egress",
+            "definition": "Data transferred out of the provider's network, which the provider bills per unit of volume.",
+        },
+        {
+            "id": "free_tier",
+            "term": "Free tier",
+            "definition": "The volume of internet egress per month that the provider does not bill.",
+        },
+        {
+            "id": "gib_gb",
+            "term": "GiB / GB",
+            "definition": "Gibibyte (2³⁰ bytes) and gigabyte (10⁹ bytes); 1 GiB = 1.074 GB.",
+        },
+    ],
+    "html_notice_advice": (
+        "It is not legal, financial or investment advice, an audit or an exit plan."
+    ),
+    "html_label_aws_icons": "AWS Architecture Icons",
+    "html_label_aws_guidelines": "AWS Trademark Guidelines",
+    "html_label_azure_icons": "Azure Architecture Icons",
+    "html_label_repository": "github.com/escapecloud/cloudexit",
+    "html_figures_heading": "Figures",
+    "html_figures": (
+        "Costs come from the provider's billing data for the scope. "
+        "Alternatives are entries from the data catalogue, not recommendations."
+    ),
+    "html_figures_egress": (
+        "Costs come from the provider's billing data for the scope; egress "
+        "prices are public list prices at the time of the run. Alternatives "
+        "are entries from the data catalogue, not recommendations."
+    ),
+    "html_figures_tfstate": (
+        "Resources are read from the Terraform state file; a state file holds "
+        "no billing data, so this report shows no costs. Alternatives are "
+        "entries from the data catalogue, not recommendations."
+    ),
+    "html_software": (
+        "cloudexit is free software, licensed under the GNU Affero General "
+        "Public License v3.0 (AGPL-3.0). Source code and issues: "
+        "{repository_link}. The provider icons are not covered by this "
+        "licence. Fonts: IBM Plex, SIL Open Font License 1.1. Guided tour: "
+        "driver.js, MIT License, included in this report's assets."
+    ),
+    "html_footer_ids": "{document_id} · cloudexit {version}",
+    "html_tour_next": "Next",
+    "html_tour_back": "Back",
+    "html_tour_done": "Done",
+    "html_tour_progress": "{{current}} of {{total}}",
+    "html_tour_sections_title": "Sections",
+    "html_tour_sections": (
+        "Jump to any part of the report; the section in view is highlighted."
+    ),
+    "html_tour_sections_lock": (
+        "Scores, marked with a lock, are available in EscapeCloud Light & "
+        "Enterprise."
+    ),
+    "html_tour_report_title": "This Report",
+    "html_tour_report": "The assessed scope and its cloud provider.",
+    "html_tour_report_platform": (
+        "This run was uploaded: Open on the platform shows its full results."
+    ),
+    "html_tour_download_both": (
+        "Download has the same results as PDF: the Executive Summary and the "
+        "Egress & Data Landscape."
+    ),
+    "html_tour_download_both_platform": (
+        "Download has the Executive Summary and the Egress & Data Landscape as " "PDF."
+    ),
+    "html_tour_download_one": "Download has the Executive Summary as PDF.",
+    "html_tour_overview_title": "Overview",
+    "html_tour_overview": (
+        "Scope, unique risks by severity and the last six months of costs. The "
+        "current month is provisional while it is still accruing; costs are "
+        "context, not an exit-cost estimate."
+    ),
+    "html_tour_overview_tfstate": (
+        "Scope and unique risks by severity. A Terraform state holds no "
+        "billing data, so there are no costs; resources that Terraform does "
+        "not manage are not assessed."
+    ),
+    "html_tour_scores_title": "Exit Readiness Grade & Vendor Lock-in Score",
+    "html_tour_scores_available": "Available in EscapeCloud Light & Enterprise.",
+    "html_tour_scores_platform": (
+        "This run was uploaded. Its Exit Readiness Grade and Vendor Lock-in "
+        "Score are on the platform: use Open on the platform. This local "
+        "report never shows platform scores."
+    ),
+    "html_tour_risks_title": "Risks",
+    "html_tour_risks": (
+        "Exit risks found in the scope, ordered by severity. Each risk has a "
+        "stable code, so a finding can be followed from one run to the next. "
+        "Open a row for its description."
+    ),
+    "html_tour_inventory_title": "Resource Inventory",
+    "html_tour_inventory": (
+        "One row per resource type, with its regions and its share of all "
+        "resources in the scope."
+    ),
+    "html_tour_alternatives_title": "Alternative Technologies",
+    "html_tour_alternatives": (
+        "Replacement options from the data catalogue for each resource type, "
+        "listed alphabetically and not ranked. Search, or filter by open "
+        "source, enterprise support or European vendors."
+    ),
+    "html_tour_egress_title": "Egress & Data Landscape",
+    "html_tour_egress": (
+        "Data held in the scope and the one-off fee to transfer it out at "
+        "public list prices. Data is shown in GiB; the provider prices per GB. "
+        "Types marked 'not sized' are listed but not in the fee."
+    ),
+    "html_tour_about_title": "About This Report",
+    "html_tour_about": (
+        "Document ID, scope and provenance. The run ID and the data catalogue "
+        "version make the result reproducible; method, limitations, severity "
+        "levels and terms are below."
+    ),
 }
 
 # Labels and headings that follow English Title Case, for the wording test.
@@ -784,4 +1146,41 @@ TITLE_CASE_KEYS = (
     "fa_heading",
     "fa_how_heading",
     "fa_heading_uploaded",
+    "html_download",
+    "html_download_summary",
+    "html_download_egress",
+    "html_nav_overview",
+    "html_nav_scores",
+    "html_nav_risks",
+    "html_nav_about",
+    "html_scope_label",
+    "html_risks_label",
+    "html_costs_label",
+    "html_costs_label_short",
+    "html_scores_grade",
+    "html_scores_lock",
+    "html_scores_pill",
+    "html_risks_th_affected",
+    "html_inv_th_locations",
+    "html_filter_os",
+    "html_filter_sp",
+    "html_filter_eu",
+    "html_alt_th_name",
+    "html_eg_kpi_fee",
+    "html_eg_kpi_headroom",
+    "html_about_document",
+    "html_about_purpose",
+    "html_figures_heading",
+    "html_tour_sections_title",
+    "html_tour_report_title",
+    "html_tour_overview_title",
+    "html_tour_scores_title",
+    "html_tour_risks_title",
+    "html_tour_inventory_title",
+    "html_tour_alternatives_title",
+    "html_tour_egress_title",
+    "html_tour_about_title",
+    "html_nav_label",
+    "html_run_label",
+    "html_help",
 )

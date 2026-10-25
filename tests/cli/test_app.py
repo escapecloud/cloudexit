@@ -624,11 +624,6 @@ class EgressStageTests(unittest.TestCase):
         "logs": "",
         "json_path": "/tmp/report/raw/egress_inventory_raw_data.json",
     }
-    _REPORT_OK = {
-        "success": True,
-        "logs": "",
-        "html_path": "/tmp/report/egress.html",
-    }
     # The egress PDF is written with the report, from the same context
     _WITH_PDF = {
         "success": True,
@@ -658,7 +653,7 @@ class EgressStageTests(unittest.TestCase):
             },
         }
 
-    def _run(self, config, provider, report=None, estimate=None, html=None, **kwargs):
+    def _run(self, config, provider, report=None, estimate=None, **kwargs):
         patches = _base_patches()
         for p in patches:
             p.start()
@@ -671,10 +666,6 @@ class EgressStageTests(unittest.TestCase):
                 "cloudexit.cli.app.estimate_egress",
                 return_value=estimate or self._ESTIMATE_OK,
             ).start(),
-            "html": patch(
-                "cloudexit.cli.app.generate_egress_html_report",
-                return_value=html or self._REPORT_OK,
-            ).start(),
             "print": patch("cloudexit.cli.app.console.print").start(),
             "step": patch("cloudexit.cli.app.print_step").start(),
         }
@@ -684,14 +675,19 @@ class EgressStageTests(unittest.TestCase):
             patch.stopall()
         return mocks
 
+    def _steps(self, mocks):
+        return [call.args[0] for call in mocks["step"].call_args_list]
+
+    def _printed(self, mocks):
+        return [str(call) for call in mocks["print"].call_args_list]
+
     def test_egress_module_not_invoked_without_flag(self):
         mocks = self._run(self._azure_config(), "azure")
 
         mocks["estimate"].assert_not_called()
-        mocks["html"].assert_not_called()
         self.assertIsNone(mocks["report"].call_args.kwargs["egress_json_path"])
 
-    def test_egress_runs_in_the_collection_stages_before_the_report(self):
+    def test_the_estimate_comes_before_the_report_and_goes_into_it(self):
         manager = MagicMock()
         patches = _base_patches()
         for p in patches:
@@ -702,13 +698,8 @@ class EgressStageTests(unittest.TestCase):
         mock_estimate = patch(
             "cloudexit.cli.app.estimate_egress", return_value=self._ESTIMATE_OK
         ).start()
-        mock_render = patch(
-            "cloudexit.cli.app.generate_egress_html_report",
-            return_value=self._REPORT_OK,
-        ).start()
         manager.attach_mock(mock_report, "generate_report")
         manager.attach_mock(mock_estimate, "estimate_egress")
-        manager.attach_mock(mock_render, "generate_egress_html_report")
         config = self._azure_config()
         try:
             app.run_assessment(config, "azure", egress=True)
@@ -724,39 +715,34 @@ class EgressStageTests(unittest.TestCase):
             exit_strategy=config["exitStrategy"],
             assessment_type=config["assessmentType"],
         )
-        # The HTML carries the scope and the run, so its ID matches the PDF's
-        mock_render.assert_called_once_with(
-            "/tmp/report",
-            "/tmp/report/raw/egress_inventory_raw_data.json",
-            config["providerDetails"],
-            ANY,
-        )
-        sync_id = mock_render.call_args.args[3]
         self.assertEqual(
             mock_report.call_args.kwargs["egress_json_path"],
             "/tmp/report/raw/egress_inventory_raw_data.json",
         )
-        self.assertEqual(mock_report.call_args.kwargs["sync_id"], sync_id)
         call_names = [name for name, _, _ in manager.mock_calls]
         self.assertLess(
-            call_names.index("estimate_egress"),
-            call_names.index("generate_egress_html_report"),
-        )
-        # The PDF is part of the report, after the upload
-        self.assertLess(
-            call_names.index("generate_egress_html_report"),
-            call_names.index("generate_report"),
+            call_names.index("estimate_egress"), call_names.index("generate_report")
         )
 
-    def test_the_egress_pdf_step_is_printed_and_the_path_listed(self):
+    def test_there_is_no_separate_egress_report_step_any_more(self):
         mocks = self._run(self._azure_config(), "azure", egress=True)
 
-        steps = [call.args[0] for call in mocks["step"].call_args_list]
+        steps = self._steps(mocks)
+        self.assertNotIn("Generating egress report...", steps)
+        self.assertIn("Estimating egress data...", steps)
         self.assertIn("Generating egress PDF...", steps)
-        printed = [str(call) for call in mocks["print"].call_args_list]
+        printed = self._printed(mocks)
+        self.assertFalse(any("Egress Report:" in line for line in printed))
+        self.assertFalse(any("egress.html" in line for line in printed))
+
+    def test_the_egress_pdf_path_is_listed(self):
+        mocks = self._run(self._azure_config(), "azure", egress=True)
+
+        printed = self._printed(mocks)
         self.assertTrue(
             any("Egress PDF: /tmp/report/egress.pdf" in line for line in printed)
         )
+        self.assertTrue(any("HTML Report:" in line for line in printed))
 
     def test_egress_failure_still_prints_outputs_and_exits_egress(self):
         patches = _base_patches()
@@ -766,31 +752,8 @@ class EgressStageTests(unittest.TestCase):
             "cloudexit.cli.app.estimate_egress",
             return_value={"success": False, "logs": "metrics api error"},
         ).start()
-        mock_render = patch("cloudexit.cli.app.generate_egress_html_report").start()
-        mock_print = patch("cloudexit.cli.app.console.print").start()
-        try:
-            with self.assertRaises(SystemExit) as ctx:
-                app.run_assessment(self._azure_config(), "azure", egress=True)
-        finally:
-            patch.stopall()
-
-        self.assertEqual(ctx.exception.code, codes.EGRESS)
-        mock_render.assert_not_called()
-        printed = [str(call) for call in mock_print.call_args_list]
-        self.assertTrue(any("Outputs:" in line for line in printed))
-
-    def test_egress_report_failure_still_prints_outputs_and_exits_egress(self):
-        patches = _base_patches()
-        for p in patches:
-            p.start()
-        patch(
-            "cloudexit.cli.app.estimate_egress", return_value=self._ESTIMATE_OK
-        ).start()
-        patch(
-            "cloudexit.cli.app.generate_egress_html_report",
-            return_value={"success": False, "logs": "template error"},
-        ).start()
-        patch("cloudexit.cli.app.generate_report", return_value=self._WITH_PDF).start()
+        report = patch("cloudexit.cli.app.generate_report").start()
+        report.return_value = {"success": True, "reports": {"HTML": "/tmp/index.html"}}
         mock_print = patch("cloudexit.cli.app.console.print").start()
         try:
             with self.assertRaises(SystemExit) as ctx:
@@ -801,12 +764,7 @@ class EgressStageTests(unittest.TestCase):
         self.assertEqual(ctx.exception.code, codes.EGRESS)
         printed = [str(call) for call in mock_print.call_args_list]
         self.assertTrue(any("Outputs:" in line for line in printed))
-        # The JSON path is internal input for the reports; it is never listed
-        # in Outputs. The failed HTML report is not listed, but the PDF is
-        # written independently and succeeded, so it is.
-        self.assertFalse(any("Egress Estimate:" in line for line in printed))
-        self.assertFalse(any("Egress Report:" in line for line in printed))
-        self.assertTrue(any("Egress PDF:" in line for line in printed))
+        self.assertIsNone(report.call_args.kwargs["egress_json_path"])
 
     def test_egress_pdf_failure_still_prints_outputs_and_exits_egress(self):
         patches = _base_patches()
@@ -814,10 +772,6 @@ class EgressStageTests(unittest.TestCase):
             p.start()
         patch(
             "cloudexit.cli.app.estimate_egress", return_value=self._ESTIMATE_OK
-        ).start()
-        patch(
-            "cloudexit.cli.app.generate_egress_html_report",
-            return_value=self._REPORT_OK,
         ).start()
         patch(
             "cloudexit.cli.app.generate_report", return_value=self._PDF_FAILED
@@ -835,7 +789,6 @@ class EgressStageTests(unittest.TestCase):
         printed = [str(call) for call in mock_print.call_args_list]
         self.assertTrue(any("Outputs:" in line for line in printed))
         self.assertTrue(any("HTML Report:" in line for line in printed))
-        self.assertTrue(any("Egress Report:" in line for line in printed))
         self.assertFalse(any("Egress PDF:" in line for line in printed))
         failed = [
             call
@@ -846,9 +799,13 @@ class EgressStageTests(unittest.TestCase):
         self.assertEqual(failed[0].kwargs["logs"], "reportlab error")
 
     def test_a_failed_report_is_still_a_report_failure(self):
-        mocks_report = {"success": False, "logs": "boom"}
         with self.assertRaises(SystemExit) as ctx:
-            self._run(self._azure_config(), "azure", report=mocks_report, egress=True)
+            self._run(
+                self._azure_config(),
+                "azure",
+                report={"success": False, "logs": "boom"},
+                egress=True,
+            )
 
         self.assertEqual(ctx.exception.code, codes.REPORT)
 
@@ -858,10 +815,6 @@ class EgressStageTests(unittest.TestCase):
             p.start()
         mock_estimate = patch(
             "cloudexit.cli.app.estimate_egress", return_value=self._ESTIMATE_OK
-        ).start()
-        patch(
-            "cloudexit.cli.app.generate_egress_html_report",
-            return_value=self._REPORT_OK,
         ).start()
         patch("cloudexit.cli.app.generate_report", return_value=self._WITH_PDF).start()
         config = VALID_CONFIG.copy()

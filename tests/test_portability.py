@@ -191,3 +191,11 @@ class LineEndingTests(unittest.TestCase):
     def test_the_definition_copy_is_checked_out_with_unix_line_endings(self):
         attributes = (ROOT / ".gitattributes").read_text(encoding="utf-8")
         self.assertIn("docs/api-v2/** text eol=lf", attributes)
+
+    def test_the_bundled_scripts_are_never_converted(self):
+        attributes = (ROOT / ".gitattributes").read_text(encoding="utf-8")
+        for pattern in (
+            "cloudexit/assets/js/** -text",
+            "cloudexit/assets/css/driver.css -text",
+        ):
+            self.assertIn(pattern, attributes)

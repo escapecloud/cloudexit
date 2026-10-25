@@ -109,6 +109,8 @@ ALTERNATIVES = {
     "Microsoft.ContainerRegistry/registries": (0, 0),
     "Microsoft.DocumentDB/databaseAccounts": (2, 2),
     "Microsoft.Compute/virtualMachines": (5, 4),
+    # More than the page shows at first, so the rest is collapsed
+    "AWS.ec2.describe_instances.Reservations": (12, 10),
 }
 DEFAULT_ALTERNATIVES = (3, 3)
 
@@ -196,12 +198,14 @@ def build_sample_catalogue(path, scenarios):
             conn.execute(
                 "INSERT INTO alternativetechnology (id, product_name, "
                 "product_description, product_url, open_source, support_plan, "
-                "status, organization_id) VALUES (?, ?, '', NULL, ?, ?, 't', 1)",
+                "status, organization_id) VALUES (?, ?, '', NULL, ?, ?, 't', ?)",
                 (
                     technology,
                     f"Sample Technology {technology}",
                     "t" if position % 2 else "f",
                     "t" if position < supported else "f",
+                    # Some have no recorded vendor
+                    1 if technology % 4 else None,
                 ),
             )
             for strategy in (1, 2, 3):

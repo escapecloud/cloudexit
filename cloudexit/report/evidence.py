@@ -53,52 +53,60 @@ def build_document_table(
     return key_value_table(rows, context.appearance)
 
 
-def _scope_rows(context, b):
+def scope_rows(context, b):
+    # (label, text, monospaced), the same for the PDF and the HTML report
     scope = context.scope
     values = dict(scope.rows)
-    rows = [(b["ev_cloud_provider"], scope.provider or b["ev_dash"])]
+    rows = [(b["ev_cloud_provider"], scope.provider or b["ev_dash"], False)]
     if scope.kind == "aws":
         if values.get("account"):
-            rows.append((b["ev_account_id"], _mono_value(values["account"])))
-        rows.append((b["ev_region"], values.get("region") or b["ev_dash"]))
+            rows.append((b["ev_account_id"], values["account"], True))
+        rows.append((b["ev_region"], values.get("region") or b["ev_dash"], False))
     elif scope.kind == "azure":
+        rows.append((b["ev_tenant_id"], values.get("tenant") or b["ev_dash"], True))
         rows.append(
-            (b["ev_tenant_id"], _mono_value(values.get("tenant")) or b["ev_dash"])
+            (b["ev_subscription_id"], values.get("subscription") or b["ev_dash"], True)
         )
         rows.append(
             (
-                b["ev_subscription_id"],
-                _mono_value(values.get("subscription")) or b["ev_dash"],
+                b["ev_resource_group"],
+                values.get("resource_group") or b["ev_dash"],
+                False,
             )
-        )
-        rows.append(
-            (b["ev_resource_group"], values.get("resource_group") or b["ev_dash"])
         )
     else:
         file_text = values.get("file") or b["ev_dash"]
         if values.get("sha256"):
             file_text = f"{file_text} (SHA-256 {_short(values['sha256'])})"
-        rows.append((b["ev_file"], file_text))
+        rows.append((b["ev_file"], file_text, False))
         if values.get("lineage"):
             state = values["lineage"]
             if values.get("serial") is not None:
                 state = f"{state} (serial {values['serial']})"
-            rows.append((b["ev_state"], _mono_value(state)))
+            rows.append((b["ev_state"], state, True))
         for key, label in (
             ("subscriptions", "ev_subscriptions"),
             ("resource_groups", "ev_resource_groups"),
             ("regions", "ev_regions"),
         ):
             if key in values:
-                rows.append((b[label], values[key] or b["ev_not_determinable"]))
+                rows.append((b[label], values[key] or b["ev_not_determinable"], False))
     source = b["ev_source_tfstate" if scope.kind == "tfstate" else "ev_source_live"]
     rows.append(
         (
             b["ev_source_label"],
             b["ev_source_value"].format(source=source, completed=context.completed),
+            False,
         )
     )
     return rows
+
+
+def _scope_rows(context, b):
+    return [
+        (label, _mono_value(text) if mono and text != b["ev_dash"] else text)
+        for label, text, mono in scope_rows(context, b)
+    ]
 
 
 def build_scope_table(context, b):
