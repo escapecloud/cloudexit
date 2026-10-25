@@ -14,7 +14,6 @@ from cloudexit.report.context import (
     Provenance,
     format_document_id,
 )
-from cloudexit.report.egress import generate_egress_html_report
 from cloudexit.report.egress_report import generate_egress_report
 from cloudexit.report.sections import AWS_ICONS_URL, AZURE_ICONS_URL
 from cloudexit.report.wording import BLOCKS
@@ -30,6 +29,7 @@ from tests.report.test_basic_report import (
     uploaded,
 )
 from tests.report.test_no_credentials import pricing_for_both_clouds
+from tests.support.egress import empty_estimate
 from tests.support.flow import build_flow_run
 from tests.support.html import html_text
 from tests.support.report import (
@@ -111,18 +111,6 @@ class EgressReportTestCase(unittest.TestCase):
         ):
             path = generate_egress_report(context, json_path)
         return path, context, PdfReader(path)
-
-    def render_html(self, rows=MULTI_TIB, provider=1, details=None):
-        folder, json_path = self.prepare(rows, provider)
-        with patch(
-            "cloudexit.report.egress.load_data", side_effect=pricing_for_both_clouds
-        ):
-            result = generate_egress_html_report(
-                str(folder), json_path, details, SYNC_ID
-            )
-        self.assertTrue(result["success"], result["logs"])
-        html = Path(result["html_path"]).read_text(encoding="utf-8")
-        return html, html_text(html)
 
     def scenarios(self):
         for provider, name in ((1, "azure"), (2, "aws")):
@@ -437,55 +425,6 @@ class GuardTests(EgressReportTestCase):
                         self.assertEqual(retired_term_hits(text), [])
                         self.assertEqual(american_hits(text), [])
 
-    def test_the_html_follows_the_pdf_and_passes_the_guards(self):
-        for provider, details in (
-            (1, {"resourceGroupName": "Prod-RG", "tenantId": "t-1"}),
-            (2, {"region": "eu-central-1", "accountId": "123456789012"}),
-        ):
-            with self.subTest(provider=provider):
-                html, text = self.render_html(MULTI_TIB, provider, details)
-
-                position = 0
-                for heading in (
-                    "Introduction",
-                    "Purpose",
-                    "Scope of the Estimation",
-                    "Data Landscape",
-                    "Estimated Costs",
-                    "Appendix – Egress Prices",
-                    "Glossary",
-                    "Next Steps",
-                    "Legal Notices",
-                ):
-                    position = text.index(heading, position)
-                self.assertIn(EDL_ID, text)
-                self.assertIn(f"({ES_ID})", text)
-                self.assertTrue(
-                    text.rstrip().endswith("© 2024–2026 EscapeCloud"), text[-80:]
-                )
-                self.assertEqual(find_terms(text), [])
-                self.assertEqual(find_terms(html.split("<body", 1)[0]), [])
-                self.assertEqual(retired_term_hits(text), [])
-                self.assertEqual(american_hits(text), [])
-
-    def test_the_html_title_names_the_document_and_the_run(self):
-        html, _text = self.render_html()
-
-        self.assertIn(
-            "<title>Egress &amp; Data Landscape – Exit Assessment Test</title>", html
-        )
-        self.assertNotIn("EscapeCloud Community Edition -", html.split("</title>")[0])
-        self.assertNotIn("TiB", html)
-        self.assertIn(BLOCKS["notices_egress"], html.replace("&#39;", "'"))
-
-    def test_the_html_scope_names_no_account_or_tenant(self):
-        _html, text = self.render_html(
-            MULTI_TIB, 2, {"region": "eu-central-1", "accountId": "123456789012"}
-        )
-
-        self.assertIn("AWS region eu-central-1", text)
-        self.assertNotIn("123456789012", text)
-
 
 class GenerationOrderTests(unittest.TestCase):
     def setUp(self):
@@ -518,13 +457,18 @@ class GenerationOrderTests(unittest.TestCase):
     def test_the_egress_pdf_is_made_from_the_context_of_the_report(self):
         upload = {"status": "uploaded", "url": URL, "assessment_id": "a-1"}
         seen = {}
+        estimate = empty_estimate()
 
-        def fake(context, json_path):
-            seen["context"] = context
-            seen["json_path"] = json_path
+        def fake(context, json_path, path=None, estimate=None):
+            seen.update(context=context, json_path=json_path, estimate=estimate)
             return "egress.pdf"
 
-        with patch("cloudexit.engine.generate_egress_report", side_effect=fake):
+        with (
+            patch(
+                "cloudexit.engine.load_egress_estimate", return_value=estimate
+            ) as load,
+            patch("cloudexit.engine.generate_egress_report", side_effect=fake),
+        ):
             result = self.generate(upload=upload, egress_json_path="estimate.json")
 
         self.assertTrue(result["success"])
@@ -536,10 +480,17 @@ class GenerationOrderTests(unittest.TestCase):
         self.assertEqual(context.provenance.platform_url, URL)
         self.assertEqual(context.egress_document_id, EDL_ID)
         self.assertEqual(seen["json_path"], "estimate.json")
+        # The estimate is read once, and the page and the PDF share it
+        load.assert_called_once_with(self.report, "estimate.json")
+        self.assertIs(seen["estimate"], estimate)
 
-    def test_the_summary_names_the_egress_document_only_when_there_is_one(self):
-        with patch(
-            "cloudexit.engine.generate_egress_report", return_value="egress.pdf"
+    def test_the_summary_and_the_page_name_the_egress_document_only_with_one(self):
+        with (
+            patch(
+                "cloudexit.engine.load_egress_estimate",
+                return_value=empty_estimate(),
+            ),
+            patch("cloudexit.engine.generate_egress_report", return_value="egress.pdf"),
         ):
             self.generate(egress_json_path="estimate.json")
         with_egress = self.es_text()
@@ -547,34 +498,49 @@ class GenerationOrderTests(unittest.TestCase):
 
         sentence = BLOCKS["es_costs_egress_note"].format(document_id=EDL_ID)
         self.assertIn(sentence, with_egress)
-        self.assertIn("A separate Egress &amp; Data Landscape", html)
-        self.assertIn(EDL_ID, html)
+        # The page carries it in its egress section, not as a sentence
+        self.assertIn(f"also as PDF {EDL_ID}", html_text(html))
+        self.assertIn('id="egress"', html)
+        self.assertIn('href="egress.pdf"', html)
 
         self.generate()
         self.assertNotIn("A separate Egress", self.es_text())
         html = (Path(self.report) / "index.html").read_text(encoding="utf-8")
-        self.assertNotIn("A separate Egress", html)
+        self.assertNotIn(EDL_ID, html)
+        self.assertNotIn('id="egress"', html)
+        self.assertNotIn("egress.pdf", html)
 
-    def test_a_failing_egress_pdf_leaves_the_summary_written(self):
+    def test_a_failing_egress_pdf_leaves_the_summary_and_the_page_written(self):
         (Path(self.report) / "report.pdf").unlink(missing_ok=True)
-        with patch(
-            "cloudexit.engine.generate_egress_report",
-            side_effect=RuntimeError("reportlab went wrong"),
+        with (
+            patch(
+                "cloudexit.engine.load_egress_estimate",
+                return_value=empty_estimate(),
+            ),
+            patch(
+                "cloudexit.engine.generate_egress_report",
+                side_effect=RuntimeError("reportlab went wrong"),
+            ),
         ):
             result = self.generate(egress_json_path="estimate.json")
 
         self.assertTrue(result["success"])
         self.assertTrue((Path(self.report) / "report.pdf").is_file())
-        self.assertTrue((Path(self.report) / "index.html").is_file())
+        html = (Path(self.report) / "index.html").read_text(encoding="utf-8")
+        self.assertIn('id="egress"', html)
         self.assertNotIn("EGRESS_PDF", result["reports"])
         self.assertEqual(result["egress_pdf_logs"], "reportlab went wrong")
 
-    def test_an_unreadable_estimate_is_the_same_failure(self):
+    def test_an_unreadable_estimate_leaves_egress_out_of_every_report(self):
         result = self.generate(egress_json_path="/nowhere/estimate.json")
 
         self.assertTrue(result["success"])
         self.assertIn("egress_pdf_logs", result)
+        self.assertNotIn("EGRESS_PDF", result["reports"])
         self.assertTrue((Path(self.report) / "report.pdf").is_file())
+        self.assertNotIn("A separate Egress", self.es_text())
+        html = (Path(self.report) / "index.html").read_text(encoding="utf-8")
+        self.assertNotIn('id="egress"', html)
 
     def test_without_an_estimate_nothing_is_added(self):
         result = self.generate()

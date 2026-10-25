@@ -18,69 +18,35 @@ from tests.support.report import (
 
 
 class ReportPipelineSmokeTests(unittest.TestCase):
-    def test_generate_html_report_creates_expected_output(self):
-        fixture = build_report_fixture()
-
+    def html(self, fixture, **overrides):
         with tempfile.TemporaryDirectory() as report_dir:
-            html_path = generate_html_report(
-                report_dir,
-                fixture["metadata"],
-                fixture["resource_type_mapping"],
-                fixture["resource_inventory"],
-                fixture["cost_data"],
-                None,
-                fixture["risk_data"],
-                fixture["risk_definitions"],
-                fixture["alternatives"],
-                fixture["alternative_technologies"],
-                fixture["exit_strategy"],
-                fixture["alternative_technology_organizations"],
-            )
+            context = build_fixture_context(fixture, report_dir, **overrides)
+            html_path = generate_html_report(context)
 
             self.assertTrue(Path(html_path).exists())
-            html = Path(html_path).read_text(encoding="utf-8")
+            self.assertEqual(Path(html_path).name, "index.html")
+            return Path(html_path).read_text(encoding="utf-8")
+
+    def test_generate_html_report_creates_expected_output(self):
+        html = self.html(build_report_fixture())
 
         self.assertIn("Smoke Test Assessment", html)
         self.assertIn("Amazon Web Services", html)
         self.assertIn("OpenStack", html)
         self.assertIn("OpenInfra Foundation", html)
-        self.assertIn("All Regions", html)
-        self.assertIn("data-org-region", html)
         self.assertIn("EC2 Instance", html)
+        self.assertIn('data-os="1"', html)
 
     def test_generate_html_report_renders_empty_state_output(self):
-        fixture = build_empty_report_fixture()
-
-        with tempfile.TemporaryDirectory() as report_dir:
-            html_path = generate_html_report(
-                report_dir,
-                fixture["metadata"],
-                fixture["resource_type_mapping"],
-                fixture["resource_inventory"],
-                fixture["cost_data"],
-                None,
-                fixture["risk_data"],
-                fixture["risk_definitions"],
-                fixture["alternatives"],
-                fixture["alternative_technologies"],
-                fixture["exit_strategy"],
-                fixture["alternative_technology_organizations"],
-            )
-
-            self.assertTrue(Path(html_path).exists())
-            html = Path(html_path).read_text(encoding="utf-8")
+        html = self.html(build_empty_report_fixture())
 
         self.assertIn("Empty State Assessment", html)
-        self.assertIn("No risk data available.", html)
-        self.assertIn("No cost data available.", html)
-        self.assertNotIn("exit score", html.lower())
-        self.assertNotIn("lock-in score", html.lower())
-        self.assertIn("No resources were discovered during the assessment.", html)
-        self.assertIn("No alternative technologies are available", html)
-        self.assertNotIn('id="risksChart"', html)
-        self.assertNotIn('id="costsChart"', html)
-        self.assertNotIn('id="exitScoreChart"', html)
-        self.assertNotIn('id="vendorLockInScoreChart"', html)
+        self.assertIn("No exit risks were identified.", html)
+        self.assertIn("No cost data available for this assessment.", html)
+        self.assertIn("No resources were found in the defined scope.", html)
+        self.assertIn("No resource types to list alternatives for.", html)
+        # No filters when there is nothing to filter
+        self.assertNotIn('class="toolbar"', html)
 
     def test_generate_json_report_creates_expected_structure(self):
         fixture = build_report_fixture()
@@ -137,29 +103,13 @@ class EmptyCostInventoryReportTests(unittest.TestCase):
 
     def test_html_report_renders_resources_without_cost_data(self):
         fixture = build_report_fixture()
-
         with tempfile.TemporaryDirectory() as report_dir:
-            html_path = generate_html_report(
-                report_dir,
-                fixture["metadata"],
-                fixture["resource_type_mapping"],
-                fixture["resource_inventory"],
-                [],
-                None,
-                fixture["risk_data"],
-                fixture["risk_definitions"],
-                fixture["alternatives"],
-                fixture["alternative_technologies"],
-                fixture["exit_strategy"],
-                fixture["alternative_technology_organizations"],
-            )
-
-            self.assertTrue(Path(html_path).exists())
-            html = Path(html_path).read_text(encoding="utf-8")
+            context = build_fixture_context(fixture, report_dir, cost_data=[])
+            html = Path(generate_html_report(context)).read_text(encoding="utf-8")
 
         self.assertIn("EC2 Instance", html)
-        self.assertIn("No cost data available.", html)
-        self.assertNotIn('id="costsChart"', html)
+        self.assertIn("No cost data available for this assessment.", html)
+        self.assertNotIn('class="bars"', html)
 
     def test_json_report_has_empty_cost_inventory(self):
         fixture = build_report_fixture()

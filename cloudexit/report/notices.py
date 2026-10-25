@@ -27,7 +27,9 @@ def text_parts(template, links, values=None):
     for piece in FIELD.split(template):
         field = piece[1:-1]
         if field in links:
-            parts.append((links[field], links[field]))
+            link = links[field]
+            # A (label, url) pair shows the label; a bare url shows itself
+            parts.append(link if isinstance(link, tuple) else (link, link))
         elif values and field in values:
             parts.append(str(values[field]))
         elif piece:

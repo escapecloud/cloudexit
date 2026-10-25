@@ -43,7 +43,7 @@ def copy_assets(report_path: str, cloud_service_provider: int) -> None:
     # Create the 'assets' directory if it doesn't exist
     os.makedirs(assets_path, exist_ok=True)
 
-    for folder in ("css", "img"):
+    for folder in ("css", "fonts", "img", "js"):
         src_path = asset_path(folder)
         dest_path = os.path.join(assets_path, folder)
 

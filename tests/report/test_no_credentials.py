@@ -176,7 +176,6 @@ class OutputGuardTests(FlowTestCase):
         for name in (
             "index.html",
             "report.pdf",
-            "egress.html",
             "egress.pdf",
             "run.log",
             "raw_data/assessment_result.json",

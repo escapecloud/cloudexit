@@ -1,5 +1,4 @@
 # tests/report/test_egress.py
-import json
 import os
 import sqlite3
 import tempfile
@@ -7,19 +6,18 @@ import unittest
 from unittest.mock import patch
 
 
-from cloudexit.resources import asset_path
 from cloudexit.egress.model import GIB, write_egress_inventory
+from cloudexit.report.helpers import format_gib, gib_number, percent
 from cloudexit.catalogue.store import active_catalogue_path
 from cloudexit.report.egress import (
-    CATEGORIES,
-    _build_allocation,
     _build_type_groups,
     _resolve_icon,
     build_fee_estimate,
     calculate_tiered_cost,
+    fee_number,
     format_fee,
+    free_tier_headroom,
     free_tier_limit_display,
-    generate_egress_html_report,
     load_pricing,
 )
 
@@ -178,34 +176,6 @@ def _seed_egress_inventory(report_path, rows, archive_tiers=frozenset()):
     ]
     write_egress_inventory(stored, type_ids, set(archive_tiers), db_path)
     return db_path
-
-
-class CategoryCoverageTests(unittest.TestCase):
-    # The CHECK constraint on resourcetype_data.data_category. A category the
-    # report does not know about renders an unstyled badge and, worse, drops
-    # out of the allocation chart while still counting towards the totals.
-    DATA_CATEGORIES = {"object", "block", "file", "database", "backup"}
-
-    def test_every_master_data_category_is_known_to_the_report(self):
-        self.assertEqual(set(CATEGORIES), self.DATA_CATEGORIES)
-
-    def test_only_backup_is_left_out_of_the_allocation_chart(self):
-        excluded = {k for k, v in CATEGORIES.items() if not v["in_allocation"]}
-
-        # Backup is enumerated but never sized, so it has nothing to allocate.
-        self.assertEqual(excluded, {"backup"})
-
-    def test_allocated_categories_have_a_colour_and_a_label(self):
-        for key, info in CATEGORIES.items():
-            if info["in_allocation"]:
-                self.assertIsNotNone(info["color"], key)
-                self.assertIsNotNone(info["label"], key)
-
-    def test_template_styles_every_category_badge(self):
-        css = asset_path("template", "egress.html").read_text(encoding="utf-8")
-
-        for key in CATEGORIES:
-            self.assertIn(f".category-{key} {{", css, f"no badge rule for {key!r}")
 
 
 class LoadPricingTests(unittest.TestCase):
@@ -392,34 +362,6 @@ class ResolveIconTests(unittest.TestCase):
         self.assertIsNone(_resolve_icon("Vendor.Unknown/things", {}))
 
 
-class AllocationSeriesTests(unittest.TestCase):
-    def test_groups_known_bytes_by_category_in_fixed_order(self):
-        rows = [
-            _row("disk1", "Managed Disk", "block", 40 * GIB),
-            _row("sa1", "Storage Account", "object", 60 * GIB),
-            _row("db1", "SQL Database", "database", 10 * GIB),
-            _row("vault1", "Recovery Services Vault", "backup", None),
-            _row("db2", "SQL Database", "database", None, size_unknown=True),
-        ]
-
-        labels, values, colors = _build_allocation(rows)
-
-        self.assertEqual(
-            labels,
-            ["Object Storage", "Block (allocated)", "Databases"],
-        )
-        self.assertEqual(values, [60 * GIB, 40 * GIB, 10 * GIB])
-        self.assertEqual(len(colors), 3)
-
-    def test_zero_categories_are_omitted(self):
-        rows = [_row("sa1", "Storage Account", "object", 5 * GIB)]
-
-        labels, values, _ = _build_allocation(rows)
-
-        self.assertEqual(labels, ["Object Storage"])
-        self.assertEqual(values, [5 * GIB])
-
-
 class TypeGroupTests(unittest.TestCase):
     def test_groups_by_label_and_sorts_by_fee(self):
         rows = [
@@ -466,124 +408,52 @@ class TypeGroupTests(unittest.TestCase):
         )
 
 
-class GenerateEgressHtmlReportTests(unittest.TestCase):
-    def _generate(self, payload):
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            json_path = os.path.join(tmp_dir, "egress_inventory_raw_data.json")
-            with open(json_path, "w", encoding="utf-8") as json_file:
-                json.dump(payload, json_file)
-            _seed_egress_inventory(
-                tmp_dir,
-                payload["data"]["resources"],
-                _archive_tiers(payload["data"]["resources"]),
-            )
+class GibAndFeeFormatTests(unittest.TestCase):
+    def test_a_size_that_is_not_zero_never_reads_as_zero(self):
+        self.assertEqual(gib_number(0), "0.0")
+        self.assertEqual(gib_number(GIB // 100), "<0.1")
+        self.assertEqual(gib_number(GIB // 50, places=2), "0.02")
+        self.assertEqual(gib_number(GIB // 1000, places=2), "<0.01")
 
-            with patch(
-                "cloudexit.report.egress.load_data",
-                side_effect=_fake_load_data,
-            ):
-                result = generate_egress_html_report(tmp_dir, json_path)
+    def test_places_and_grouping(self):
+        self.assertEqual(gib_number(2048 * GIB), "2,048.0")
+        self.assertEqual(gib_number(22 * GIB, places=2), "22.00")
+        self.assertEqual(format_gib(20 * GIB), "20.0 GiB")
+        self.assertEqual(format_gib(None), "n/a")
 
-            html = None
-            if result["success"]:
-                self.assertEqual(
-                    result["html_path"], os.path.join(tmp_dir, "egress.html")
-                )
-                with open(result["html_path"], encoding="utf-8") as html_file:
-                    html = html_file.read()
-        return result, html
+    def test_the_fee_has_one_format_with_and_without_the_symbol(self):
+        self.assertEqual(fee_number(0), "0.00")
+        self.assertEqual(fee_number(1732.1), "1,732.10")
+        self.assertEqual(format_fee(1732.1), f"${fee_number(1732.1)}")
 
-    def test_renders_report_with_fees_table_and_charts(self):
-        rows = [
-            _row(
-                "proddata",
-                "Storage Account",
-                "object",
-                2048 * GIB,
-                resource_type="Microsoft.Storage/storageAccounts",
-            ),
-            _row(
-                "vm-osdisk",
-                "Managed Disk",
-                "block",
-                512 * GIB,
-                resource_type="Microsoft.Compute/disks",
-                flags=["allocated (upper bound)"],
-            ),
+    def test_a_share_keeps_its_sign_and_never_reads_zero_when_it_is_not(self):
+        self.assertEqual(percent(63.4), "63\u00a0%")
+        self.assertEqual(percent(0.2), "<1\u00a0%")
+        self.assertEqual(percent(0), "0\u00a0%")
+
+
+class FreeTierHeadroomTests(unittest.TestCase):
+    def test_the_headroom_is_in_the_unit_the_provider_prices_in(self):
+        prices = [
+            _price_row(1, "internet_egress", 0, 100, 0.0, unit="GB"),
+            _price_row(1, "internet_egress", 100, None, 0.1, unit="GB"),
         ]
-        result, html = self._generate(_payload(rows))
 
-        self.assertTrue(result["success"], result["logs"])
-        self.assertIn("Exit Assessment Test", html)
-        normalized_html = " ".join(html.split())
-        # The alpha banner is a limitation in the Introduction now
-        self.assertNotIn("alpha", html)
-        self.assertNotIn("mailto:beta@escapecloud.io", html)
-        # (2560 - 100) GiB * 0.087 = $214.02 total internet egress fee
-        self.assertIn("$214.02", html)
-        self.assertIn("Estimated Egress Fee", html)
-        self.assertIn("Estimated one-time charge to transfer the identified", html)
-        self.assertIn(
-            'any resources whose size could not be measured. A "+" means',
-            normalized_html,
-        )
-        self.assertIn("lower-bound estimate.", html)
-        self.assertIn("feesChart", html)
-        self.assertIn("allocationChart", html)
-        self.assertIn("proddata", html)
-        self.assertIn("category-object", html)
-        self.assertIn("allocated (upper bound)", html)
-        self.assertNotIn("Estimates only", html)
-        self.assertNotIn("At least", html)
+        headroom = free_tier_headroom(prices, 1, 40 * 10**9)
 
-    def test_unknown_sizes_add_plus_suffix_to_headlines(self):
-        rows = [
-            _row("sa1", "Storage Account", "object", 2048 * GIB),
-            _row("db1", "SQL Database", "database", None, size_unknown=True),
-        ]
-        result, html = self._generate(_payload(rows, unknown_count=1))
+        self.assertEqual(headroom["unit"], "GB")
+        self.assertAlmostEqual(headroom["left"], 60.0)
+        self.assertAlmostEqual(headroom["used_share"], 40.0)
 
-        self.assertTrue(result["success"], result["logs"])
-        # 2048 GiB known: (2048 - 100) * 0.087 = $169.48, "+" marks the lower bound
-        self.assertIn("2,048.0 GiB+", html)
-        self.assertNotIn("TiB", html)
-        self.assertIn("$169.48+", html)
-        self.assertIn("Excludes 1 resource", html)
-        self.assertIn("n/a", html)
+    def test_a_footprint_over_the_free_tier_has_none_left(self):
+        headroom = free_tier_headroom(SIMPLE_PRICING, 1, 150 * GIB)
 
-    def test_free_tier_environment_shows_included_in_free_tier_card(self):
-        rows = [_row("sa1", "Storage Account", "object", 5 * GIB)]
-        result, html = self._generate(_payload(rows))
+        self.assertEqual(headroom["left"], 0.0)
+        self.assertEqual(headroom["used_share"], 100.0)
 
-        self.assertTrue(result["success"], result["logs"])
-        self.assertIn("Included in Free Tier", html)
-        # The fee headline stays visible above the card, in the one money format
-        self.assertIn("Estimated Egress Fee", html)
-        self.assertIn('<div class="count">$0.00</div>', html)
-        self.assertIn("5.0 GiB", html)
-        self.assertIn("100 GiB free tier", html)
-        self.assertNotIn("No fee estimate available.", html)
-        self.assertNotIn("feesChart", html)
+    def test_no_free_tier_means_no_headroom(self):
+        self.assertIsNone(free_tier_headroom(SIMPLE_PRICING, 2, GIB))
 
-    def test_empty_inventory_renders_empty_states(self):
-        result, html = self._generate(_payload([]))
 
-        self.assertTrue(result["success"], result["logs"])
-        self.assertIn("$0.00", html)
-        # Zero known bytes is the empty state, not the free-tier success card.
-        self.assertIn("No fee estimate available.", html)
-        self.assertNotIn("Included in Free Tier", html)
-        self.assertIn("No data volume available.", html)
-        self.assertIn(
-            "No data-bearing resources were discovered during the",
-            html,
-        )
-        self.assertNotIn("allocationChart", html)
-
-    def test_missing_json_returns_failure(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            result = generate_egress_html_report(
-                tmp_dir, os.path.join(tmp_dir, "missing.json")
-            )
-
-        self.assertFalse(result["success"])
+if __name__ == "__main__":
+    unittest.main()

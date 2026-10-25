@@ -1,1130 +1,573 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link
-      rel="icon"
-      type="image/png"
-      sizes="16x16"
-      href="assets/img/logo/favicon.png"
-    />
-    <title>Executive Summary – {{ name }}</title>
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css"
-    />
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-      integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
-      crossorigin="anonymous"
-    />
-    <link rel="stylesheet" href="assets/css/style.css" />
-    <script
-      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
-      integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
-      crossorigin="anonymous"
-    ></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@visactor/vchart/build/index.min.js"></script>
-  </head>
-  <body>
-    {% set provider_name = "Microsoft Azure" if cloud_service_provider == 1 else "Amazon Web Services" if cloud_service_provider == 2 else "Unknown Provider" %}
-    {% set strategy_name = "Repatriation to On-Premises" if exit_strategy == 1 else "Migration to Alternate Cloud" if exit_strategy == 3 else "Unknown Strategy" %}
-    {% set assessment_name = "Basic" if assessment_type == 1 else "Standard" if assessment_type == 2 else "Unknown" %}
-    {% set total_risks = high_risk_count + medium_risk_count + low_risk_count %}
+{%- macro parts(items) -%}
+{%- for part in items -%}
+{%- if part is string -%}{{ part }}
+{%- elif part[1].startswith('#') -%}<a href="{{ part[1] }}">{{ part[0] }}</a>
+{%- else -%}<a href="{{ part[1] }}" target="_blank" rel="noopener noreferrer">{{ part[0] }}</a>
+{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{%- macro icon(src, initials) -%}
+{%- if src -%}<img src="{{ src }}" alt="">{%- else -%}<span class="ph" aria-hidden="true">{{ initials }}</span>{%- endif -%}
+{%- endmacro -%}
+{%- macro pill(id, s) -%}
+{%- if s.platform_url -%}
+<a class="lock-note platform-link" href="{{ s.platform_url }}" target="_blank" rel="noopener noreferrer">{{ s.open_platform }}<svg class="i sm"><use href="#i-external"/></svg></a>
+{%- else -%}
+<span class="hint"><button class="lock-note" type="button" aria-expanded="false" aria-controls="{{ id }}"><svg class="i sm"><use href="#i-lock"/></svg>{{ s.pill }}</button>
+<span class="hint-pop" id="{{ id }}" role="note" hidden><b>{{ s.hint.title }}</b><p>{{ s.hint.text }}</p><p class="foot">{% for label, url in s.hint.sites %}{% if not loop.first %} · {% endif %}<a href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ label }}</a>{% endfor %}</p></span>
+</span>
+{%- endif -%}
+{%- endmacro -%}
+{%- macro mark(on, yes, no) -%}
+<td class="{{ 'yes' if on else 'no' }}"><svg class="i mark" aria-hidden="true"><use href="#{{ 'i-check' if on else 'i-x' }}"/></svg><span class="visually-hidden">{{ yes if on else no }}</span></td>
+{%- endmacro -%}
+<!doctype html>
+<html lang="{{ page.language }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ page.title }}</title>
+<link rel="icon" type="image/png" href="assets/img/logo/favicon.png">
+<link rel="stylesheet" href="assets/css/report.css">
+<link rel="stylesheet" href="assets/css/driver.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-download" viewBox="0 0 16 16"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M3 13.5h10"/></symbol>
+  <symbol id="i-chev-down" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></symbol>
+  <symbol id="i-chev-right" viewBox="0 0 16 16"><path d="m6 4 4 4-4 4"/></symbol>
+  <symbol id="i-file" viewBox="0 0 16 16"><path d="M4 1.5h5l3 3v10H4zM9 1.5v3h3"/></symbol>
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="m3.5 8.5 3 3 6-6.5"/></symbol>
+  <symbol id="i-question" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5"/><path d="M6.3 6.3a1.8 1.8 0 1 1 2.4 1.7c-.5.2-.7.6-.7 1.1M8 11.3v.1"/></symbol>
+  <symbol id="i-warning" viewBox="0 0 16 16"><path d="M8 2 14.5 13.5h-13zM8 6.5v3M8 11.6v.1"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="m4.5 4.5 7 7M11.5 4.5l-7 7"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 16 16"><rect x="3.5" y="7" width="9" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></symbol>
+  <symbol id="i-help" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5"/><path d="M6.2 6.2a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.2M8 11.4v.1"/></symbol>
+  <symbol id="i-external" viewBox="0 0 16 16"><path d="M9.5 2.5H13.5V6.5M13.5 2.5 7.5 8.5M11.5 9.5v4h-9v-9h4"/></symbol>
+  <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3.5 3.5"/></symbol>
+</svg>
 
-    <div class="bg-white px-4">
-      <div
-        class="d-flex flex-column flex-md-row align-items-start justify-content-between align-self-md-center gap-3 py-4 px-4 project-title"
-      >
-        <h2 class="d-flex align-items-center gap-3 px-4">
-          <img src="assets/img/logo/logo.png" width="30" alt="cloudexit" />
-          <span>{{ name }}</span>
-        </h2>
-        <div class="d-flex align-items-center gap-3 px-4 flex-wrap flex-sm-nowrap">
-          <a href="report.pdf" target="_blank" class="btn btn-primary"
-            >Executive Summary (PDF)</a
-          >
+<header class="app-header">
+  <div class="inner">
+    <span class="brand"><a href="https://escapecloud.io" target="_blank" rel="noopener noreferrer" aria-label="{{ page.header.logo_link }}"><img src="assets/img/logo/report_logo.png" alt="EscapeCloud"></a><span class="brand-tag">{{ page.header.tag }}</span></span>
+    <button class="help-btn" type="button" id="help" aria-label="{{ page.header.help_aria }}" data-next="{{ page.header.tour.next }}" data-back="{{ page.header.tour.back }}" data-done="{{ page.header.tour.done }}" data-progress="{{ page.header.tour.progress }}"><svg class="i"><use href="#i-help"/></svg>{{ page.header.help }}</button>
+  </div>
+</header>
+
+<div class="shell">
+  <div class="card titlebar">
+    <div>
+      <div class="name">
+        {% if page.titlebar.logo %}<img class="provider-logo" src="{{ page.titlebar.logo }}" alt="{{ page.titlebar.provider }}" title="{{ page.titlebar.provider }}">{% endif %}
+        <h1 class="t-title">{{ page.titlebar.name }}</h1>
+        <span class="chip {{ 'success' if page.titlebar.uploaded else 'offline' }}" title="{{ page.titlebar.chip_title }}">{{ page.titlebar.chip }}</span>
+      </div>
+    </div>
+    <div class="actions">
+      {% if page.titlebar.platform_url %}<a class="btn" href="{{ page.titlebar.platform_url }}" target="_blank" rel="noopener noreferrer">{{ page.open_platform }}<svg class="i"><use href="#i-external"/></svg></a>{% endif %}
+      <details class="menu">
+        <summary class="btn"><svg class="i"><use href="#i-download"/></svg>{{ page.download }}<svg class="i"><use href="#i-chev-down"/></svg></summary>
+        <div class="menu-list" role="menu">
+          {% for href, label in page.titlebar.downloads %}<a role="menuitem" href="{{ href }}"><svg class="i"><use href="#i-file"/></svg>{{ label }}</a>
+          {% endfor %}
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <nav class="secnav" aria-label="{{ page.nav_label }}">
+    <ul>
+      {% for item in page.nav %}<li><a href="#{{ item.id }}">{{ item.label }}{% if item.lock %}<svg class="i sm" aria-label="{{ item.lock }}"><use href="#i-lock"/></svg>{% endif %}{% if item.count is defined %}<span class="n">{{ item.count }}</span>{% endif %}</a></li>
+      {% endfor %}
+    </ul>
+  </nav>
+
+  <main>
+  <section class="block" id="overview" aria-labelledby="overview-h">
+    <h2 class="visually-hidden" id="overview-h">{{ page.nav[0].label }}</h2>
+    <div class="overview">
+      <div class="card">
+        <span class="t-label">{{ page.overview.scope.label }}</span>
+        <dl class="scope">
+          {% for row in page.overview.scope.rows %}<dt>{{ row.label }}</dt><dd>{{ row.value }}{% if row.small %}<small{% if row.small_mono %} class="mono"{% endif %}>{{ row.small }}</small>{% endif %}</dd>
+          {% endfor %}
+        </dl>
+      </div>
+
+      <div class="card">
+        {% set r = page.overview.risks %}
+        <span class="t-label">{{ r.label }}</span>
+        <div class="t-figure" style="margin-top:6px">{{ r.total }}</div>
+        {% if r.none %}<div class="t-caption">{{ r.none }}</div>{% endif %}
+        <div class="sevchart" role="img" aria-label="{{ r.aria }}">
+          {% for row in r.rows %}<div class="sevrow"><span class="sev {{ row.severity }}"><span class="pips" aria-hidden="true"><i></i><i></i><i></i><i></i></span>{{ row.label }}</span><span class="sevbar"><span class="{{ row.severity }}" style="width:{{ row.width }}%"></span></span><b>{{ row.count }}</b></div>
+          {% endfor %}
         </div>
       </div>
-      <div class="divider-border"></div>
-    </div>{% if upload %}
-    <div class="px-4 pt-3">
-      {% if upload.status == "uploaded" %}
-      <div class="alert alert-success mb-0" role="status">
-        Uploaded to the platform.{% if upload.url %}
-        <a href="{{ upload.url }}" target="_blank" rel="noopener noreferrer"
-          >Open the platform report</a
-        >{% endif %}
+
+      <div class="card costs">
+        {% set c = page.overview.costs %}
+        <span class="t-label">{{ c.label }}</span>
+        {% if c.kind == 'message' %}
+        <div class="no-costs">
+          <div class="t-figure muted">{{ c.figure }}</div>
+          <p>{{ c.message }}</p>
+          {% if c.hint %}<p class="t-caption">{{ c.hint }}</p>{% endif %}
+        </div>
+        {% else %}
+        <div class="kpis">
+          <div><div class="t-figure">{{ c.figure }}</div><div class="t-caption">{{ c.caption }}</div></div>
+          <div><div class="t-value" style="margin-top:6px">{{ c.change }}</div>{% if c.change_caption %}<div class="t-caption">{{ c.change_caption }}</div>{% endif %}</div>
+        </div>
+        <div class="bars" role="img" aria-label="{{ c.aria }}">
+          {% for bar in c.bars %}<div class="col"><div class="track"><div class="b{% if bar.zero %} zero{% endif %}{% if bar.provisional %} prov{% endif %}" style="height:{{ bar.height }}%"></div></div><span class="m">{{ bar.month }}</span></div>
+          {% endfor %}
+        </div>
+        <p class="t-caption" style="margin-top:10px">{{ c.footnote }}</p>
+        {% endif %}
       </div>
-      {% else %}
-      <div class="alert alert-warning mb-0" role="alert">
-        Not uploaded: {{ upload.reason }}
+    </div>
+  </section>
+
+  <section class="block" id="scores" aria-labelledby="scores-h">
+    <h2 class="visually-hidden" id="scores-h">{{ page.nav[1].label }}</h2>
+    {% set s = page.scores %}
+    <div class="scores">
+      <div class="card">
+        <div class="card-head"><h3 class="t-sub">{{ s.grade.title }}</h3>
+          {{ pill('hint-grade', s) }}
+        </div>
+        <div class="card-body grade">
+          <div class="grade-tile ghost"><div><div class="l">{{ s.grade.placeholder }}</div><div class="t-caption">{{ s.grade.scale }}</div></div></div>
+          <div>
+            <div class="bands ghost" aria-hidden="true">{% for band in s.grade.bands %}<span>{{ band }}</span>{% endfor %}</div>
+            <p style="margin-top:12px">{{ s.grade.text }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3 class="t-sub">{{ s.lock.title }}</h3>
+          {{ pill('hint-lock', s) }}
+        </div>
+        <div class="card-body">
+          <div class="dims ghost" aria-hidden="true">
+            {% for name, value in s.lock.dims %}<div class="dim"><span>{{ name }}</span><span class="track"></span><b>{{ value }}</b></div>
+            {% endfor %}
+          </div>
+          <p style="margin-top:12px">{{ s.lock.text }}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block card" id="risks" aria-labelledby="risks-h">
+    {% set r = page.risks %}
+    <div class="card-head">
+      <div><h2 class="t-section" id="risks-h">{{ r.heading }}</h2><p class="t-caption">{{ r.caption }}</p></div>
+    </div>
+    {% if r.empty %}
+    <div class="card-body">
+      <div class="empty-state"><b>{{ r.empty.title }}</b><span>{{ r.empty.text }}</span></div>
+    </div>
+    {% else %}
+    <div class="card-body table-wrap">
+      <table class="data risks">
+        <thead><tr><th style="width:72px">{{ r.headers[0] }}</th><th>{{ r.headers[1] }}</th><th style="width:130px">{{ r.headers[2] }}</th><th style="width:220px">{{ r.headers[3] }}</th></tr></thead>
+        <tbody>
+          {% for group in r.groups %}
+          <tr class="group"><td colspan="4">{{ group.heading }}</td></tr>
+          {% for row in group.rows %}
+          <tr class="r"><td class="code"><code>{{ row.code }}</code></td><td class="name"><button class="rowbtn" type="button" aria-expanded="{{ 'true' if r.open else 'false' }}" aria-controls="{{ row.id }}"><svg class="i sm chev"><use href="#i-chev-right"/></svg><span class="rname">{{ row.name }}</span></button></td><td class="sevc"><span class="sev {{ row.severity }}"><span class="pips" aria-hidden="true"><i></i><i></i><i></i><i></i></span>{{ row.label }}</span></td>{% if row.affected is none %}<td class="aff muted">{{ r.scope_wide }}</td>{% else %}<td class="aff">{{ row.affected }}</td>{% endif %}</tr>
+          <tr class="detail" id="{{ row.id }}"{% if not r.open %} hidden{% endif %}><td></td><td colspan="3">{{ row.description }}</td></tr>
+          {% endfor %}
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="t-caption" style="margin-top:12px">{{ parts(r.footnote) }}</p>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="block card" id="inventory" aria-labelledby="inv-h">
+    {% set inv = page.inventory %}
+    <div class="card-head">
+      <div><h2 class="t-section" id="inv-h">{{ inv.heading }}</h2><p class="t-caption">{{ inv.caption }}</p></div>
+    </div>
+    {% if inv.empty %}
+    <div class="card-body">
+      <div class="empty-state"><b>{{ inv.empty.title }}</b><span>{{ inv.empty.text }}</span></div>
+    </div>
+    {% else %}
+    <div class="card-body table-wrap">
+      <table class="data">
+        <thead><tr><th>{{ inv.headers[0] }}</th><th class="hide-sm">{{ inv.headers[1] }}</th><th class="hide-sm">{{ inv.headers[2] }}</th><th class="num">{{ inv.headers[3] }}</th></tr></thead>
+        <tbody>
+          {% for row in inv.rows %}<tr><td><div class="rt">{{ icon(row.icon, row.initials) }}{{ row.name }}</div></td><td class="hide-sm loc">{{ row.locations }}</td><td class="hide-sm"><span class="share"><span class="bar"><span style="width:{{ row.share_value }}%"></span></span><b>{{ row.share }}</b></span></td><td class="num">{{ row.count }}</td></tr>
+          {% endfor %}
+          <tr class="total"><td>{{ inv.total[0] }}</td><td class="hide-sm"></td><td class="hide-sm"></td><td class="num">{{ inv.total[1] }}</td></tr>
+        </tbody>
+      </table>
+      <p class="t-caption" style="margin-top:12px">{{ inv.footnote }}</p>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="block card" id="alternatives" aria-labelledby="alt-h">
+    {% set alt = page.alternatives %}
+    <div class="card-head">
+      <div><h2 class="t-section" id="alt-h">{{ alt.heading }}</h2><p class="t-caption">{{ alt.caption }}</p></div>
+      {% if alt.total %}
+      <div class="toolbar" data-filter>
+        <label class="searchbox"><svg class="i"><use href="#i-search"/></svg><input class="search" type="search" placeholder="{{ alt.search }}" aria-label="{{ alt.search }}"></label>
+        {% for key, label in alt.filters %}<button class="fchip" type="button" aria-pressed="false" data-f="{{ key }}">{{ label }}</button>
+        {% endfor %}
       </div>
       {% endif %}
     </div>
+    {% if alt.empty %}
+    <div class="card-body">
+      <div class="empty-state"><b>{{ alt.empty.title }}</b><span>{{ alt.empty.text }}</span></div>
+    </div>
+    {% else %}
+    <div class="card-body">
+      {% for group in alt.groups %}
+      <details class="grp"{% if group.open %} open{% endif %}>
+        <summary><span class="t">{{ icon(group.icon, group.initials) }}{{ group.name }}</span><span class="m">{{ group.meta }}</span></summary>
+        {% if group.rows %}
+        <div class="table-wrap"><table class="data alts">
+          <thead><tr><th>{{ alt.headers[0] }}</th><th>{{ alt.headers[1] }}</th><th>{{ alt.headers[2] }}</th></tr></thead>
+          <tbody>
+            {% for row in group.rows %}<tr data-cc="{{ row.cc }}" data-sp="{{ 1 if row.sp else 0 }}" data-os="{{ 1 if row.os else 0 }}"{% if row.extra %} data-extra="1" hidden{% endif %}><td><span class="alt-name">{{ row.name }}</span><span class="alt-meta">{{ row.vendor }}{% if row.cc %} <span class="cc">{{ row.cc }}</span>{% endif %}</span></td>{{ mark(row.os, alt.yes, alt.no) }}{{ mark(row.sp, alt.yes, alt.no) }}</tr>
+            {% endfor %}
+          </tbody>
+        </table></div>
+        {% if group.more %}<div class="more"><a href="#" data-more>{{ group.more }}</a></div>{% endif %}
+        {% endif %}
+      </details>
+      {% endfor %}
+      <p class="alt-empty" hidden>{{ alt.no_match }}</p>
+      <p class="t-caption" style="margin-top:12px">{{ alt.footnote }}</p>
+    </div>
     {% endif %}
+  </section>
 
-    <main id="main-content">
-      {% if summary %}
-      <div class="px-3 px-md-4 pt-3">
-        <div class="bg-white shadow-s rounded-4 p-4">
-          <h2 class="h4 mb-3">{{ summary.brief.heading }}</h2>
-          <p>{{ summary.brief.lead | safe }}</p>
-          <h3 class="h6 mt-4">{{ summary.brief.findings_heading }}</h3>
-          <div class="table-responsive">
-            <table class="table table-sm align-middle">
-              <thead>
-                <tr>
-                  {% for header in summary.brief.headers %}
-                  <th scope="col">{{ header }}</th>
-                  {% endfor %}
-                </tr>
-              </thead>
-              <tbody>
-                {% for row in summary.brief.rows %}
-                <tr{% if row.attention %} class="table-warning"{% endif %}>
-                  <th scope="row">{{ row.area }}</th>
-                  <td>{{ row.finding | safe }}</td>
-                  <td class="text-muted small">{{ row.details }}</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-          <p class="text-muted small mb-0">{{ summary.brief.caption | safe }}</p>
-        </div>
-        <div class="bg-white shadow-s rounded-4 p-4 mt-3">
-          <h2 class="h5 mb-3">{{ summary.provenance.heading }}</h2>
-          <dl class="row mb-0">
-            {% for label, value in summary.provenance.rows %}
-            <dt class="col-sm-3">{{ label }}</dt>
-            <dd class="col-sm-9">{{ value }}</dd>
-            {% endfor %}
-            {% if summary.provenance.platform_url %}
-            <dt class="col-sm-3">&nbsp;</dt>
-            <dd class="col-sm-9">
-              <a
-                href="{{ summary.provenance.platform_url }}"
-                target="_blank"
-                rel="noopener noreferrer"
-                >{{ summary.provenance.platform_url }}</a
-              >
-            </dd>
+  {% if page.egress %}
+  {% set e = page.egress %}
+  <section class="block card" id="egress" aria-labelledby="egress-h">
+    <div class="card-head">
+      <div><h2 class="t-section" id="egress-h">{{ e.heading }}</h2><p class="t-caption">{{ e.caption }}</p></div>
+    </div>
+    <div class="card-body">
+      <div class="kpi-row">
+        {% for kpi in e.kpis %}<div class="kpi{% if kpi.primary %} primary{% endif %}"><span class="t-label">{{ kpi.label }}</span><div class="t-figure">{{ kpi.figure }}{% if kpi.unit %} <span style="font-size:14px">{{ kpi.unit }}</span>{% endif %}</div><div class="t-caption">{{ kpi.caption }}</div>{% if kpi.bar is defined %}<div class="headroom" role="img" aria-label="{{ kpi.aria }}"><span style="width:{{ kpi.bar }}%"></span></div>{% endif %}</div>
+        {% endfor %}
+      </div>
+
+      {% if e.empty %}
+      <p style="margin-top:var(--space-5)">{{ e.empty }}</p>
+      {% else %}
+      {% if e.volume %}
+      <div class="vol" role="img" aria-label="{{ e.volume.aria }}">
+        {% for segment in e.volume.segments %}<span style="flex:{{ segment.flex }};background:{{ segment.color }}"></span>
+        {% endfor %}
+      </div>
+      <div class="vol-legend">
+        {% for item in e.volume.legend %}<span><i style="background:{{ item.color }}"></i>{{ item.text }}</span>
+        {% endfor %}
+        {% if e.volume.unsized %}<span class="muted">{{ e.volume.unsized }}</span>{% endif %}
+      </div>
+      {% endif %}
+
+      <div class="table-wrap" style="margin-top: var(--space-5)">
+        <table class="data egress">
+          <thead><tr><th>{{ e.table.headers[0] }}</th><th class="num">{{ e.table.headers[1] }}</th><th class="hide-sm">{{ e.table.headers[2] }}</th><th class="num">{{ e.table.headers[3] }}</th></tr></thead>
+          <tbody>
+            {% for row in e.table.rows %}
+            {% if row.size is none %}<tr class="t"><td class="nm"><div class="rt">{{ icon(row.icon, row.initials) }}{{ row.label }}</div></td><td class="num"><span class="unsized"><svg class="i sm"><use href="#i-question"/></svg>{{ e.table.not_sized }}</span></td><td class="hide-sm muted">{{ page.dash }}</td><td class="num muted">{{ page.dash }}</td></tr>
+            {% else %}<tr class="t"><td class="nm"><div class="rt">{{ icon(row.icon, row.initials) }}{{ row.label }}</div></td><td class="num">{{ row.size }}</td><td class="hide-sm"><span class="share"><span class="bar"><span style="width:{{ row.share_value }}%"></span></span><b>{{ row.share }}</b></span></td><td class="num">{{ row.fee }}</td></tr>
             {% endif %}
-          </dl>
-        </div>
-        <div class="bg-white shadow-s rounded-4 p-4 mt-3">
-          <h2 class="h4 mb-3">{{ summary.introduction.heading }}</h2>
-          <h3 class="h6">{{ summary.introduction.purpose_heading }}</h3>
-          <p>{{ summary.introduction.purpose }}</p>
-          <h3 class="h6">{{ summary.introduction.scope_heading }}</h3>
-          {% for paragraph in summary.introduction.scope %}
-          <p>{{ paragraph | safe }}</p>
-          {% endfor %}
-          <h3 class="h6">{{ summary.introduction.method_heading }}</h3>
-          {% for paragraph in summary.introduction.method %}
-          <p>{{ paragraph }}</p>
-          {% endfor %}
-          <ul>
-            {% for phase, text in summary.introduction.phases %}
-            <li><strong>{{ phase }}</strong> {{ text }}</li>
             {% endfor %}
-          </ul>
-          <p>{{ summary.introduction.method_catalogue }}</p>
-          <h3 class="h6">{{ summary.introduction.limitations_heading }}</h3>
-          {% for paragraph in summary.introduction.limitations %}
-          <p class="mb-2">{{ paragraph }}</p>
-          {% endfor %}
-        </div>
+            <tr class="total t"><td class="nm">{{ e.table.total[0] }}</td><td class="num">{{ e.table.total[1] }}</td><td class="hide-sm"></td><td class="num">{{ e.table.total[2] }}</td></tr>
+          </tbody>
+        </table>
       </div>
       {% endif %}
-      <div class="px-3 px-md-4">
-        <div class="mt-1 row g-3 stats">
-          <div class="col-xl-4 col-lg-6 col-md-6 chart-box">
-            <div
-              class="d-flex align-items-center bg-white shadow-s p-3 p-lg-4 rounded-4 h-100"
-            >
-              <div class="d-flex flex-wrap flex-column gap-25 sync-status">
-                <div class="d-flex align-items-center gap-3 sync-status-card">
-                  <div class="sync-status-icon">
-                    <span>
-                      {% if cloud_service_provider == 1 %}
-                      <svg
-                        width="22"
-                        height="20"
-                        viewBox="0 0 22 20"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        aria-label="Microsoft Azure"
-                        role="img"
-                      >
-                        <path d="M7.86133 1.37256H13.4145L7.65764 18.4703C7.53972 18.8352 7.19666 19.0714 6.82145 19.0714H2.4904C1.99726 19.0714 1.61133 18.6742 1.61133 18.1912C1.61133 18.0946 1.62205 17.998 1.65421 17.9122L7.02514 1.97361C7.14306 1.61942 7.48611 1.37256 7.86133 1.37256Z" fill="url(#azure-paint0)"/>
-                        <path d="M15.9334 12.8354H7.13198C6.90686 12.8354 6.72461 13.0179 6.72461 13.2433C6.72461 13.3614 6.76749 13.4687 6.85325 13.5438L12.5136 18.8245C12.6744 18.9748 12.8996 19.0606 13.1247 19.0606H18.1097L15.9334 12.8354Z" fill="#0078D4"/>
-                        <path d="M7.86108 1.37256C7.47515 1.37256 7.13209 1.61942 7.02489 1.98434L1.66468 17.88C1.50388 18.3415 1.73973 18.846 2.2007 19.007C2.29719 19.0392 2.39367 19.0606 2.50088 19.0606H6.92841C7.26074 18.9962 7.53947 18.7601 7.65739 18.4381L8.72944 15.2826L12.5459 18.8674C12.7067 18.9962 12.9104 19.0714 13.1141 19.0714H18.0776L15.9014 12.8355H9.55491L13.4357 1.37256H7.86108Z" fill="url(#azure-paint1)"/>
-                        <path d="M14.9584 1.97361C14.8405 1.60869 14.4974 1.37256 14.1222 1.37256H7.93652C8.31174 1.37256 8.65479 1.61942 8.77272 1.97361L14.1329 17.9015C14.2937 18.363 14.0364 18.8674 13.5755 19.0177C13.4897 19.0499 13.3932 19.0606 13.2967 19.0606H19.4824C19.9755 19.0606 20.3615 18.6635 20.3615 18.1805C20.3615 18.0839 20.3508 17.9873 20.3186 17.9015L14.9584 1.97361Z" fill="url(#azure-paint2)"/>
-                        <defs>
-                          <linearGradient id="azure-paint0" x1="9.88834" y1="2.68414" x2="4.11123" y2="19.7311" gradientUnits="userSpaceOnUse">
-                            <stop stop-color="#114A8B"/>
-                            <stop offset="1" stop-color="#0765B6"/>
-                          </linearGradient>
-                          <linearGradient id="azure-paint1" x1="11.6889" y1="10.6302" x2="10.355" y2="11.0807" gradientUnits="userSpaceOnUse">
-                            <stop stop-opacity="0.3"/>
-                            <stop offset="0.071" stop-opacity="0.2"/>
-                            <stop offset="0.321" stop-opacity="0.1"/>
-                            <stop offset="0.623" stop-opacity="0.05"/>
-                            <stop offset="1" stop-opacity="0"/>
-                          </linearGradient>
-                          <linearGradient id="azure-paint2" x1="10.9974" y1="2.17127" x2="17.3387" y2="19.0457" gradientUnits="userSpaceOnUse">
-                            <stop stop-color="#3BC9F3"/>
-                            <stop offset="1" stop-color="#2892DF"/>
-                          </linearGradient>
-                        </defs>
-                      </svg>
-                      {% elif cloud_service_provider == 2 %}
-                      <svg
-                        width="35"
-                        height="15"
-                        viewBox="0 0 35 20"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        aria-label="Amazon Web Services"
-                        role="img"
-                      >
-                        <g clip-path="url(#aws-clip0)">
-                          <path d="M10.0898 7.25005C10.0898 7.66672 10.1453 8.00005 10.2009 8.25005C10.2843 8.50005 10.3955 8.75005 10.5623 9.05561C10.6179 9.13894 10.6457 9.22228 10.6457 9.30561C10.6457 9.41672 10.5901 9.52783 10.4233 9.63894L9.7284 10.1112C9.61722 10.1667 9.53383 10.2223 9.45044 10.2223C9.33925 10.2223 9.22807 10.1667 9.11688 10.0556C8.95011 9.88894 8.83892 9.72228 8.72774 9.52783C8.61655 9.33339 8.50537 9.13894 8.39418 8.86117C7.5325 9.88894 6.44845 10.3889 5.11423 10.3889C4.16915 10.3889 3.44645 10.1112 2.89053 9.58339C2.3346 9.05561 2.05664 8.33339 2.05664 7.4445C2.05664 6.50005 2.3902 5.72228 3.05731 5.16672C3.72441 4.61117 4.64169 4.30561 5.78134 4.30561C6.17048 4.30561 6.55963 4.33339 6.94878 4.38894C7.36572 4.4445 7.78266 4.52783 8.2274 4.63894V3.83339C8.2274 3.00005 8.06063 2.38894 7.69928 2.05561C7.33792 1.72228 6.7542 1.55561 5.89252 1.55561C5.50337 1.55561 5.11423 1.61117 4.69728 1.6945C4.28034 1.80561 3.89119 1.91672 3.50204 2.08339C3.33527 2.13894 3.19629 2.1945 3.1129 2.22228C3.02951 2.22228 2.97392 2.25005 2.94612 2.25005C2.77934 2.25005 2.72375 2.13894 2.72375 1.91672V1.36117C2.72375 1.1945 2.75155 1.05561 2.80714 0.972277C2.86273 0.888943 2.97392 0.80561 3.1129 0.750054C3.50204 0.55561 3.97458 0.388943 4.50271 0.250054C5.05863 0.111165 5.61456 0.027832 6.22608 0.027832C7.56029 0.027832 8.50537 0.333388 9.14468 0.916721C9.7562 1.52783 10.062 2.41672 10.062 3.66672L10.0898 7.25005ZM5.58676 8.9445C5.94811 8.9445 6.33726 8.88894 6.72641 8.75005C7.11555 8.61117 7.47691 8.36117 7.78266 8.02783C7.94944 7.80561 8.08842 7.58339 8.17181 7.30561C8.2274 7.02783 8.283 6.72228 8.283 6.33339V5.86117C7.94944 5.77783 7.61589 5.72228 7.25454 5.66672C6.89319 5.61117 6.55963 5.61117 6.19828 5.61117C5.44778 5.61117 4.91965 5.75005 4.53051 6.05561C4.16915 6.36117 3.97458 6.77783 3.97458 7.33339C3.97458 7.86117 4.11356 8.25005 4.39152 8.50005C4.66949 8.83339 5.05863 8.9445 5.58676 8.9445ZM14.5094 10.1667C14.3148 10.1667 14.1758 10.1389 14.0924 10.0556C14.009 10.0001 13.9256 9.83339 13.87 9.61117L11.2572 1.00005C11.2016 0.777832 11.146 0.638943 11.146 0.55561C11.146 0.388943 11.2294 0.277832 11.424 0.277832H12.508C12.7304 0.277832 12.8694 0.30561 12.9528 0.388943C13.0362 0.444499 13.1195 0.611165 13.1751 0.833388L15.0375 8.1945L16.7608 0.833388C16.8164 0.611165 16.872 0.472276 16.9832 0.388943C17.0666 0.333388 17.2334 0.277832 17.428 0.277832H18.3174C18.5398 0.277832 18.6788 0.30561 18.7622 0.388943C18.8456 0.444499 18.929 0.611165 18.9845 0.833388L20.7357 8.27783L22.6536 0.833388C22.7092 0.611165 22.7926 0.472276 22.876 0.388943C22.9594 0.333388 23.0984 0.277832 23.3208 0.277832H24.3492C24.516 0.277832 24.6272 0.361165 24.6272 0.55561C24.6272 0.611165 24.6272 0.666721 24.5994 0.722277C24.5994 0.777832 24.5716 0.888943 24.516 1.00005L21.8198 9.61117C21.7642 9.83339 21.6808 9.97228 21.5974 10.0556C21.514 10.1112 21.375 10.1667 21.1804 10.1667H20.2354C20.013 10.1667 19.874 10.1389 19.7906 10.0556C19.7072 9.97228 19.6239 9.83339 19.5683 9.61117L17.8449 2.4445L16.1215 9.61117C16.0659 9.83339 16.0103 9.97228 15.8992 10.0556C15.8158 10.1389 15.649 10.1667 15.4544 10.1667H14.5094ZM28.8244 10.4445C28.2407 10.4445 27.657 10.3889 27.101 10.2501C26.5451 10.1112 26.1004 9.97228 25.8224 9.80561C25.6556 9.6945 25.5167 9.58339 25.4889 9.50006C25.4611 9.41672 25.4055 9.27783 25.4055 9.1945V8.63894C25.4055 8.41672 25.4889 8.30561 25.6556 8.30561C25.7112 8.30561 25.7946 8.30561 25.8502 8.33339C25.9058 8.36117 26.017 8.38894 26.1282 8.4445C26.5173 8.61117 26.9065 8.75005 27.3512 8.83339C27.796 8.91672 28.2407 8.97228 28.6854 8.97228C29.3803 8.97228 29.9363 8.86117 30.2976 8.61117C30.6868 8.36117 30.8813 8.00005 30.8813 7.55561C30.8813 7.25005 30.7701 7.00005 30.5756 6.77783C30.381 6.55561 29.9919 6.38894 29.4637 6.1945L27.8515 5.6945C27.0455 5.4445 26.4339 5.05561 26.0726 4.55561C25.7112 4.05561 25.5167 3.52783 25.5167 2.9445C25.5167 2.47228 25.6278 2.05561 25.8224 1.72228C26.017 1.38894 26.295 1.05561 26.6285 0.80561C26.9621 0.55561 27.3512 0.361165 27.796 0.222276C28.2407 0.0833876 28.7132 0.027832 29.1858 0.027832C29.4359 0.027832 29.6861 0.027832 29.9363 0.0833876C30.1864 0.111165 30.4366 0.166721 30.659 0.194499C30.8813 0.250054 31.1037 0.30561 31.2983 0.361165C31.4929 0.416721 31.6596 0.500054 31.7708 0.55561C31.9376 0.638943 32.0488 0.722277 32.1044 0.833388C32.16 0.916721 32.2156 1.05561 32.2156 1.1945V1.72228C32.2156 1.9445 32.1322 2.08339 31.9654 2.08339C31.882 2.08339 31.743 2.02783 31.5484 1.9445C30.9091 1.66672 30.2142 1.50005 29.4081 1.50005C28.7688 1.50005 28.2685 1.61117 27.9349 1.80561C27.6014 2.00005 27.4068 2.33339 27.4068 2.80561C27.4068 3.11117 27.518 3.38894 27.7404 3.58339C27.9627 3.80561 28.3797 4.00005 28.9634 4.1945L30.5478 4.6945C31.3539 4.9445 31.9376 5.30561 32.2711 5.75005C32.6047 6.1945 32.7715 6.72228 32.7715 7.30561C32.7715 7.77783 32.6603 8.22228 32.4935 8.58339C32.2989 8.97228 32.021 9.30561 31.6874 9.55561C31.3539 9.83339 30.9369 10.0278 30.4644 10.1667C29.9085 10.3889 29.3803 10.4445 28.8244 10.4445Z" fill="#252F3E"/>
-                          <path fill-rule="evenodd" clip-rule="evenodd" d="M30.937 15.8612C27.2679 18.5556 21.9311 20.0001 17.3725 20.0001C10.9515 20.0001 5.16993 17.639 0.805916 13.6945C0.472362 13.389 0.77812 12.9723 1.19506 13.1945C5.92042 15.9445 11.7298 17.5834 17.7616 17.5834C21.8199 17.5834 26.2951 16.7501 30.4089 15.0001C30.9926 14.7501 31.5208 15.4167 30.937 15.8612Z" fill="#FF9900"/>
-                          <path fill-rule="evenodd" clip-rule="evenodd" d="M32.438 14.1391C31.9655 13.528 29.3527 13.8613 28.1574 14.0002C27.7961 14.0558 27.7405 13.7224 28.074 13.5002C30.1587 12.028 33.6055 12.4447 33.9946 12.9447C34.3838 13.4447 33.8834 16.8891 31.9377 18.528C31.6319 18.778 31.354 18.6391 31.493 18.3058C31.9377 17.1947 32.9106 14.7224 32.438 14.1391Z" fill="#FF9900"/>
-                          <defs>
-                            <clipPath id="aws-clip0">
-                              <rect width="33.4667" height="20" fill="white" transform="translate(0.666992)"/>
-                            </clipPath>
-                          </defs>
-                        </g>
-                      </svg>
-                      {% else %}
-                      <img src="assets/img/logo/logo.png" alt="{{ provider_name }}" />
-                      {% endif %}
-                    </span>
-                  </div>
-                  <div class="sync-status-text">
-                    <h6>Cloud Service Provider</h6>
-                    <h5>{{ provider_name }}</h5>
-                  </div>
-                </div>
-                <div class="d-flex align-items-center gap-3 sync-status-card">
-                  <div class="sync-status-icon">
-                    <span><i class="bi bi-sign-turn-slight-right"></i></span>
-                  </div>
-                  <div class="sync-status-text">
-                    <h6>Exit Strategy</h6>
-                    <h5>{{ strategy_name }}</h5>
-                  </div>
-                </div>
-                <div class="d-flex align-items-center gap-3 sync-status-card">
-                  <div class="sync-status-icon">
-                    <span><i class="bi bi-box"></i></span>
-                  </div>
-                  <div class="sync-status-text">
-                    <h6>Assessment Type</h6>
-                    <h5>{{ assessment_name }}</h5>
-                  </div>
-                </div>
-                <div class="d-flex align-items-center gap-3 sync-status-card">
-                  <div class="sync-status-icon">
-                    <span><i class="bi bi-clock"></i></span>
-                  </div>
-                  <div class="sync-status-text">
-                    <h6>Timestamp</h6>
-                    <h5>{{ timestamp }}</h5>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <div class="col-xl-4 col-lg-6 col-md-6 chart-box">
-            <div class="bg-white shadow-s rounded-4 h-100">
-              <div class="px-3 px-lg-4 py-3 risk-dashboard">
-                <div class="risk-header">
-                  <div class="risk-count">
-                    <h2>Risk Inventory</h2>
-                    <div class="count counter">{{ total_risks }}</div>
-                  </div>
-                </div>
-                {% if total_risks > 0 %}
-                <div class="my-3 chart-container">
-                  <canvas id="risksChart" width="300" height="250"></canvas>
-                </div>
-                {% else %}
-                <div class="chart-empty-state">
-                  <div class="chart-empty-state-inner">
-                    <i class="bi bi-pie-chart-fill"></i>
-                    <p>No risk data available.</p>
-                  </div>
-                </div>
-                {% endif %}
-              </div>
-            </div>
-          </div>
-
-          <div class="col-xl-4 col-lg-6 col-md-6 chart-box">
-            <div class="bg-white shadow-s rounded-4 h-100">
-              <div class="px-3 px-lg-4 py-3 risk-dashboard">
-                <div class="risk-header">
-                  <div class="risk-count">
-                    <h2>Costs Overview</h2>
-                    <div class="count">
-                      {% if total_cost > 0 %}{{ currency_symbol }}{{ total_cost }}{% else
-                      %}-{% endif %}
-                    </div>
-                  </div>
-                </div>
-                {% if total_cost > 0 %}
-                <div class="mt-4 chart-container">
-                  <canvas id="costsChart" width="300" height="250"></canvas>
-                </div>
-                {% else %}
-                <div class="chart-empty-state">
-                  <div class="chart-empty-state-inner">
-                    <i class="bi bi-bar-chart-fill"></i>
-                    <p>No cost data available.</p>
-                  </div>
-                </div>
-                {% endif %}
-                {% if summary.costs_egress_note %}
-                <p class="small text-muted mt-3 mb-0">{{ summary.costs_egress_note }}</p>
-                {% endif %}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-4 row g-0">
-          <div class="col-12">
-            <div class="bg-white shadow-s rounded-4">
-              <div
-                class="d-flex align-items-center justify-content-between px-3 px-lg-4 py-3"
-              >
-                <h3 class="form-title">Risk Inventory</h3>
-                <div class="btn-group d-inline-block">
-                  <button
-                    class="btn-outline-primary btn dropdown-toggle"
-                    type="button"
-                    id="dropdownMenuButtonSeverity"
-                    data-bs-toggle="dropdown"
-                    aria-expanded="false"
-                  >
-                    All Severities <i class="ms-1 bi bi-chevron-down"></i>
-                  </button>
-                  <ul
-                    class="dropdown-menu"
-                    aria-labelledby="dropdownMenuButtonSeverity"
-                  >
-                    <li>
-                      <a class="dropdown-item" href="#" data-severity="all"
-                        >All Severities</a
-                      >
-                    </li>
-                    <li>
-                      <a class="dropdown-item" href="#" data-severity="high">High</a>
-                    </li>
-                    <li>
-                      <a class="dropdown-item" href="#" data-severity="medium"
-                        >Medium</a
-                      >
-                    </li>
-                    <li>
-                      <a class="dropdown-item" href="#" data-severity="low">Low</a>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-              <div class="divider-border"></div>
-
-              <div class="risk-table-container p-3">
-                <table class="table">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Risk</th>
-                      <th>Impacted Resources</th>
-                      <th>Severity</th>
-                    </tr>
-                  </thead>
-                  <tbody id="risk-table-body">
-                    {% if risks %} {% for risk in risks %}
-                    <tr
-                      class="risk-row {% if loop.first %}expanded{% endif %}"
-                      data-target="expandable-{{ loop.index }}"
-                      data-severity="{{ risk.severity }}"
-                    >
-                      <td class="risk-number">{{ loop.index }}</td>
-                      <td class="risk-title-cell">
-                        <svg
-                          class="chevron-icon"
-                          width="6"
-                          height="8"
-                          viewBox="0 0 6 8"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                          aria-hidden="true"
-                        >
-                          <path
-                            fill-rule="evenodd"
-                            clip-rule="evenodd"
-                            d="M0.76711 7.81586C0.537434 7.577 0.544882 7.19718 0.783745 6.9675L3.93395 4L0.783745 1.0325C0.544881 0.802823 0.537434 0.422997 0.76711 0.184134C0.996786 -0.0547285 1.37661 -0.0621767 1.61547 0.167499L5.21548 3.5675C5.33312 3.68062 5.39961 3.83679 5.39961 4C5.39961 4.16321 5.33312 4.31938 5.21548 4.4325L1.61548 7.8325C1.37661 8.06218 0.996786 8.05473 0.76711 7.81586Z"
-                            fill="#112726"
-                          />
-                        </svg>
-                        <span class="risk-title">{{ risk.name }}</span>
-                      </td>
-                      <td class="impacted-count">
-                        {% if risk.impacted_resources_count is none %}-{% else %}{{
-                        risk.impacted_resources_count }}{% endif %}
-                      </td>
-                      <td class="text-center">
-                        <span
-                          class="severity-badge severity-{{ risk.severity }}"
-                          >{{ risk.severity | capitalize }}</span
-                        >
-                      </td>
-                    </tr>
-                    <tr
-                      class="expandable-content {% if loop.first %}show{% endif %}"
-                      id="expandable-{{ loop.index }}"
-                      data-severity="{{ risk.severity }}"
-                    >
-                      <td></td>
-                      <td colspan="3">
-                        <div class="px-3 rounded-3 description">
-                          <div class="description-section">
-                            <div class="section-label">Description</div>
-                            <div class="section-content">{{ risk.description }}</div>
-                          </div>
-                          {% if risk.impacted_resources_count %}
-                          <div>
-                            <div class="section-label">Impacted Resources</div>
-                            <div class="impacted-resources-content">
-                              {{ risk.impacted_resources | join(", ") }}
-                            </div>
-                          </div>
-                          {% endif %}
-                        </div>
-                      </td>
-                    </tr>
-                    {% endfor %} {% else %}
-                    <tr>
-                      <td colspan="4" class="text-center py-4">
-                        No risks were identified for this assessment.
-                      </td>
-                    </tr>
-                    {% endif %}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-4 row g-0">
-          <div class="col-12">
-            <div class="bg-white shadow-s rounded-4">
-              <div
-                class="d-flex flex-wrap align-items-center justify-content-between gap-3 px-3 px-lg-4 py-3"
-              >
-                <h3>Resource Inventory ({{ total_resources }})</h3>
-              </div>
-              <div class="divider-border"></div>
-              <div class="resource-inner">
-                <div class="p-3 p-lg-4">
-                  <div class="row gapy-3" id="resource-grid">
-                    {% if resource_inventory %} {% for resource in resource_inventory %}
-                    <div class="col-xl-3 col-lg-6 col-md-6 resource-item">
-                      <div class="p-3 p-lg-4 rounded-4 resource-card">
-                        {% if resource.icon | trim %}
-                        <img
-                          src="assets/{{ resource.icon | trim }}"
-                          alt="{{ resource.name | trim }}"
-                        />
-                        {% else %}
-                        <span class="resource-icon-placeholder" aria-hidden="true">{{ resource.initials }}</span>
-                        {% endif %}
-                        <h3>{{ resource.name | trim }}</h3>
-                        <h6>
-                          {{ resource.count }} Resource{% if resource.count != 1 %}s{%
-                          endif %} Available
-                        </h6>
-                      </div>
-                    </div>
-                    {% endfor %} {% else %}
-                    <div class="col-12 text-center py-4">
-                      <p>
-                        No resources were discovered during the assessment.
-                      </p>
-                    </div>
-                    {% endif %}
-                  </div>
-                </div>
-                {% if resource_inventory|length > 8 %}
-                <div class="divider-border"></div>
-                <div class="text-end view-more">
-                  <button
-                    class="float-right mx-4 my-3 btn btn-light view-more-btn"
-                    type="button"
-                    id="resourceViewMore"
-                  >
-                    View More
-                  </button>
-                </div>
-                {% endif %}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-4 row g-0">
-          <div class="col-12">
-            <div class="bg-white shadow-s rounded-4">
-              <div
-                class="d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-3 bg-white px-3 px-lg-4 py-3 alt-tech-card filter-wrapper"
-              >
-                <h3>
-                  Alternative Technologies ({{ alternative_technologies | length }})
-                </h3>
-                {% if alternative_technologies %}
-                <div class="d-flex align-items-center gap-3 flex-wrap">
-                  <div>
-                    <input
-                      type="search"
-                      class="custom-search form-control form-control-sm"
-                      placeholder="Search for technologies"
-                      aria-controls="alt-tech-grid"
-                      id="altTechSearch"
-                    />
-                  </div>
-                  <div class="btn-group">
-                    <button
-                      class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2 flex-shrink-0 dropdown-toggle"
-                      type="button"
-                      id="dropdownMenuButtonAlternativeTechnology"
-                      data-bs-toggle="dropdown"
-                      data-bs-auto-close="outside"
-                      aria-expanded="false"
-                    >
-                      <span>Filters</span>
-                      <svg
-                        class="filter-icon"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M8.00004 2C9.8365 2 11.6368 2.1547 13.3887 2.45178C13.7439 2.51202 14 2.82237 14 3.18268V3.87868C14 4.2765 13.842 4.65803 13.5607 4.93934L9.93934 8.56066C9.65804 8.84196 9.5 9.2235 9.5 9.62132V11.5729C9.5 12.1411 9.179 12.6605 8.67082 12.9146L6.5 14V9.62132C6.5 9.2235 6.34196 8.84196 6.06066 8.56066L2.43934 4.93934C2.15804 4.65804 2 4.2765 2 3.87868V3.1827C2 2.82238 2.25605 2.51203 2.61129 2.45179C4.3632 2.1547 6.16355 2 8.00004 2Z"
-                          stroke="#115E59"
-                          stroke-width="1.5"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        />
-                      </svg>
-                    </button>
-
-                    <ul
-                      class="dropdown-menu p-3 shadow-lg border-0"
-                      aria-labelledby="dropdownMenuButtonAlternativeTechnology"
-                      style="width: 280px;"
-                    >
-                      <div class="drop-header mb-2">
-                        <h6 class="fw-semibold mb-1">Filters</h6>
-                      </div>
-                      <div class="drop-body">
-                        <div class="form-group mb-3">
-                          <label for="resourceTypeSelect" class="form-label mb-2">Resource</label>
-                          <select class="form-select" id="resourceTypeSelect">
-                            <option value="all" selected>Select Resource Type</option>
-                            {% for resource in resource_inventory %}
-                            <option value="{{ resource.resource_type | trim }}">
-                              {{ resource.name | trim }}
-                            </option>
-                            {% endfor %}
-                          </select>
-                        </div>
-                        <div class="form-group mb-3">
-                          <label for="regionSelect" class="form-label mb-2">Region</label>
-                          <select class="form-select" id="regionSelect">
-                            <option value="all" selected>All Regions</option>
-                            <option value="european-union">European Union</option>
-                            <option value="united-kingdom">United Kingdom</option>
-                            <option value="switzerland">Switzerland</option>
-                            <option value="united-states">United States</option>
-                            <option value="other">Other</option>
-                          </select>
-                        </div>
-                        <div class="form-toggle-switch mb-3 d-flex justify-content-between align-items-center">
-                          <h6 class="mb-0">Open Source</h6>
-                          <div class="toggle-switch">
-                            <input type="checkbox" id="openSourceSwitch" />
-                            <label for="openSourceSwitch" class="toggle-slider"></label>
-                          </div>
-                        </div>
-                        <div class="form-toggle-switch mb-3 d-flex justify-content-between align-items-center">
-                          <h6 class="mb-0">Enterprise Support</h6>
-                          <div class="toggle-switch">
-                            <input type="checkbox" id="enterpriseSupportSwitch" />
-                            <label for="enterpriseSupportSwitch" class="toggle-slider"></label>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="drop-footer d-flex justify-content-between mt-3">
-                        <button type="button" class="btn btn-outline-primary btn-sm" id="clearFilters">
-                          Clear
-                        </button>
-                        <button type="button" class="btn btn-primary btn-sm" id="applyFilters">
-                          Apply
-                        </button>
-                      </div>
-                    </ul>
-                  </div>
-                </div>
-                {% endif %}
-              </div>
-              <div class="divider-border"></div>
-
-              <div class="alttech-inner">
-                <div class="p-3 p-lg-4">
-                  <div class="row gapy-3" id="alt-tech-grid">
-                    {% if alternative_technologies %} {% for alt_tech in
-                    alternative_technologies %}
-                    <div
-                      class="col-lg-6 alt-tech-item alt-tech-card-item"
-                      data-resource-type="{{ alt_tech.resource_type_id }}"
-                      data-open-source="{{ 'true' if alt_tech.open_source else 'false' }}"
-                      data-enterprise-support="{{ 'true' if alt_tech.support_plan else 'false' }}"
-                      data-org-region="{{ alt_tech.organization_region }}"
-                      data-org-country="{{ alt_tech.organization_country_code }}"
-                    >
-                      <div class="p-3 p-lg-4 rounded-4 alttech-card">
-                        <div
-                          class="d-flex align-items-center justify-content-between alttech-title"
-                        >
-                          <div>
-                            <h6 class="mb-1 d-flex align-items-center gap-2 flex-wrap">
-                              <i class="bi bi-building"></i>
-                              <span>{{ alt_tech.organization_name }}</span>
-                              {% if alt_tech.organization_url %}
-                              <a
-                                href="{{ alt_tech.organization_url }}{% if '?' in alt_tech.organization_url %}&{% else %}?{% endif %}utm_source=escapecloud&utm_medium=referral"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                aria-label="Visit {{ alt_tech.organization_name }}"
-                                class="d-inline-flex align-items-center text-decoration-none"
-                              >
-                                <i class="bi bi-box-arrow-up-right"></i>
-                              </a>
-                              {% endif %}
-                              <span class="text-muted">|</span>
-                              <span>{% if alt_tech.organization_flag %}{{ alt_tech.organization_flag }} {% endif %}{{ alt_tech.organization_country_code }} • {{ alt_tech.organization_region_label }}</span>
-                            </h6>
-                            <h3 class="mb-0">{{ alt_tech.product_name }}</h3>
-                          </div>
-                        </div>
-                        <div class="my-3 alttech-text">
-                          <p>{{ alt_tech.product_description }}</p>
-                        </div>
-                        <div class="d-flex gap-3 flex-wrap mb-3">
-                          <div
-                            class="verified d-inline-flex align-items-center px-2 rounded-1 gap-2 py-1 {% if alt_tech.open_source %}green-100{% else %}red-50{% endif %}"
-                          >
-                            {% if alt_tech.open_source %}
-                            <svg
-                              width="14"
-                              height="12"
-                              viewBox="0 0 14 12"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                              aria-hidden="true"
-                            >
-                              <path
-                                fill-rule="evenodd"
-                                clip-rule="evenodd"
-                                d="M13.7045 0.153466C14.034 0.404497 14.0976 0.875094 13.8466 1.20457L5.84657 11.7046C5.71541 11.8767 5.51627 11.9838 5.30033 11.9983C5.08439 12.0129 4.87271 11.9334 4.71967 11.7804L0.21967 7.28037C-0.0732233 6.98748 -0.0732233 6.5126 0.21967 6.21971C0.512563 5.92682 0.987437 5.92682 1.28033 6.21971L5.17351 10.1129L12.6534 0.295507C12.9045 -0.0339712 13.3751 -0.0975653 13.7045 0.153466Z"
-                                fill="#198754"
-                              />
-                            </svg>
-                            {% else %}
-                            <svg
-                              width="10"
-                              height="10"
-                              viewBox="0 0 10 10"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                              aria-hidden="true"
-                            >
-                              <path
-                                d="M1.28033 0.21967C0.987437 -0.0732233 0.512563 -0.0732233 0.21967 0.21967C-0.0732233 0.512563 -0.0732233 0.987437 0.21967 1.28033L3.93934 5L0.21967 8.71967C-0.0732233 9.01256 -0.0732233 9.48744 0.21967 9.78033C0.512563 10.0732 0.987437 10.0732 1.28033 9.78033L5 6.06066L8.71967 9.78033C9.01256 10.0732 9.48744 10.0732 9.78033 9.78033C10.0732 9.48744 10.0732 9.01256 9.78033 8.71967L6.06066 5L9.78033 1.28033C10.0732 0.987437 10.0732 0.512563 9.78033 0.21967C9.48744 -0.0732233 9.01256 -0.0732233 8.71967 0.21967L5 3.93934L1.28033 0.21967Z"
-                                fill="#D72323"
-                              />
-                            </svg>
-                            {% endif %}
-                            <span
-                              class="{% if alt_tech.open_source %}green-700{% else %}red-700{% endif %}"
-                              >Open Source</span
-                            >
-                          </div>
-                          <div
-                            class="verified d-inline-flex align-items-center px-2 rounded-1 gap-2 py-1 {% if alt_tech.support_plan %}green-100{% else %}red-50{% endif %}"
-                          >
-                            {% if alt_tech.support_plan %}
-                            <svg
-                              width="14"
-                              height="12"
-                              viewBox="0 0 14 12"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                              aria-hidden="true"
-                            >
-                              <path
-                                fill-rule="evenodd"
-                                clip-rule="evenodd"
-                                d="M13.7045 0.153466C14.034 0.404497 14.0976 0.875094 13.8466 1.20457L5.84657 11.7046C5.71541 11.8767 5.51627 11.9838 5.30033 11.9983C5.08439 12.0129 4.87271 11.9334 4.71967 11.7804L0.21967 7.28037C-0.0732233 6.98748 -0.0732233 6.5126 0.21967 6.21971C0.512563 5.92682 0.987437 5.92682 1.28033 6.21971L5.17351 10.1129L12.6534 0.295507C12.9045 -0.0339712 13.3751 -0.0975653 13.7045 0.153466Z"
-                                fill="#198754"
-                              />
-                            </svg>
-                            {% else %}
-                            <svg
-                              width="10"
-                              height="10"
-                              viewBox="0 0 10 10"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                              aria-hidden="true"
-                            >
-                              <path
-                                d="M1.28033 0.21967C0.987437 -0.0732233 0.512563 -0.0732233 0.21967 0.21967C-0.0732233 0.512563 -0.0732233 0.987437 0.21967 1.28033L3.93934 5L0.21967 8.71967C-0.0732233 9.01256 -0.0732233 9.48744 0.21967 9.78033C0.512563 10.0732 0.987437 10.0732 1.28033 9.78033L5 6.06066L8.71967 9.78033C9.01256 10.0732 9.48744 10.0732 9.78033 9.78033C10.0732 9.48744 10.0732 9.01256 9.78033 8.71967L6.06066 5L9.78033 1.28033C10.0732 0.987437 10.0732 0.512563 9.78033 0.21967C9.48744 -0.0732233 9.01256 -0.0732233 8.71967 0.21967L5 3.93934L1.28033 0.21967Z"
-                                fill="#D72323"
-                              />
-                            </svg>
-                            {% endif %}
-                            <span
-                              class="{% if alt_tech.support_plan %}green-700{% else %}red-700{% endif %}"
-                              >Enterprise Support</span
-                            >
-                          </div>
-                        </div>
-                        <div class="divider-border my-3"></div>
-                        <div class="visit text-end pt-2">
-                          {% if alt_tech.product_url %}
-                          <a
-                            href="{{ alt_tech.product_url }}{% if '?' in alt_tech.product_url %}&{% else %}?{% endif %}utm_source=escapecloud&utm_medium=referral"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="d-inline-flex align-items-center text-underline gap-2"
-                          >
-                            <i class="bi bi-box-arrow-up-right"></i>
-                            <span>Visit {{ alt_tech.product_name }}</span>
-                          </a>
-                          {% endif %}
-                        </div>
-                      </div>
-                    </div>
-                    {% endfor %} {% else %}
-                    <div class="col-12">
-                      <div class="chart-empty-state alt-tech-empty-state">
-                        <div class="chart-empty-state-inner">
-                          <i class="bi bi-search"></i>
-                          <p>
-                            No alternative technologies are available for this
-                            assessment.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    {% endif %}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="fine t-caption">
+        {% for note in e.notes %}<p>{{ note }}</p>
+        {% endfor %}
       </div>
 
-      <script>
-        document.addEventListener("DOMContentLoaded", function () {
-          document.querySelectorAll(".risk-row").forEach((row) => {
-            row.addEventListener("click", function () {
-              const details = document.getElementById(this.dataset.target);
-              if (!details) {
-                return;
-              }
-
-              const isOpen = details.classList.contains("show");
-              details.classList.toggle("show", !isOpen);
-              this.classList.toggle("expanded", !isOpen);
-            });
-          });
-
-          const severityButton = document.getElementById("dropdownMenuButtonSeverity");
-          const severityItems = document.querySelectorAll(
-            "#dropdownMenuButtonSeverity + .dropdown-menu .dropdown-item"
-          );
-
-          severityItems.forEach((item) => {
-            item.addEventListener("click", function (event) {
-              event.preventDefault();
-              const severity = this.dataset.severity;
-
-              if (severityButton) {
-                severityButton.innerHTML =
-                  this.textContent.trim() +
-                  ' <i class="ms-1 bi bi-chevron-down"></i>';
-              }
-
-              document.querySelectorAll("#risk-table-body .risk-row").forEach((row) => {
-                const matches = severity === "all" || row.dataset.severity === severity;
-                row.style.display = matches ? "" : "none";
-
-                const details = document.getElementById(row.dataset.target);
-                if (details) {
-                  details.style.display =
-                    matches && details.classList.contains("show")
-                      ? "table-row"
-                      : matches
-                        ? ""
-                        : "none";
-                }
-              });
-            });
-          });
-
-          const resourceItems = Array.from(
-            document.querySelectorAll("#resource-grid .resource-item")
-          );
-          const resourceViewMoreButton = document.getElementById("resourceViewMore");
-          let resourceVisibleLimit = 8;
-
-          function syncResourceVisibility() {
-            resourceItems.forEach((item, index) => {
-              item.style.display = index < resourceVisibleLimit ? "" : "none";
-            });
-
-            if (resourceViewMoreButton) {
-              resourceViewMoreButton.style.display =
-                resourceItems.length > resourceVisibleLimit ? "" : "none";
-            }
-          }
-
-          if (resourceItems.length) {
-            syncResourceVisibility();
-          }
-
-          if (resourceViewMoreButton) {
-            resourceViewMoreButton.addEventListener("click", function () {
-              resourceVisibleLimit += 8;
-              syncResourceVisibility();
-            });
-          }
-
-          const applyFiltersBtn = document.getElementById("applyFilters");
-          const clearFiltersBtn = document.getElementById("clearFilters");
-          const resourceTypeSelect = document.getElementById("resourceTypeSelect");
-          const regionSelect = document.getElementById("regionSelect");
-          const openSourceSwitch = document.getElementById("openSourceSwitch");
-          const enterpriseSupportSwitch = document.getElementById(
-            "enterpriseSupportSwitch"
-          );
-          const technologyBoxes = document.querySelectorAll(".alt-tech-card-item");
-          const searchInput = document.getElementById("altTechSearch");
-          const gridContainer = document.getElementById("alt-tech-grid");
-
-          if (
-            applyFiltersBtn &&
-            clearFiltersBtn &&
-            resourceTypeSelect &&
-            regionSelect &&
-            openSourceSwitch &&
-            enterpriseSupportSwitch &&
-            searchInput &&
-            gridContainer
-          ) {
-            let noResultsMessage = document.getElementById("noResultsMessage");
-            if (!noResultsMessage) {
-              noResultsMessage = document.createElement("div");
-              noResultsMessage.id = "noResultsMessage";
-              noResultsMessage.className = "col-12 text-center text-muted py-4";
-              noResultsMessage.style.display = "none";
-              noResultsMessage.innerHTML =
-                '<i class="bi bi-search fs-1"></i><p class="mb-0">No alternative technologies found for the selected criteria.</p>';
-              gridContainer.appendChild(noResultsMessage);
-            }
-
-            technologyBoxes.forEach((box) => {
-              box.dataset.filtered = "true";
-            });
-
-            function syncAltTechVisibility() {
-              let filteredCount = 0;
-
-              technologyBoxes.forEach((box) => {
-                const matchesFilter = box.dataset.filtered !== "false";
-                if (matchesFilter) {
-                  filteredCount += 1;
-                  box.style.display = "";
-                } else {
-                  box.style.display = "none";
-                }
-              });
-
-              noResultsMessage.style.display = filteredCount === 0 ? "" : "none";
-            }
-
-            function applyAlternativeFilters() {
-              const selectedResourceType = resourceTypeSelect.value;
-              const selectedRegion = regionSelect.value;
-              const isOpenSource = openSourceSwitch.checked;
-              const hasEnterpriseSupport = enterpriseSupportSwitch.checked;
-              const searchQuery = searchInput.value.trim().toLowerCase();
-
-              technologyBoxes.forEach((box) => {
-                const matchesResourceType =
-                  selectedResourceType === "all" ||
-                  box.dataset.resourceType === selectedResourceType;
-                const matchesRegion =
-                  selectedRegion === "all" ||
-                  box.dataset.orgRegion === selectedRegion;
-                const matchesOpenSource =
-                  !isOpenSource || box.dataset.openSource === "true";
-                const matchesEnterpriseSupport =
-                  !hasEnterpriseSupport || box.dataset.enterpriseSupport === "true";
-                const matchesSearch =
-                  !searchQuery || box.textContent.toLowerCase().includes(searchQuery);
-
-                box.dataset.filtered =
-                  matchesResourceType &&
-                  matchesRegion &&
-                  matchesOpenSource &&
-                  matchesEnterpriseSupport &&
-                  matchesSearch
-                    ? "true"
-                    : "false";
-              });
-
-              syncAltTechVisibility();
-            }
-
-            applyFiltersBtn.addEventListener("click", function () {
-              applyAlternativeFilters();
-            });
-
-            clearFiltersBtn.addEventListener("click", function () {
-              resourceTypeSelect.value = "all";
-              regionSelect.value = "all";
-              openSourceSwitch.checked = false;
-              enterpriseSupportSwitch.checked = false;
-              searchInput.value = "";
-              technologyBoxes.forEach((box) => {
-                box.dataset.filtered = "true";
-                box.style.display = "";
-              });
-              syncAltTechVisibility();
-            });
-
-            searchInput.addEventListener("keyup", function () {
-              applyAlternativeFilters();
-            });
-
-            syncAltTechVisibility();
-          }
-        });
-      </script>
-
-      {% if total_risks > 0 %}
-      <script>
-        const risksCanvas = document.getElementById("risksChart");
-        if (risksCanvas) {
-          const risksChart = new Chart(risksCanvas.getContext("2d"), {
-            type: "doughnut",
-            data: {
-              labels: ["High", "Medium", "Low"],
-              datasets: [
-                {
-                  label: "Risk(s)",
-                  data: [{{ high_risk_count }}, {{ medium_risk_count }}, {{ low_risk_count }}],
-                  backgroundColor: [
-                    "rgba(153, 27, 27, 1)",
-                    "rgba(255, 174, 31, 1)",
-                    "rgba(83, 155, 255, 1)",
-                  ],
-                  borderColor: [
-                    "rgba(153, 27, 27, 1)",
-                    "rgba(255, 174, 31, 1)",
-                    "rgba(83, 155, 255, 1)",
-                  ],
-                  borderWidth: 1,
-                },
-              ],
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              cutout: "60%",
-              plugins: {
-                legend: {
-                  position: "bottom",
-                  labels: {
-                    boxWidth: 20,
-                    padding: 15,
-                  },
-                },
-              },
-            },
-          });
-        }
-      </script>
-      {% endif %}
-
-      {% if total_cost > 0 %}
-      <script>
-        const costsCanvas = document.getElementById("costsChart");
-        if (costsCanvas) {
-          const months = JSON.parse('{{ months_json|safe }}');
-          const costs = JSON.parse('{{ costs_json|safe }}');
-          const currencySymbol = "{{ currency_symbol|safe }}";
-
-          const costsChart = new Chart(costsCanvas.getContext("2d"), {
-            type: "bar",
-            data: {
-              labels: months,
-              datasets: [
-                {
-                  label: `Costs (${currencySymbol})`,
-                  data: costs,
-                  backgroundColor: "rgba(17, 94, 89, 0.25)",
-                  borderColor: "rgba(17, 94, 89, 1)",
-                  borderWidth: 1,
-                },
-              ],
-            },
-            options: {
-              scales: {
-                y: {
-                  beginAtZero: true,
-                  title: {
-                    display: true,
-                    text: `Amount (${currencySymbol})`,
-                  },
-                },
-                x: {
-                  title: {
-                    display: false,
-                    text: "Month",
-                  },
-                },
-              },
-              responsive: true,
-              plugins: {
-                legend: {
-                  display: false,
-                },
-              },
-              maintainAspectRatio: false,
-            },
-          });
-        }
-      </script>
-      {% endif %}
-
-      {% if summary %}
-      <div class="px-3 px-md-4 pb-4">
-        <div class="bg-white shadow-s rounded-4 p-4 mt-3">
-          <h2 class="h4 mb-3">{{ summary.severity.heading }}</h2>
-          {% for paragraph in summary.severity.lead %}
-          <p>{{ paragraph }}</p>
-          {% endfor %}
-          <table class="table table-sm">
-            <thead>
-              <tr>
-                {% for header in summary.severity.headers %}
-                <th scope="col">{{ header }}</th>
-                {% endfor %}
-              </tr>
-            </thead>
+      {% if e.sized.facts %}
+      <details class="prices">
+        <summary>{{ e.sized.summary }}</summary>
+        <div class="inner table-wrap">
+          <table class="data">
+            <thead><tr><th>{{ e.sized.facts.headers[0] }}</th><th>{{ e.sized.facts.headers[1] }}</th></tr></thead>
             <tbody>
-              {% for level, meaning in summary.severity.rows %}
-              <tr>
-                <th scope="row">{{ level }}</th>
-                <td>{{ meaning }}</td>
-              </tr>
+              {% for name, note in e.sized.facts.rows %}<tr><td>{{ name }}</td><td>{{ note }}</td></tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
-        <div class="bg-white shadow-s rounded-4 p-4 mt-3">
-          <h2 class="h4 mb-3">{{ summary.glossary.heading }}</h2>
-          <p>{{ summary.glossary.lead }}</p>
-          <dl class="row mb-0">
-            {% for term, definition in summary.glossary.entries %}
-            <dt class="col-sm-3">{{ term }}</dt>
-            <dd class="col-sm-9">{{ definition }}</dd>
-            {% endfor %}
-          </dl>
-        </div>
-        <div class="bg-white shadow-s rounded-4 p-4 mt-3">
-          <h2 class="h4 mb-3">{{ summary.closing.heading }}</h2>
-          <p>{{ summary.closing.lead }}</p>
-          {% if summary.closing.uploaded %}
-          {% if summary.closing.url %}
-          <p>
-            <a
-              href="{{ summary.closing.url }}"
-              target="_blank"
-              rel="noopener noreferrer"
-              >{{ summary.closing.url }}</a
-            >
-          </p>
-          {% elif summary.closing.assessment_id %}
-          <p>Assessment ID: {{ summary.closing.assessment_id }}</p>
-          {% endif %}
-          {% else %}
-          <ul>
-            {% for term, text in summary.closing.points %}
-            <li><strong>{{ term }}</strong> {{ text }}</li>
-            {% endfor %}
-          </ul>
-          <h3 class="h6">{{ summary.closing.how_heading }}</h3>
-          <p>{{ summary.closing.how }}</p>
-          <p><code>{{ summary.closing.command }}</code></p>
-          <p class="mb-0">
-            {% for name, url in summary.closing.sites %}
-            <a href="{{ url }}" target="_blank" rel="noopener noreferrer"
-              >{{ url }}</a
-            >{% if not loop.last %} · {% endif %}
-            {% endfor %}
-          </p>
-          {% endif %}
-        </div>
-        <div class="bg-white shadow-s rounded-4 p-4 mt-3">
-          <h2 class="h4 mb-3">{{ summary.notices.heading }}</h2>
-          {% for block in summary.notices.blocks %}
-          <h3 class="h6 mt-3">{{ block.heading }}</h3>
-          {% for paragraph in block.paragraphs %}
-          <p>
-            {% for part in paragraph %}{% if part is string %}{{ part }}{% else %}<a
-              href="{{ part[1] }}"
-              target="_blank"
-              rel="noopener noreferrer"
-              >{{ part[0] }}</a
-            >{% endif %}{% endfor %}
-          </p>
+      </details>
+      {% endif %}
+      {% if e.prices %}
+      <details class="prices">
+        <summary>{{ e.prices.summary }}</summary>
+        <div class="inner table-wrap">
+          <table class="data">
+            <thead><tr>{% for header in e.prices.facts.headers %}<th{% if loop.index == 3 %} class="num"{% endif %}>{{ header }}</th>{% endfor %}</tr></thead>
+            <tbody>
+              {% for row in e.prices.facts.rows %}<tr>{% for cell in row %}<td{% if loop.index == 3 %} class="num"{% endif %}>{{ cell }}</td>{% endfor %}</tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% if e.prices.facts.units %}<p class="t-caption" style="margin-top:8px">{{ e.prices.facts.units }}</p>{% endif %}
+          {% for template, url in e.prices.facts.sources %}{% set pieces = template.split('{link}') %}<p class="t-caption" style="margin-top:4px">{{ pieces[0] }}<a href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ url }}</a>{{ pieces[1] }}</p>
           {% endfor %}
-          {% endfor %}
-          <p class="text-muted small mt-4 mb-0">{{ summary.notices.copyright }}</p>
+          {% if e.prices.facts.no_archive %}<p class="t-caption" style="margin-top:4px">{{ e.prices.facts.no_archive }}</p>{% endif %}
+          <p class="t-caption" style="margin-top:4px">{{ e.prices.facts.note }}</p>
+        </div>
+      </details>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="block card" id="about" aria-labelledby="about-h">
+    {% set a = page.about %}
+    <div class="card-head">
+      <div><h2 class="t-section" id="about-h">{{ a.heading }}</h2><p class="t-caption">{{ a.caption }}</p></div>
+    </div>
+    <div class="card-body">
+      <div class="kv-grid">
+        <div>
+          <h3 class="t-label">{{ a.document.heading }}</h3>
+          <table class="kv">
+            {% for label, value, mono in a.document.rows %}<tr><th>{{ label }}</th><td{% if mono %} class="mono"{% endif %}>{{ value }}</td></tr>
+            {% endfor %}
+          </table>
+        </div>
+        <div>
+          <h3 class="t-label">{{ a.scope.heading }}</h3>
+          <table class="kv">
+            {% for label, value, mono in a.scope.rows %}<tr><th>{{ label }}</th><td{% if mono %} class="mono"{% endif %}>{{ value }}</td></tr>
+            {% endfor %}
+          </table>
+        </div>
+        <div>
+          <h3 class="t-label">{{ a.provenance.heading }}</h3>
+          <table class="kv">
+            {% if a.provenance.run_id %}<tr><th>{{ a.provenance.run_id[0] }}</th><td class="mono">{{ a.provenance.run_id[1] }}</td></tr>{% endif %}
+            <tr><th>{{ a.provenance.catalogue[0] }}</th><td>{{ a.provenance.catalogue[1] }}{% if a.provenance.catalogue[2] %} · <span class="mono">{{ a.provenance.catalogue[2] }}</span>{% endif %}</td></tr>
+            <tr><th>{{ a.provenance.platform[0] }}</th><td>{{ parts(a.provenance.platform[1]) }}</td></tr>
+          </table>
         </div>
       </div>
-      {% endif %}
-    </main>
-  </body>
+      <p class="t-caption" style="margin:12px 0 var(--space-5)">{{ a.stored }}</p>
+
+      <details class="disc">
+        <summary>{{ a.purpose.summary }}<span class="m">{{ a.purpose.meta }}</span></summary>
+        <div class="inner">
+          {% for paragraph in a.purpose.paragraphs %}<p>{{ paragraph }}</p>
+          {% endfor %}
+          <ul>
+            {% for name, text in a.purpose.phases %}<li><b>{{ name }}</b> {{ text }}</li>
+            {% endfor %}
+          </ul>
+          <p>{{ a.purpose.closing }}</p>
+        </div>
+      </details>
+      <details class="disc">
+        <summary>{{ a.limitations.summary }}</summary>
+        <div class="inner">
+          {% for paragraph in a.limitations.paragraphs %}<p>{{ paragraph }}</p>
+          {% endfor %}
+        </div>
+      </details>
+      <details class="disc">
+        <summary>{{ a.severity.summary }}<span class="m">{{ a.severity.meta }}</span></summary>
+        <div class="inner">
+          <table class="data">
+            <thead><tr><th style="width:140px">{{ a.severity.headers[0] }}</th><th>{{ a.severity.headers[1] }}</th></tr></thead>
+            <tbody>
+              {% for level, label, meaning in a.severity.rows %}<tr><td><span class="sev {{ level }}"><span class="pips" aria-hidden="true"><i></i><i></i><i></i><i></i></span>{{ label }}</span></td><td>{{ meaning }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <p class="t-caption">{{ a.severity.note }}</p>
+        </div>
+      </details>
+      <details class="disc">
+        <summary>{{ a.glossary.summary }}<span class="m">{{ a.glossary.meta }}</span></summary>
+        <div class="inner">
+          <table class="kv">
+            {% for term, definition in a.glossary.entries %}<tr><th>{{ term }}</th><td>{{ definition }}</td></tr>
+            {% endfor %}
+          </table>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  {% set n = page.notices %}
+  <aside class="disclaimer" aria-labelledby="disclaimer-h">
+    <svg class="i"><use href="#i-warning"/></svg>
+    <div>
+      <h2 id="disclaimer-h">{{ n.disclaimer.heading }}</h2>
+      {% for paragraph in n.disclaimer.paragraphs %}<p>{{ parts(paragraph) }}</p>
+      {% endfor %}
+    </div>
+  </aside>
+  <footer class="notices" aria-label="{{ n.disclaimer.heading }}">
+    {% for block in n.blocks %}<div>
+      <h2>{{ block.heading }}</h2>
+      <p>{{ parts(block.parts) }}</p>
+    </div>
+    {% endfor %}
+    <div class="copyright"><span>{{ n.copyright }}</span><span class="mono">{{ n.ids }}</span></div>
+  </footer>
+  </main>
+</div>
+
+<script>
+  // Everything below is plain JavaScript in the page: no library, works offline.
+  // Expandable rows
+  document.querySelectorAll('.rowbtn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var row = document.getElementById(btn.getAttribute('aria-controls'));
+      var open = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', String(!open));
+      if (row) row.hidden = open;
+    });
+  });
+  // Alternatives: search and filters. Every alternative is in the page; the
+  // rows beyond the first few are only collapsed, so the filters reach them.
+  (function () {
+    var bar = document.querySelector('[data-filter]');
+    var groups = document.querySelectorAll('details.grp');
+    var empty = document.querySelector('.alt-empty');
+    var europe = ['AT','BE','BG','CH','CY','CZ','DE','DK','EE','ES','FI','FR','GB','GR','HR','HU','IE','IS','IT','LI','LT','LU','LV','MT','NL','NO','PL','PT','RO','SE','SI','SK'];
+    var input = bar && bar.querySelector('.search');
+    function pressed(name) { return bar.querySelector('[data-f="' + name + '"]').getAttribute('aria-pressed') === 'true'; }
+    function apply() {
+      var q = bar ? input.value.trim().toLowerCase() : '';
+      var os = bar && pressed('os'), sp = bar && pressed('sp'), eu = bar && pressed('eu');
+      var active = Boolean(q || os || sp || eu), shown = 0;
+      groups.forEach(function (grp) {
+        var visible = 0, expanded = grp.hasAttribute('data-expanded');
+        grp.querySelectorAll('table.alts tbody tr').forEach(function (tr) {
+          var ok = (!q || tr.textContent.toLowerCase().indexOf(q) > -1) && (!os || tr.dataset.os === '1') && (!sp || tr.dataset.sp === '1') && (!eu || europe.indexOf(tr.dataset.cc) > -1);
+          tr.hidden = active ? !ok : (tr.hasAttribute('data-extra') && !expanded);
+          if (ok) visible++;
+        });
+        // A resource type without a match disappears while a filter is on
+        grp.hidden = active && visible === 0;
+        if (active && visible) grp.open = true;
+        var more = grp.querySelector('.more');
+        if (more) more.hidden = active || expanded;
+        shown += visible;
+      });
+      if (empty) empty.hidden = !active || shown > 0;
+    }
+    groups.forEach(function (grp) {
+      var more = grp.querySelector('[data-more]');
+      if (more) more.addEventListener('click', function (e) { e.preventDefault(); grp.setAttribute('data-expanded', ''); apply(); });
+    });
+    if (!bar) return;
+    input.addEventListener('input', apply);
+    bar.querySelectorAll('.fchip').forEach(function (chip) {
+      chip.addEventListener('click', function () { chip.setAttribute('aria-pressed', String(chip.getAttribute('aria-pressed') !== 'true')); apply(); });
+    });
+  })();
+  // Section nav: mark the section in view
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('.secnav a'));
+    if (!window.IntersectionObserver) return;
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        links.forEach(function (a) { a.setAttribute('aria-current', String(a.getAttribute('href') === '#' + e.target.id)); });
+      });
+    }, { rootMargin: '-45% 0px -50% 0px' });
+    document.querySelectorAll('section.block').forEach(function (s) { io.observe(s); });
+  })();
+  // Menus: close on outside click and Escape
+  document.addEventListener('click', function (e) {
+    document.querySelectorAll('details.menu[open]').forEach(function (d) { if (!d.contains(e.target)) d.removeAttribute('open'); });
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    document.querySelectorAll('details.menu[open]').forEach(function (d) { d.removeAttribute('open'); d.querySelector('summary').focus(); });
+  });
+  // Print: the collapsible blocks are open on paper
+  (function () {
+    var opened = [];
+    window.addEventListener('beforeprint', function () {
+      document.querySelectorAll('details:not([open])').forEach(function (d) { d.setAttribute('open', ''); opened.push(d); });
+    });
+    window.addEventListener('afterprint', function () {
+      opened.forEach(function (d) { d.removeAttribute('open'); });
+      opened = [];
+    });
+  })();
+  // Light & Enterprise hints: open on hover, keyboard focus or tap; close on leave, Escape or a click outside
+  (function () {
+    var buttons = Array.prototype.slice.call(document.querySelectorAll('.hint > button'));
+    function set(btn, open) {
+      var pop = document.getElementById(btn.getAttribute('aria-controls'));
+      btn.setAttribute('aria-expanded', String(open));
+      pop.hidden = !open;
+      if (open) {
+        pop.classList.remove('flip');
+        if (pop.getBoundingClientRect().left < 8) pop.classList.add('flip');
+      }
+    }
+    function closeAll(except) { buttons.forEach(function (b) { if (b !== except) set(b, false); }); }
+    buttons.forEach(function (btn) {
+      var hint = btn.parentNode, timer;
+      hint.addEventListener('mouseenter', function () { clearTimeout(timer); closeAll(btn); set(btn, true); });
+      hint.addEventListener('mouseleave', function () { timer = setTimeout(function () { set(btn, false); }, 150); });
+      btn.addEventListener('focus', function () { closeAll(btn); set(btn, true); });
+      btn.addEventListener('click', function (e) { e.stopPropagation(); closeAll(btn); set(btn, btn.getAttribute('aria-expanded') !== 'true'); });
+    });
+    document.addEventListener('click', function (e) { if (!e.target.closest('.hint')) closeAll(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeAll(); });
+  })();
+</script>
+
+<script type="application/json" id="tour-steps">{{ page.tour | tojson }}</script>
+<script src="assets/js/driver.js.iife.js"></script>
+<script>
+  // Help: starts the tour on click only, never by itself. Below 992 px it jumps to About This Report.
+  (function () {
+    var button = document.getElementById('help');
+    var steps = JSON.parse(document.getElementById('tour-steps').textContent);
+    button.addEventListener('click', function () {
+      if (window.innerWidth < 992 || !window.driver || !window.driver.js) {
+        location.hash = 'about';
+        return;
+      }
+      var tour = window.driver.js.driver({
+        showProgress: true,
+        progressText: button.dataset.progress,
+        nextBtnText: button.dataset.next,
+        prevBtnText: button.dataset.back,
+        doneBtnText: button.dataset.done,
+        popoverClass: 'cx-tour',
+        stagePadding: 6,
+        stageRadius: 12,
+        overlayOpacity: 0.45,
+        smoothScroll: true,
+        onDestroyed: function () { button.focus(); },
+        steps: steps.map(function (s) {
+          return { element: s.element, popover: { title: s.title, description: s.description, side: s.side, align: 'start' } };
+        })
+      });
+      tour.drive();
+    });
+  })();
+</script>
+</body>
 </html>

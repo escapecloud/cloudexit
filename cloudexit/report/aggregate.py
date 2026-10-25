@@ -80,29 +80,6 @@ def sort_cost_data(cost_data: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(cost_data, key=lambda x: datetime.strptime(x["month"], "%Y-%m-%d"))
 
 
-def summarize_costs(
-    cost_data: list[dict[str, Any]], *, last_n: int | None = None
-) -> tuple[list[str], list[float], float, str, str]:
-    sorted_costs = sort_cost_data(cost_data)
-    if last_n is not None:
-        sorted_costs = sorted_costs[-last_n:]
-
-    months = [
-        datetime.strptime(item["month"], "%Y-%m-%d").strftime("%b")
-        for item in sorted_costs
-    ]
-    values = [item["cost"] for item in sorted_costs]
-    total_cost = round(sum(values), 2)
-
-    if sorted_costs:
-        currency_code = sorted_costs[0].get("currency", "USD")
-    else:
-        currency_code = "USD"
-    currency_symbol = CURRENCY_SYMBOLS.get(currency_code, currency_code)
-
-    return months, values, total_cost, currency_code, currency_symbol
-
-
 def summarize_risks(
     risk_data: list[dict[str, Any]],
     risk_definitions: list[dict[str, Any]],

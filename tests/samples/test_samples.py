@@ -15,13 +15,13 @@ from tests.report.test_basic_report import metadata_texts, page_texts
 from tests.report.test_no_credentials import find_leaks, folder_text
 from tests.samples import __main__ as samples_main
 from tests.samples.catalogue import build_sample_catalogue
+from tests.samples.rendered import rendered
 from tests.samples.render import (
     expected_files,
     pdf_dump,
     render_case,
     render_cases,
 )
-from tests.samples.scenarios import load_scenarios
 from tests.support.credentials import AWS_DETAILS, AZURE_DETAILS
 from tests.support.html import html_blocks, html_text
 from tests.support.report_terms import american_hits, find_terms, retired_term_hits
@@ -31,9 +31,7 @@ IDENTIFYING = ("accountId", "tenantId", "subscriptionId", "resourceGroupName")
 ICON_MARKERS = {"azure": "Microsoft group", "aws": "Amazon.com"}
 EGRESS_FILES = (
     "egress.pdf",
-    "egress.html",
     "texts/egress.txt",
-    "texts/egress-html.txt",
 )
 
 STATE = {}
@@ -44,22 +42,10 @@ def squashed(text):
 
 
 def setUpModule():
-    tmp = tempfile.TemporaryDirectory()
-    STATE["tmp"] = tmp
-    root = Path(tmp.name)
-    STATE["scenarios"] = scenarios = load_scenarios()
-    STATE["catalogue"] = catalogue = root / "catalogue.db"
-    build_sample_catalogue(catalogue, scenarios.values())
-    STATE["out"] = root / "out"
-    results, failures = render_cases(
-        scenarios.values(), STATE["out"], catalogue_path=catalogue
-    )
-    STATE["results"] = {result.case: result for result in results}
-    STATE["failures"] = failures
+    STATE.update(rendered())
 
 
 def tearDownModule():
-    STATE["tmp"].cleanup()
     STATE.clear()
 
 
@@ -111,15 +97,19 @@ class RenderTests(RenderedTestCase):
                         text, pages = pdf_dump(folder / pdf)
                         self.assertEqual(self.text(case, f"texts/{dump}"), text)
                         self.assertEqual(text.count("--- page "), pages)
-                for html, dump in (
-                    ("index.html", "index-html.txt"),
-                    ("egress.html", "egress-html.txt"),
-                ):
-                    if (folder / html).is_file():
-                        self.assertEqual(
-                            self.text(case, f"texts/{dump}"),
-                            html_blocks(self.text(case, html)),
-                        )
+                self.assertEqual(
+                    self.text(case, "texts/index-html.txt"),
+                    html_blocks(self.text(case, "index.html")),
+                )
+                # One HTML report: there is no second page for the egress cases
+                self.assertFalse((folder / "egress.html").exists())
+
+    def test_the_html_dump_has_the_egress_section_for_the_egress_cases(self):
+        for case, scenario in self.cases():
+            with self.subTest(case):
+                dump = self.text(case, "texts/index-html.txt")
+                has_section = "## Egress & Data Landscape" in dump
+                self.assertEqual(has_section, scenario.egress is not None)
 
     def test_rendering_a_case_twice_gives_the_same_texts(self):
         scenario = STATE["scenarios"]["aws_typical"]
@@ -172,11 +162,9 @@ class GuardTests(RenderedTestCase):
                         for text in metadata_texts(reader):
                             self.assertEqual(find_terms(text), [])
                         texts += page_texts(reader)
-                for html in ("index.html", "egress.html"):
-                    if (folder / html).is_file():
-                        source = self.text(case, html)
-                        texts.append(html_text(source))
-                        self.assertEqual(find_terms(source.split("<body", 1)[0]), [])
+                source = self.text(case, "index.html")
+                texts.append(html_text(source))
+                self.assertEqual(find_terms(source.split("<body", 1)[0]), [])
                 self.assertTrue(texts)
                 for text in texts:
                     self.assertEqual(find_terms(text), [])
@@ -406,7 +394,6 @@ class CommandTests(unittest.TestCase):
             'href="aws_typical/report.pdf"',
             'href="aws_typical/egress.pdf"',
             'href="aws_typical/index.html"',
-            'href="aws_typical/egress.html"',
         ):
             self.assertIn(link, overview)
         self.assertIn("Executive Summary: 11", overview)

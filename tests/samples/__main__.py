@@ -101,9 +101,8 @@ def overview(scenarios, results, failures, sheets):
             link(case, name, title)
             for name, title in (
                 ("report.pdf", "Executive Summary PDF"),
-                ("index.html", "Executive Summary HTML"),
+                ("index.html", "HTML report"),
                 ("egress.pdf", "Egress PDF"),
-                ("egress.html", "Egress HTML"),
             )
             if name in result.files
         ]

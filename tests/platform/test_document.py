@@ -863,10 +863,6 @@ class RunAssessmentTests(SyncDocumentTestCase):
                     "cloudexit.cli.app.estimate_egress",
                     return_value={"success": egress_ok, "logs": "x", "json_path": "p"},
                 ),
-                patch(
-                    "cloudexit.cli.app.generate_egress_html_report",
-                    return_value={"success": True, "html_path": "h"},
-                ),
             ]
         for item in patches:
             item.start()

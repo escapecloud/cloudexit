@@ -37,6 +37,7 @@ from tests.support.api import (
     sync_body,
     whoami_reply,
 )
+from tests.support.egress import empty_estimate
 from tests.support.flow import LOCAL_RISKS, SERVER_SCORES, build_flow_run
 from tests.support.http import fake_http, make_response
 from tests.support.sync import SYNC_ID, egress_row
@@ -225,7 +226,7 @@ class LocalResultsTests(FlowTestCase):
         self.assertTrue(result["success"], result.get("logs"))
         html = self.html(report)
         self.assertIn(f'href="{URL}"', html)
-        self.assertIn("Open the platform report", html)
+        self.assertIn("Open on the platform", html)
         self.assertEqual(self.json_report(report)["meta"]["upload"], info)
 
     def test_banner_text_is_escaped(self):
@@ -422,11 +423,11 @@ class RunFlowTests(FlowTestCase):
                     "cloudexit.cli.app.estimate_egress",
                     return_value={"success": egress_ok, "logs": "x", "json_path": "p"},
                 ),
+                # The estimate file is a stub: the report is made from this one
                 patch(
-                    "cloudexit.cli.app.generate_egress_html_report",
-                    return_value={"success": True, "html_path": "h"},
+                    "cloudexit.engine.load_egress_estimate",
+                    return_value=empty_estimate(),
                 ),
-                # The PDF is written by generate_report, from the estimate file
                 patch(
                     "cloudexit.engine.generate_egress_report",
                     return_value="egress.pdf",
@@ -738,8 +739,7 @@ class RunFlowTests(FlowTestCase):
                 or {"success": True, "json_path": "p"},
             ),
             patch(
-                "cloudexit.cli.app.generate_egress_html_report",
-                return_value={"success": True},
+                "cloudexit.engine.load_egress_estimate", return_value=empty_estimate()
             ),
             patch("cloudexit.engine.generate_egress_report", return_value="egress.pdf"),
         ):

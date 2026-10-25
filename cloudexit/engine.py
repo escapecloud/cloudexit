@@ -27,9 +27,9 @@ from cloudexit.report.context import (
     build_context,
     collect_provenance,
 )
+from cloudexit.report.egress import load_egress_estimate
 from cloudexit.report.egress_report import generate_egress_report
 from cloudexit.report.executive_summary import generate_executive_summary
-from cloudexit.report.html_sections import html_sections
 from cloudexit.report.writers import (
     generate_html_report,
     generate_json_report,
@@ -499,25 +499,22 @@ def generate_report(
             provenance=provenance,
             report_path=report_path,
         )
+        # The estimate is read once, for the page and for the egress PDF. When
+        # it cannot be read there is no egress in any report, and the failure
+        # is reported with the egress PDF's.
+        egress_estimate, egress_error = None, None
         if egress_json_path:
-            context.egress_document_id = context.document_id_for(EGRESS_DOCUMENT_CODE)
+            try:
+                egress_estimate = load_egress_estimate(report_path, egress_json_path)
+                context.egress_document_id = context.document_id_for(
+                    EGRESS_DOCUMENT_CODE
+                )
+            except Exception as e:
+                logger.error("Error reading the egress estimate: %s", e, exc_info=True)
+                egress_error = str(e)
 
         # Generate HTML report
-        reports["HTML"] = generate_html_report(
-            report_path,
-            metadata,
-            resource_type_mapping,
-            resource_inventory,
-            cost_data,
-            scoring_data,
-            risk_data,
-            risk_definitions,
-            alternatives,
-            alternative_technologies,
-            exit_strategy,
-            alternative_technology_organizations,
-            summary=html_sections(context),
-        )
+        reports["HTML"] = generate_html_report(context, egress_estimate)
 
         # Generate PDF report
         reports["PDF"] = generate_executive_summary(context)
@@ -542,10 +539,12 @@ def generate_report(
 
         # The Egress & Data Landscape is written last, from the same context: a
         # problem with it never costs the Executive Summary
-        if egress_json_path:
+        if egress_error:
+            result["egress_pdf_logs"] = egress_error
+        elif egress_estimate is not None:
             try:
                 reports["EGRESS_PDF"] = generate_egress_report(
-                    context, egress_json_path
+                    context, egress_json_path, estimate=egress_estimate
                 )
             except Exception as e:
                 logger.error("Error generating the egress PDF: %s", e, exc_info=True)

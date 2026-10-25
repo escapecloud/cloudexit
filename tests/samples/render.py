@@ -19,19 +19,13 @@ from cloudexit.engine import (
     perform_risk_assessment,
 )
 from cloudexit.report.assets import copy_assets
-from cloudexit.report.egress import generate_egress_html_report
 from tests.support.html import html_blocks
 
-# What a rendered case holds. Both HTML reports have a text dump, so a change
-# to either can be reviewed with a diff.
+# What a rendered case holds. The HTML report and each PDF have a text dump, so
+# a change to any of them can be reviewed with a diff.
 EXPECTED_FILES = {
     "always": ("report.pdf", "index.html", "texts/report.txt", "texts/index-html.txt"),
-    "egress": (
-        "egress.pdf",
-        "egress.html",
-        "texts/egress.txt",
-        "texts/egress-html.txt",
-    ),
+    "egress": ("egress.pdf", "texts/egress.txt"),
 }
 ASSESSMENT_TYPE = 1
 
@@ -186,13 +180,8 @@ def _write_dumps(scenario, directory, result):
             text, pages = pdf_dump(directory / pdf)
             (texts / dump).write_text(text, encoding="utf-8")
             result.pages[pdf] = pages
-    for html, dump in (
-        ("index.html", "index-html.txt"),
-        ("egress.html", "egress-html.txt"),
-    ):
-        if (directory / html).is_file():
-            source = (directory / html).read_text(encoding="utf-8")
-            (texts / dump).write_text(html_blocks(source), encoding="utf-8")
+    source = (directory / "index.html").read_text(encoding="utf-8")
+    (texts / "index-html.txt").write_text(html_blocks(source), encoding="utf-8")
 
 
 def _render(scenario, directory, catalogue_path):
@@ -220,13 +209,6 @@ def _render(scenario, directory, catalogue_path):
     risks = perform_risk_assessment(scenario.exit_strategy, report_path)
     if not risks["success"]:
         raise RenderError(f"risk assessment failed: {risks['logs']}")
-
-    if egress_json:
-        html = generate_egress_html_report(
-            report_path, egress_json, details, scenario.run_id
-        )
-        if not html["success"]:
-            raise RenderError(f"egress.html failed: {html['logs']}")
 
     report = generate_report(
         scenario.csp,
