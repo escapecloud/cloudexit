@@ -118,24 +118,37 @@ class LoadTfstateScopeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             self._write_manifest(tmp_dir, {"scope": scope, "counted": []})
 
-            self.assertEqual(_load_tfstate_scope(tmp_dir), scope)
+            self.assertEqual(_load_tfstate_scope(tmp_dir), (scope, None))
 
-    def test_missing_manifest_returns_none_without_raising(self):
+    def test_returns_the_coverage_block_with_the_scope(self):
+        scope = {"file": "infra.tfstate"}
+        coverage = {
+            "instances_total": 9,
+            "instances_counted": 5,
+            "instances_excluded_other_provider": 3,
+            "instances_excluded_unmapped": 1,
+        }
         with tempfile.TemporaryDirectory() as tmp_dir:
-            self.assertIsNone(_load_tfstate_scope(tmp_dir))
+            self._write_manifest(tmp_dir, {"scope": scope, "coverage": coverage})
 
-    def test_corrupt_manifest_returns_none_without_raising(self):
+            self.assertEqual(_load_tfstate_scope(tmp_dir), (scope, coverage))
+
+    def test_missing_manifest_returns_nothing_without_raising(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            self.assertEqual(_load_tfstate_scope(tmp_dir), (None, None))
+
+    def test_corrupt_manifest_returns_nothing_without_raising(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             path = Path(tmp_dir) / "tfstate_manifest.json"
             path.write_text("{not json", encoding="utf-8")
 
-            self.assertIsNone(_load_tfstate_scope(tmp_dir))
+            self.assertEqual(_load_tfstate_scope(tmp_dir), (None, None))
 
-    def test_manifest_without_scope_returns_none(self):
+    def test_manifest_without_scope_returns_nothing(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             self._write_manifest(tmp_dir, {"counted": []})
 
-            self.assertIsNone(_load_tfstate_scope(tmp_dir))
+            self.assertEqual(_load_tfstate_scope(tmp_dir), (None, None))
 
 
 if __name__ == "__main__":

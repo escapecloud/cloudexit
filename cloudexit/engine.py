@@ -415,15 +415,19 @@ def perform_risk_assessment(exit_strategy: int, report_path: str) -> dict[str, A
         return {"success": False, "logs": str(e)}
 
 
-def _load_tfstate_scope(raw_data_path: str) -> dict[str, Any] | None:
-    # A missing or unreadable manifest must not fail report generation.
+def _load_tfstate_scope(
+    raw_data_path: str,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    # A missing or unreadable manifest must not fail report generation. Older
+    # manifests have no coverage.
     manifest_path = os.path.join(raw_data_path, "tfstate_manifest.json")
     try:
         with open(manifest_path, "r", encoding="utf-8") as manifest_file:
-            return json.load(manifest_file).get("scope")
+            manifest = json.load(manifest_file)
+        return manifest.get("scope"), manifest.get("coverage")
     except (OSError, json.JSONDecodeError) as e:
         logger.warning("Could not read the tfstate manifest for report scope: %s", e)
-        return None
+        return None, None
 
 
 # Stage 8
@@ -477,10 +481,10 @@ def generate_report(
         reports = {}
 
         # One context feeds all three reports, so they say the same things
-        tfstate_scope = (
+        tfstate_scope, tfstate_coverage = (
             _load_tfstate_scope(raw_data_path)
             if provider_details.get("tfstatePath")
-            else None
+            else (None, None)
         )
         provenance = collect_provenance(db_path, run_id=sync_id, upload=upload)
         context = build_context(
@@ -496,6 +500,7 @@ def generate_report(
             alternative_technology_organizations=alternative_technology_organizations,
             exit_strategy=exit_strategy,
             tfstate_scope=tfstate_scope,
+            tfstate_coverage=tfstate_coverage,
             provenance=provenance,
             report_path=report_path,
         )

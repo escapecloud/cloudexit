@@ -23,11 +23,14 @@ FIELDS = (
     "clock",
     "run_id",
 )
+OPTIONAL_FIELDS = ("catalogue",)
+CATALOGUES = ("legacy",)
 SCOPE_FIELDS = {
     "aws": ("accountId", "region"),
     "azure": ("tenantId", "subscriptionId", "resourceGroupName"),
 }
-UPLOAD_FIELDS = ("status", "url", "assessment_id", "sync_id", "reason")
+UPLOAD_FIELDS = ("status", "url", "assessment_id", "sync_id", "reason", "spooled")
+UPLOAD_STATUSES = ("uploaded", "failed")
 MONTH = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
 CURRENCY = re.compile(r"^[A-Z]{3}$")
 UUID7 = re.compile(
@@ -54,6 +57,8 @@ class Scenario:
     upload: dict | None
     clock: datetime
     run_id: str
+    # "legacy": a catalogue without catalogue_meta
+    catalogue: str | None = None
 
     @property
     def csp(self):
@@ -218,8 +223,20 @@ def _upload(path, upload):
     if not isinstance(upload, dict):
         _fail(path, "upload", "expected an object or null")
     _only(path, "upload", upload, UPLOAD_FIELDS)
-    _text(path, "upload.status", upload.get("status"))
+    status = _text(path, "upload.status", upload.get("status"))
+    if status not in UPLOAD_STATUSES:
+        _fail(path, "upload.status", f"expected one of {list(UPLOAD_STATUSES)}")
+    if "reason" in upload:
+        _text(path, "upload.reason", upload["reason"])
+    if "spooled" in upload and not isinstance(upload["spooled"], bool):
+        _fail(path, "upload.spooled", "expected true or false")
     return upload
+
+
+def _catalogue(path, value):
+    if value is not None and value not in CATALOGUES:
+        _fail(path, "catalogue", f"expected one of {list(CATALOGUES)}, got {value!r}")
+    return value
 
 
 def _clock(path, value):
@@ -243,7 +260,7 @@ def load_scenario(path):
     for field in FIELDS:
         if field not in data:
             _fail(path, field, "missing")
-    _only(path, "(file)", data, FIELDS)
+    _only(path, "(file)", data, FIELDS + OPTIONAL_FIELDS)
 
     provider = data["provider"]
     if provider not in PROVIDER_IDS:
@@ -280,6 +297,7 @@ def load_scenario(path):
         upload=_upload(path, data["upload"]),
         clock=_clock(path, data["clock"]),
         run_id=run_id,
+        catalogue=_catalogue(path, data.get("catalogue")),
     )
 
 

@@ -250,7 +250,7 @@ def read_sync_files(
     return found, problems
 
 
-REPORT_KEYS = ("status", "reason", "sync_id", "assessment_id", "url")
+REPORT_KEYS = ("status", "reason", "sync_id", "assessment_id", "url", "spooled")
 
 
 def _record(result: UploadResult | None) -> dict[str, Any] | None:
@@ -273,9 +273,9 @@ def _record(result: UploadResult | None) -> dict[str, Any] | None:
     return {key: value for key, value in info.items() if value}
 
 
-def report_info(result: UploadResult | None) -> dict[str, str] | None:
-    # What the local report may show: the status and the link, nothing the
-    # platform computed.
+def report_info(result: UploadResult | None) -> dict[str, Any] | None:
+    # What the local report may show: the status, the link and whether a failed
+    # run was kept, nothing the platform computed.
     record = _record(result)
     if record is None:
         return None

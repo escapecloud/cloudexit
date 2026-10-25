@@ -27,6 +27,25 @@ BLOCKS = {
     "ev_resource_groups": "Resource Groups",
     "ev_regions": "Regions",
     "ev_not_determinable": "Not determinable from the state",
+    "ev_not_assessed": "Not Assessed",
+    "ev_not_assessed_other_one": "1 resource of another provider",
+    "ev_not_assessed_other_many": "{n} resources of other providers",
+    "ev_not_assessed_unmapped_one": "1 resource of a type not in the data catalogue",
+    "ev_not_assessed_unmapped_many": (
+        "{n} resources of types not in the data catalogue"
+    ),
+    "res_not_assessed_one": (
+        "1 resource in the state file was not assessed (see page 2)."
+    ),
+    "res_not_assessed_many": (
+        "{n} resources in the state file were not assessed (see page 2)."
+    ),
+    "html_inv_not_assessed_one": (
+        "1 resource in the state file was not assessed (see {about})"
+    ),
+    "html_inv_not_assessed_many": (
+        "{n} resources in the state file were not assessed (see {about})"
+    ),
     "ev_source_label": "Source",
     "ev_source_live": "Provider APIs",
     "ev_source_tfstate": "Terraform State",
@@ -38,6 +57,9 @@ BLOCKS = {
     "ev_platform_label": "Platform",
     "ev_platform_none": "Self-collected data: no platform evaluated this report.",
     "ev_platform_uploaded": "Uploaded to the platform",
+    "ev_platform_failed": "Upload failed: {reason}.",
+    "ev_platform_failed_no_reason": "Upload failed.",
+    "ev_platform_kept": "The run was kept for a later upload.",
     "ev_stored_footnote": (
         "This document was generated when run {run} completed and is stored "
         "unchanged. Later runs are reported in their own documents."
@@ -335,41 +357,6 @@ BLOCKS = {
             "definition": "One completed assessment of the defined scope, identified by the run ID on page 2.",
         },
     ],
-    "fa_heading": "What the Full Assessment Adds",
-    "fa_lead": (
-        "This Executive Summary is the Basic assessment. It was collected and "
-        "evaluated locally and covers the resource inventory, "
-        "costs, exit risks and alternative technologies of the defined scope. "
-        "The full assessment on a platform adds:"
-    ),
-    "fa_items": [
-        (
-            "Exit Readiness Grade",
-            "a letter grade from A to F that shows how ready the defined scope is for an exit.",
-        ),
-        (
-            "Vendor Lock-in Score",
-            "a rating of how easily each resource type can be replaced, in terms of skills, technology and operations.",
-        ),
-        (
-            "Scored Alternatives",
-            "the alternative technologies for each resource type, rated and ranked.",
-        ),
-    ],
-    "fa_how_heading": "How to Get Them",
-    "fa_how": (
-        "Connect cloudexit to a platform with an API key and run the "
-        "assessment again; the results are uploaded and evaluated there. For "
-        "example:"
-    ),
-    "fa_command": "cloudexit aws --host HOST --api-key-file KEY_FILE",
-    "fa_sites": "Platforms: {escapecloud} · {exitcloud}",
-    "fa_heading_uploaded": "The Full Assessment",
-    "fa_uploaded": (
-        "This assessment was uploaded. The Exit Readiness Grade, the Vendor "
-        "Lock-in Score, scored alternatives and the Egress & Data Landscape "
-        "are available in its reports on the platform."
-    ),
     "fa_uploaded_link": "Open the reports: {link}",
     "fa_uploaded_id": "Assessment ID: {assessment_id}",
     "eg_heading_introduction": "Introduction",
@@ -652,20 +639,20 @@ BLOCKS = {
         "affiliation."
     ),
     "notices_icons_aws": (
-        "AWS service icons are taken from the AWS Architecture Icons "
-        "({icons_url}); their use is subject to the terms published there and "
-        "in the AWS Trademark Guidelines ({guidelines_url}). Amazon Web "
-        "Services and AWS are trademarks of Amazon.com, Inc. or its "
-        "affiliates. This report is not endorsed by or affiliated with Amazon "
-        "Web Services."
+        "AWS service icons are taken from the {icons}; their use is subject to "
+        "the terms published there and in the {guidelines}. Amazon Web Services "
+        "and AWS are trademarks of Amazon.com, Inc. or its affiliates. This "
+        "report is not endorsed by or affiliated with Amazon Web Services."
     ),
     "notices_icons_azure": (
-        "Azure service icons are taken from the Azure Architecture Icons "
-        "({icons_url}); their use is subject to Microsoft's icon terms "
-        "published there. Microsoft and Azure are trademarks of the Microsoft "
-        "group of companies. This report is not endorsed by or affiliated with "
-        "Microsoft."
+        "Azure service icons are taken from the {icons}; their use is subject "
+        "to Microsoft's icon terms published there. Microsoft and Azure are "
+        "trademarks of the Microsoft group of companies. This report is not "
+        "endorsed by or affiliated with Microsoft."
     ),
+    "notices_label_aws_icons": "AWS Architecture Icons",
+    "notices_label_aws_guidelines": "AWS Trademark Guidelines",
+    "notices_label_azure_icons": "Azure Architecture Icons",
     "notices_software_heading": "Software",
     "notices_software": (
         "cloudexit is free software, licensed under the GNU Affero General "
@@ -752,7 +739,6 @@ BLOCKS = {
         "and operations, with the alternatives rated and ranked."
     ),
     "html_scores_on_platform": "For this run it is on the platform.",
-    "html_platform_not_uploaded": "Not uploaded: {reason}",
     "html_hint_title": "EscapeCloud Light & Enterprise",
     "html_hint_text": (
         "EscapeCloud's scoring engine offers several scoring methods to assess "
@@ -934,9 +920,6 @@ BLOCKS = {
     "html_notice_advice": (
         "It is not legal, financial or investment advice, an audit or an exit plan."
     ),
-    "html_label_aws_icons": "AWS Architecture Icons",
-    "html_label_aws_guidelines": "AWS Trademark Guidelines",
-    "html_label_azure_icons": "Azure Architecture Icons",
     "html_label_repository": "github.com/escapecloud/cloudexit",
     "html_figures_heading": "Figures",
     "html_figures": (
@@ -1049,6 +1032,7 @@ TITLE_CASE_KEYS = (
     "ev_catalogue_label",
     "ev_run_id",
     "ev_platform_label",
+    "ev_not_assessed",
     "cover_title_executive_summary",
     "cover_title_egress",
     "ev_egress_report",
@@ -1143,9 +1127,6 @@ TITLE_CASE_KEYS = (
     "es_heading_severity",
     "es_severity_th_meaning",
     "es_heading_glossary",
-    "fa_heading",
-    "fa_how_heading",
-    "fa_heading_uploaded",
     "html_download",
     "html_download_summary",
     "html_download_egress",

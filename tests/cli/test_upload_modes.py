@@ -91,7 +91,7 @@ class UploadModeMatrixTests(ModeTestCase):
 
         self.assertEqual(ctx.exception.code, codes.UPLOAD_AUTH)
         self.assert_local_report(report)
-        self.assertIn("Not uploaded", self.html(report))
+        self.assertIn("Upload failed", self.html(report))
 
     def test_required_without_a_platform_fails_before_collecting_anything(self):
         report = self.report()

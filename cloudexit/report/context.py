@@ -38,8 +38,10 @@ class Provenance:
     uploaded: bool = False
     platform_url: str | None = None
     assessment_id: str | None = None
-    # Why a requested upload did not happen, when it did not
+    # A requested upload that failed, why, and whether the run was kept
+    upload_failed: bool = False
     upload_reason: str | None = None
+    upload_spooled: bool = False
 
     @property
     def run_short_id(self):
@@ -79,9 +81,11 @@ def collect_provenance(db_path, *, run_id=None, upload=None, collected_at=None):
         uploaded=upload.get("status") == "uploaded",
         platform_url=upload.get("url") if upload.get("status") == "uploaded" else None,
         assessment_id=upload.get("assessment_id"),
+        upload_failed=upload.get("status") == "failed",
         upload_reason=(
-            upload.get("reason") if upload.get("status") != "uploaded" else None
+            upload.get("reason") if upload.get("status") == "failed" else None
         ),
+        upload_spooled=bool(upload.get("spooled")) and upload.get("status") == "failed",
     )
 
 
@@ -147,6 +151,14 @@ class ScopeFacts:
     resource_group: str = ""
     file_name: str = ""
     locations: tuple = ()
+    # State file instances left out: of other providers, of types not in the
+    # data catalogue
+    not_assessed_other: int = 0
+    not_assessed_unmapped: int = 0
+
+    @property
+    def not_assessed(self):
+        return self.not_assessed_other + self.not_assessed_unmapped
 
 
 @dataclass
@@ -316,7 +328,14 @@ def _alternative_entries(
     return entries
 
 
-def scope_facts(provider_details, cloud_service_provider, tfstate_scope):
+def _excluded(coverage, key):
+    value = (coverage or {}).get(key)
+    return value if isinstance(value, int) and value > 0 else 0
+
+
+def scope_facts(
+    provider_details, cloud_service_provider, tfstate_scope, tfstate_coverage=None
+):
     provider = PROVIDER_NAMES.get(cloud_service_provider, "–")
     if provider_details.get("tfstatePath"):
         scope = tfstate_scope or {
@@ -343,6 +362,12 @@ def scope_facts(provider_details, cloud_service_provider, tfstate_scope):
             tuple(rows),
             file_name=scope.get("file") or "",
             locations=locations,
+            not_assessed_other=_excluded(
+                tfstate_coverage, "instances_excluded_other_provider"
+            ),
+            not_assessed_unmapped=_excluded(
+                tfstate_coverage, "instances_excluded_unmapped"
+            ),
         )
     if cloud_service_provider == 1:
         rows = (
@@ -379,6 +404,7 @@ def build_context(
     alternative_technology_organizations: list[dict[str, Any]],
     exit_strategy: int,
     tfstate_scope: dict[str, Any] | None,
+    tfstate_coverage: dict[str, Any] | None = None,
     provenance: Provenance,
     report_path: str,
 ) -> ReportContext:
@@ -392,7 +418,7 @@ def build_context(
         provider=PROVIDER_NAMES.get(csp, "–"),
         exit_strategy=exit_strategy,
         strategy_code=STRATEGY_CODES.get(int(exit_strategy), ""),
-        scope=scope_facts(provider_details, csp, tfstate_scope),
+        scope=scope_facts(provider_details, csp, tfstate_scope, tfstate_coverage),
         provenance=provenance,
         resources=resources,
         costs=_cost_entries(cost_data, provenance.collected_at),

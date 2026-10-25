@@ -224,34 +224,53 @@ class GuardTests(RenderedTestCase):
 
 
 class UploadTests(RenderedTestCase):
-    def test_uploaded_cases_show_their_link_or_assessment_id(self):
+    def test_uploaded_cases_show_their_link_or_assessment_id_on_page_two_only(self):
         linked = STATE["scenarios"]["azure_uploaded"].upload["url"]
         for pdf in ("report.pdf", "egress.pdf"):
             pages = self.pdf_pages("azure_uploaded", pdf)
             self.assertIn(linked, squashed(pages[1]))
             self.assertIn("Uploaded to the platform", pages[1])
-        self.assertIn(
-            "The Full Assessment", self.pdf_pages("azure_uploaded", "report.pdf")[-2]
-        )
-        self.assertIn(
-            linked, squashed(self.pdf_pages("azure_uploaded", "egress.pdf")[-2])
+            if pdf == "report.pdf":
+                self.assertEqual(sum(linked in squashed(text) for text in pages), 1)
+        self.assertNotIn(
+            "The Full Assessment",
+            " ".join(self.pdf_pages("azure_uploaded", "report.pdf")),
         )
 
         pages = self.pdf_pages("uploaded_no_link", "report.pdf")
         self.assertIn("Uploaded to the platform", pages[1])
-        self.assertIn("Assessment ID: sample-assessment-0001", pages[-2])
+        self.assertIn("Assessment ID: sample-assessment-0001", pages[1])
+        self.assertEqual(sum("sample-assessment-0001" in text for text in pages), 1)
         self.assertNotIn("https://platform", " ".join(pages))
 
-    def test_offline_cases_show_the_self_collected_line(self):
+    def test_offline_cases_show_the_self_collected_line_and_no_closing_page(self):
         for case, scenario in self.cases():
             if scenario.upload is None:
                 with self.subTest(case):
                     pages = self.pdf_pages(case, "report.pdf")
                     self.assertIn("Self-collected data", pages[1])
-                    self.assertIn("What the Full Assessment Adds", " ".join(pages))
+                    self.assertNotIn("What the Full Assessment Adds", " ".join(pages))
+                    self.assertIn("Legal Notices", pages[-1][:200])
                     if scenario.egress is not None:
                         egress = self.pdf_pages(case, "egress.pdf")
                         self.assertIn("Self-collected data", egress[1])
+
+    def test_a_failed_upload_says_what_happened_in_both_pdfs_and_the_html(self):
+        wording = (
+            "Upload failed: The platform did not answer in time. "
+            "The run was kept for a later upload."
+        )
+        for pdf in ("report.pdf", "egress.pdf"):
+            if (self.folder("upload_failed") / pdf).is_file():
+                self.assertIn(wording, self.pdf_pages("upload_failed", pdf)[1])
+        pages = self.pdf_pages("upload_failed", "report.pdf")
+        self.assertNotIn("Self-collected data", " ".join(pages))
+        self.assertIn(wording, html_text(self.text("upload_failed", "index.html")))
+        chip = re.search(
+            r'<span class="chip[^>]*>(.*?)</span>',
+            self.text("upload_failed", "index.html"),
+        )
+        self.assertEqual(chip.group(1), "Self-collected")
 
 
 class CaseTests(RenderedTestCase):
@@ -319,6 +338,57 @@ class CaseTests(RenderedTestCase):
         azure = " ".join(self.pdf_pages("tfstate_azure", "report.pdf"))
         self.assertIn("Subscriptions", azure)
         self.assertIn("rg-sample-archive", azure)
+
+    def test_unsized_egress_is_not_sized_on_every_type(self):
+        text = " ".join(self.pdf_pages("egress_unsized", "egress.pdf"))
+        dump = self.text("egress_unsized", "texts/index-html.txt")
+
+        self.assertIn("None of the 5 data-bearing resources could be sized.", text)
+        self.assertIn("RESOURCES SIZED 0 of 5", text)
+        self.assertIn("Not sized: Storage Account (2 resources)", text)
+        self.assertIn("SQL Database (1 resource)", text)
+        # A fee of zero with a +: a lower bound, never a figure
+        self.assertIn("$0.00+", text)
+        self.assertIn("0.0 GiB+", text)
+        self.assertNotIn("monthly free tier", text)
+        self.assertIn("not sized", dump.lower())
+
+    def test_an_empty_scope_with_costs_has_empty_states_next_to_real_figures(self):
+        text = " ".join(self.pdf_pages("empty_with_costs", "report.pdf"))
+        dump = self.text("empty_with_costs", "texts/index-html.txt")
+
+        self.assertIn("There are no risks identified in this assessment.", text)
+        self.assertIn("There are no resources to be found", text)
+        self.assertNotIn("No cost data available", text)
+        self.assertRegex(text, r"€\s?\d")
+        self.assertIn("No resources were found in the defined scope.", dump)
+        self.assertRegex(dump, r"Costs, Last 6 Months\s+€\s?\d")
+
+    def test_a_dataset_without_catalogue_meta_says_the_version_is_unknown(self):
+        unknown = BLOCKS["ev_catalogue_unknown"]
+        pages = self.pdf_pages("legacy_catalogue", "report.pdf")
+        dump = self.text("legacy_catalogue", "texts/index-html.txt")
+
+        self.assertIn(unknown, pages[1])
+        self.assertGreaterEqual(dump.count(unknown), 2)
+        self.assertNotIn("2026-11-02", pages[1])
+        self.assertIn("2026-11-02", self.pdf_pages("aws_typical", "report.pdf")[1])
+
+    def test_a_state_file_with_foreign_and_unmapped_instances_has_the_not_assessed_row(
+        self,
+    ):
+        pages = self.pdf_pages("tfstate_skipped", "report.pdf")
+        dump = self.text("tfstate_skipped", "texts/index-html.txt")
+        row = (
+            "Not Assessed 3 resources of other providers, "
+            "3 resources of types not in the data catalogue"
+        )
+        caption = "6 resources in the state file were not assessed"
+
+        self.assertIn(row, pages[1])
+        self.assertIn(row, dump)
+        self.assertIn(f"{caption} (see page 2)", " ".join(pages))
+        self.assertIn(f"{caption} (see About This Report)", dump)
 
     def test_the_stress_case_is_long_and_has_mixed_currencies(self):
         pages = self.pdf_pages("stress", "report.pdf")
@@ -396,7 +466,7 @@ class CommandTests(unittest.TestCase):
             'href="aws_typical/index.html"',
         ):
             self.assertIn(link, overview)
-        self.assertIn("Executive Summary: 11", overview)
+        self.assertIn("Executive Summary: 10", overview)
         self.assertIn("Sample – Customer Self-Service Portal", overview)
         self.assertNotIn("azure_typical", overview)
 

@@ -1,0 +1,15 @@
+{
+  "name": "Sample – Multi-Cloud Landing Zone (Terraform)",
+  "purpose": "A state file with instances of another provider and of types not in the data catalogue: the Not Assessed row on page 2 and in About This Report.",
+  "provider": "aws",
+  "exit_strategy": 1,
+  "scope": {
+    "tfstate": "sample_aws_skipped.tfstate"
+  },
+  "resources": [],
+  "costs": null,
+  "egress": null,
+  "upload": null,
+  "clock": "2026-11-12T09:30:00Z",
+  "run_id": "01939b8e-7c2a-7d41-9a51-3c8f0a6e0017"
+}

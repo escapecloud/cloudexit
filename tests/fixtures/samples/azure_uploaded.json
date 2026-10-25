@@ -1,6 +1,6 @@
 {
   "name": "Sample – Document Archive",
-  "purpose": "The same run, uploaded with a link: the uploaded closing page and the link on page 2 of both documents.",
+  "purpose": "Uploaded with a link: the link on page 2 of both PDFs and in the HTML.",
   "provider": "azure",
   "exit_strategy": 1,
   "scope": {

@@ -37,14 +37,22 @@ def text_parts(template, links, values=None):
     return parts
 
 
-def _icon_notice(provider, b):
+def icon_notice(provider, b):
+    # The names are the links: the HTML shows the name, the PDF the name and, in
+    # brackets, the address
     if provider == 2:
         return text_parts(
             b["notices_icons_aws"],
-            {"icons_url": AWS_ICONS_URL, "guidelines_url": AWS_TRADEMARK_URL},
+            {
+                "icons": (b["notices_label_aws_icons"], AWS_ICONS_URL),
+                "guidelines": (b["notices_label_aws_guidelines"], AWS_TRADEMARK_URL),
+            },
         )
     if provider == 1:
-        return text_parts(b["notices_icons_azure"], {"icons_url": AZURE_ICONS_URL})
+        return text_parts(
+            b["notices_icons_azure"],
+            {"icons": (b["notices_label_azure_icons"], AZURE_ICONS_URL)},
+        )
     return None
 
 
@@ -60,7 +68,7 @@ def notices_html(provider, generated_at, b=BLOCKS, egress=False):
         *([[b["notices_egress"]]] if egress else []),
     ]
     trademarks = [[b["notices_trademark_own"]], [b["notices_trademark_others"]]]
-    icons = _icon_notice(provider, b)
+    icons = icon_notice(provider, b)
     if icons:
         trademarks.append(icons)
     return {
@@ -85,9 +93,20 @@ def notices_html(provider, generated_at, b=BLOCKS, egress=False):
     }
 
 
+def _link_markup(label, url, color):
+    # A link that is not its own address prints the address too, for print
+    if label == url:
+        return link_markup(url, color)
+    return f"{escape(label)} ({link_markup(url, color)})"
+
+
 def parts_markup(parts, color):
     return "".join(
-        link_markup(part[1], color) if isinstance(part, tuple) else escape(part)
+        (
+            _link_markup(part[0], part[1], color)
+            if isinstance(part, tuple)
+            else escape(part)
+        )
         for part in parts
     )
 

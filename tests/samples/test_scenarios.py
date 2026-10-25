@@ -26,6 +26,11 @@ CASES = {
     "egress_free_tier",
     "egress_multi_tib",
     "stress",
+    "upload_failed",
+    "egress_unsized",
+    "empty_with_costs",
+    "legacy_catalogue",
+    "tfstate_skipped",
 }
 GUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 MADE_UP = "00000000-0000-4000-8000-"
@@ -77,6 +82,35 @@ class LoaderTests(ScenarioTestCase):
         del data["costs"]
 
         self.assertRejected(data, "costs", "missing")
+
+    def test_the_upload_fields_are_checked(self):
+        failed = {
+            "status": "failed",
+            "reason": "The platform did not answer in time",
+            "spooled": True,
+            "sync_id": self.valid["run_id"],
+        }
+
+        scenario = load_scenario(self.write(self.edited(upload=failed)))
+        self.assertEqual(scenario.upload, failed)
+        self.assertRejected(
+            self.edited(upload={**failed, "spooled": "yes"}), "upload.spooled"
+        )
+        self.assertRejected(
+            self.edited(upload={**failed, "reason": ""}), "upload.reason"
+        )
+        self.assertRejected(
+            self.edited(upload={**failed, "status": "pending"}), "upload.status"
+        )
+        self.assertRejected(
+            self.edited(upload={**failed, "attempts": 3}), "upload.attempts", "unknown"
+        )
+
+    def test_the_catalogue_field_is_optional_and_only_knows_legacy(self):
+        self.assertIsNone(load_scenario(self.write(self.valid)).catalogue)
+        legacy = load_scenario(self.write(self.edited(catalogue="legacy")))
+        self.assertEqual(legacy.catalogue, "legacy")
+        self.assertRejected(self.edited(catalogue="future"), "catalogue", "legacy")
 
     def test_a_missing_scope_field_is_named(self):
         data = self.edited(scope={"accountId": "123456789012"})
@@ -170,6 +204,19 @@ class SampleFilesTests(unittest.TestCase):
 
     def test_the_cases_cover_the_matrix(self):
         scenarios = load_scenarios()
+
+        self.assertEqual(len(scenarios), 17)
+        failed = scenarios["upload_failed"].upload
+        self.assertEqual((failed["status"], failed["spooled"]), ("failed", True))
+        self.assertEqual(scenarios["legacy_catalogue"].catalogue, "legacy")
+        self.assertEqual(
+            [s.case for s in scenarios.values() if s.catalogue], ["legacy_catalogue"]
+        )
+        unsized = scenarios["egress_unsized"].egress["resources"]
+        self.assertTrue(all(item["size_gib"] is None for item in unsized))
+        self.assertEqual(scenarios["empty_with_costs"].resources, ())
+        self.assertTrue(scenarios["empty_with_costs"].costs["months"])
+        self.assertTrue(scenarios["tfstate_skipped"].tfstate)
 
         providers = {scenario.provider for scenario in scenarios.values()}
         self.assertEqual(providers, {"aws", "azure"})
