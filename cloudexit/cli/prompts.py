@@ -6,23 +6,31 @@ from cloudexit.terminal import ask, console
 logger = logging.getLogger(__name__)
 
 
-def prompt_required_inputs() -> tuple[int, int]:
+def prompt_required_inputs(ask_assessment_type: bool = True) -> tuple[int, int]:
     while True:
         try:
             exit_strategy = int(
                 ask(
-                    "Enter Exit Strategy (1 for 'Repatriation to On-Premises', 3 for 'Migration to Alternate Cloud'): "
+                    "Enter Exit Strategy (1 for 'Repatriation to On-Premises', 2 for 'Hybrid Cloud Adoption', 3 for 'Migration to Alternate Cloud'): "
                 ).strip()
             )
-            if exit_strategy not in [1, 3]:
+            if exit_strategy not in [1, 2, 3]:
                 raise ValueError("Invalid exit strategy.")
             # logger.info(f"Exit Strategy selected: {exit_strategy}")
             break
         except ValueError as e:
             logger.debug(f"Invalid exit strategy input: {e}")
             console.print(
-                f"{e} Please enter 1 or 3.", style="red", markup=False, emoji=False
+                f"{e} Please enter 1, 2 or 3.",
+                style="red",
+                markup=False,
+                emoji=False,
             )
+
+    # Standard only exists on a platform, so without an upload there is
+    # nothing to choose
+    if not ask_assessment_type:
+        return exit_strategy, 1
 
     while True:
         try:

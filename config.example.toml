@@ -9,8 +9,6 @@
 #   1. command-line flags (--host, --api-key-file, --config-profile, ...)
 #   2. CLOUDEXIT_* environment variables
 #   3. this file ([profiles.<name>] first, then [default])
-#   4. deprecated: the HOST and KEY environment variables (only when both are
-#      set) and config.py
 # Run `cloudexit config show` to see each value and where it came from.
 
 [default]

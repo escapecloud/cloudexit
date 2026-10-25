@@ -510,14 +510,28 @@ class NonInteractiveAWSTests(unittest.TestCase):
         self.assertEqual(ctx.exception.code, codes.CONFIG)
 
     def test_invalid_exit_strategy_exits_config(self):
-        env = {**self._BASE_ENV, "ESC_EXIT_STRATEGY": "9"}
+        for value in ("4", "9"):
+            with self.subTest(value=value):
+                env = {**self._BASE_ENV, "ESC_EXIT_STRATEGY": value}
+                with (
+                    patch.dict(os.environ, env, clear=False),
+                    patch("cloudexit.cli.app.console.print"),
+                ):
+                    with self.assertRaises(SystemExit) as ctx:
+                        app.handle_aws(_ni_aws_args())
+                self.assertEqual(ctx.exception.code, codes.CONFIG)
+
+    def test_the_hybrid_exit_strategy_reaches_the_assessment(self):
+        env = {**self._BASE_ENV, "ESC_EXIT_STRATEGY": "2"}
         with (
             patch.dict(os.environ, env, clear=False),
+            patch("cloudexit.cli.app.validate_region"),
+            patch("cloudexit.cli.app.run_assessment") as mock_run,
             patch("cloudexit.cli.app.console.print"),
         ):
-            with self.assertRaises(SystemExit) as ctx:
-                app.handle_aws(_ni_aws_args())
-        self.assertEqual(ctx.exception.code, codes.CONFIG)
+            app.handle_aws(_ni_aws_args())
+
+        self.assertEqual(mock_run.call_args[0][0]["exitStrategy"], 2)
 
     def test_missing_aws_region_exits_config(self):
         env = {k: v for k, v in self._BASE_ENV.items() if k != "AWS_DEFAULT_REGION"}
@@ -559,6 +573,18 @@ class NonInteractiveAzureTests(unittest.TestCase):
         self.assertEqual(config_arg["providerDetails"]["tenantId"], "tenant-id-123")
         self.assertEqual(config_arg["providerDetails"]["subscriptionId"], "sub-id-789")
         self.assertEqual(config_arg["providerDetails"]["resourceGroupName"], "my-rg")
+
+    def test_the_hybrid_exit_strategy_reaches_the_assessment(self):
+        env = {**self._BASE_ENV, "ESC_EXIT_STRATEGY": "2"}
+        with (
+            patch.dict(os.environ, env, clear=False),
+            patch("azure.identity.ClientSecretCredential", return_value=MagicMock()),
+            patch("cloudexit.cli.app.run_assessment") as mock_run,
+            patch("cloudexit.cli.app.console.print"),
+        ):
+            app.handle_azure(_ni_azure_args())
+
+        self.assertEqual(mock_run.call_args[0][0]["exitStrategy"], 2)
 
     def test_uses_default_credential_when_client_secret_missing(self):
         env = {k: v for k, v in self._BASE_ENV.items() if k != "AZURE_CLIENT_SECRET"}

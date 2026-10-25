@@ -342,16 +342,40 @@ class CaseTests(RenderedTestCase):
     def test_unsized_egress_is_not_sized_on_every_type(self):
         text = " ".join(self.pdf_pages("egress_unsized", "egress.pdf"))
         dump = self.text("egress_unsized", "texts/index-html.txt")
+        dash = BLOCKS["ev_dash"]
 
         self.assertIn("None of the 5 data-bearing resources could be sized.", text)
         self.assertIn("RESOURCES SIZED 0 of 5", text)
         self.assertIn("Not sized: Storage Account (2 resources)", text)
         self.assertIn("SQL Database (1 resource)", text)
-        # A fee of zero with a +: a lower bound, never a figure
-        self.assertIn("$0.00+", text)
-        self.assertIn("0.0 GiB+", text)
+        # Nothing was measured, so no figure may claim a lower bound of zero
+        for strip in ("DATA VOLUME", "ESTIMATED FEE (USD)", "BILLABLE VOLUME"):
+            self.assertIn(f"{strip} {dash}", text)
+        for kpi in ("Estimated Transfer Fee", "Data Volume", "Billable Volume"):
+            self.assertIn(f"{kpi} {dash}", dump)
+        self.assertIn(f"Total {dash} {dash}", dump)
+        for banned in ("0.0 GiB+", "$0.00+", "0.00+"):
+            self.assertNotIn(banned, text)
+            self.assertNotIn(banned, dump)
         self.assertNotIn("monthly free tier", text)
+        self.assertNotIn("Free-Tier Headroom", dump)
+        self.assertNotIn("no free tier in the prices used", dump)
         self.assertIn("not sized", dump.lower())
+
+    def test_no_egress_pdf_promotes_a_platform_or_an_edition(self):
+        for case, scenario in self.cases():
+            if scenario.egress is None:
+                continue
+            with self.subTest(case):
+                text = " ".join(self.pdf_pages(case, "egress.pdf"))
+                for banned in (
+                    "Next Steps",
+                    "exitcloud.io",
+                    "book-demo",
+                    "book a demo",
+                    "Connected",
+                ):
+                    self.assertNotIn(banned, text)
 
     def test_an_empty_scope_with_costs_has_empty_states_next_to_real_figures(self):
         text = " ".join(self.pdf_pages("empty_with_costs", "report.pdf"))

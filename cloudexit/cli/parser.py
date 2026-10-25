@@ -58,7 +58,7 @@ def parse_arguments():
         help="Increase log verbosity (-v for INFO, -vv for DEBUG + third-party).",
     )
 
-    # Platform options: flags > CLOUDEXIT_* environment > config file > legacy
+    # Platform options: flags > CLOUDEXIT_* environment > config file
     platform = argparse.ArgumentParser(add_help=False)
     platform.add_argument(
         "--host", type=str, help="Platform host (https://, or http:// for localhost)."
@@ -186,7 +186,7 @@ def parse_arguments():
         action="store_true",
         help=(
             "Run without prompts; read all inputs from environment variables "
-            "(for CI use), for example ESC_EXIT_STRATEGY (1 or 3) and "
+            "(for CI use), for example ESC_EXIT_STRATEGY (1, 2 or 3) and "
             "ESC_ASSESSMENT_TYPE (1 or 2)."
         ),
     )
@@ -246,7 +246,7 @@ def parse_arguments():
         action="store_true",
         help=(
             "Run without prompts; read all inputs from environment variables "
-            "(for CI use), for example ESC_EXIT_STRATEGY (1 or 3) and "
+            "(for CI use), for example ESC_EXIT_STRATEGY (1, 2 or 3) and "
             "ESC_ASSESSMENT_TYPE (1 or 2)."
         ),
     )

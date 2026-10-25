@@ -212,3 +212,46 @@ class WithoutATerminalTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AssessmentTypePromptTests(unittest.TestCase):
+    def test_the_type_is_asked_when_an_upload_will_happen(self):
+        with patch("cloudexit.cli.prompts.ask", side_effect=["1", "2"]) as asked:
+            self.assertEqual(prompt_required_inputs(True), (1, 2))
+
+        self.assertEqual(len(asked.call_args_list), 2)
+        self.assertIn("Assessment Type", str(asked.call_args_list))
+
+    def test_without_an_upload_the_type_is_basic_and_never_asked(self):
+        with patch("cloudexit.cli.prompts.ask", side_effect=["3"]) as asked:
+            self.assertEqual(prompt_required_inputs(False), (3, 1))
+
+        self.assertEqual(len(asked.call_args_list), 1)
+        self.assertNotIn("Assessment Type", str(asked.call_args_list))
+
+
+class ExitStrategyPromptTests(unittest.TestCase):
+    def test_the_hybrid_strategy_can_be_chosen(self):
+        with patch("cloudexit.cli.prompts.ask", side_effect=["2", "2"]):
+            self.assertEqual(prompt_required_inputs(True), (2, 2))
+
+    def test_the_prompt_names_all_three_strategies(self):
+        with patch("cloudexit.cli.prompts.ask", side_effect=["1"]) as asked:
+            prompt_required_inputs(False)
+
+        question = asked.call_args_list[0][0][0]
+        for label in (
+            "1 for 'Repatriation to On-Premises'",
+            "2 for 'Hybrid Cloud Adoption'",
+            "3 for 'Migration to Alternate Cloud'",
+        ):
+            self.assertIn(label, question)
+
+    def test_an_out_of_range_strategy_is_refused_and_asked_again(self):
+        with (
+            patch("cloudexit.cli.prompts.ask", side_effect=["4", "2"]),
+            patch("cloudexit.cli.prompts.console.print") as printed,
+        ):
+            self.assertEqual(prompt_required_inputs(False), (2, 1))
+
+        self.assertIn("Please enter 1, 2 or 3.", str(printed.call_args_list))

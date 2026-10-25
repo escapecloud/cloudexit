@@ -61,7 +61,6 @@ PRODUCT_SITES = (
     ("escapecloud", "https://escapecloud.io"),
     ("exitcloud", "https://exitcloud.io"),
 )
-BOOK_DEMO_URL = "https://escapecloud.io/book-demo/"
 AWS_ICONS_URL = "https://aws.amazon.com/architecture/icons/"
 AWS_TRADEMARK_URL = "https://aws.amazon.com/trademark-guidelines/"
 AZURE_ICONS_URL = "https://learn.microsoft.com/en-us/azure/architecture/icons/"

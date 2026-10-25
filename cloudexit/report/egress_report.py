@@ -15,7 +15,6 @@ from .egress_sections import (
     data_landscape,
     estimated_costs,
     introduction,
-    next_steps,
 )
 from .evidence import build_document_information_page
 from .flow import chapter_break, section_break
@@ -41,8 +40,6 @@ def build_egress_content(context, estimate, styles, b):
     content += estimated_costs(context, estimate, styles, b)
     content.append(chapter_break())
     content += appendix(context, estimate, styles, b)
-    content.append(Spacer(1, 12))
-    content += next_steps(context, styles, b)
     content.append(chapter_break())
     content += legal_notices(context, styles, b, egress=True)
     return content

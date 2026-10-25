@@ -16,8 +16,6 @@ from cloudexit.egress.model import (
 from cloudexit.providers.aws.egress import ARCHIVE_TIERS as AWS_ARCHIVE_TIERS
 from cloudexit.providers.azure.egress import ARCHIVE_TIERS as AZURE_ARCHIVE_TIERS
 from cloudexit.report.context import PROVIDER_NAMES
-from cloudexit.report.notices import text_parts
-from cloudexit.report.sections import BOOK_DEMO_URL, PRODUCT_SITES
 from cloudexit.report.wording import BLOCKS
 
 logger = logging.getLogger(__name__)
@@ -199,9 +197,11 @@ def free_tier_headroom(
 
 def _summarize_totals(
     totals: dict[str, Any],
+    rows: list[dict[str, Any]],
     total_fee: float,
     prices: list[dict[str, Any]],
     cloud_service_provider: int,
+    b: dict[str, Any] = BLOCKS,
 ) -> dict[str, Any]:
     free_tier_limit = free_tier_limit_display(prices, cloud_service_provider)
     free_tier = (
@@ -210,9 +210,16 @@ def _summarize_totals(
         and free_tier_limit is not None
     )
     unknown_count = totals["resources_with_unknown_size"]
+    # Nothing was measured, so there is no lower bound to show: "0.0 GiB+" would
+    # claim one of zero. A resource counts as sized when it has a size, the same
+    # way the "n of m sized" strip counts it.
+    nothing_sized = bool(rows) and all(row["size_bytes"] is None for row in rows)
     total_fee_display = format_fee(total_fee)
     total_data_display = format_gib(totals["known_size_bytes"])
-    if unknown_count > 0:
+    if nothing_sized:
+        total_fee_display = b["ev_dash"]
+        total_data_display = b["ev_dash"]
+    elif unknown_count > 0:
         total_data_display = f"{total_data_display}+"
         if not free_tier:
             total_fee_display = f"{total_fee_display}+"
@@ -220,6 +227,7 @@ def _summarize_totals(
         "free_tier": free_tier,
         "free_tier_limit": free_tier_limit,
         "unknown_count": unknown_count,
+        "nothing_sized": nothing_sized,
         "total_fee_display": total_fee_display,
         "total_data_display": total_data_display,
     }
@@ -330,7 +338,7 @@ def load_egress_estimate(report_path: str, json_path: str) -> dict[str, Any]:
         "total_fee": total_fee,
         "type_groups": type_groups,
         "summary": _summarize_totals(
-            totals, total_fee, pricing, meta["cloud_service_provider"]
+            totals, rows, total_fee, pricing, meta["cloud_service_provider"]
         ),
     }
 
@@ -339,9 +347,12 @@ def _share(part, whole):
     return part / whole * 100 if whole else 0
 
 
-def _plus(text, estimate):
+def _plus(text, estimate, b=BLOCKS):
     # Resources without a size are left out, so the figure is a lower bound
-    return f"{text}+" if estimate["summary"]["unknown_count"] > 0 else text
+    summary = estimate["summary"]
+    if summary["nothing_sized"]:
+        return b["ev_dash"]
+    return f"{text}+" if summary["unknown_count"] > 0 else text
 
 
 def introduction_facts(scope, b=BLOCKS):
@@ -540,6 +551,8 @@ def cost_facts(estimate, b=BLOCKS):
 
     if summary["free_tier"]:
         volume_stat = (b["eg_st_allowance"], summary["free_tier_limit"], False)
+    elif summary["nothing_sized"]:
+        volume_stat = (b["eg_st_billable"], b["ev_dash"], False)
     else:
         volume_stat = (b["eg_st_billable"], format_gib(billable), False)
     return {
@@ -685,27 +698,3 @@ def pricing_facts(estimate, b=BLOCKS):
             )
         ],
     }
-
-
-def next_steps_facts(
-    executive_id, uploaded=False, platform_url=None, assessment_id=None, b=BLOCKS
-):
-    # Paragraphs as text and (text, url) links, like the notices
-    sites = dict(PRODUCT_SITES)
-    paragraphs = [text_parts(b["eg_next_lead"], {}, {"executive_id": executive_id})]
-    if uploaded:
-        paragraphs.append([b["eg_next_uploaded"]])
-        if platform_url:
-            paragraphs.append(text_parts(b["fa_uploaded_link"], {"link": platform_url}))
-        elif assessment_id:
-            paragraphs.append(
-                text_parts(b["fa_uploaded_id"], {}, {"assessment_id": assessment_id})
-            )
-    else:
-        paragraphs.append(
-            text_parts(
-                b["eg_next_platforms"],
-                {"exitcloud_url": sites["exitcloud"], "book_demo_url": BOOK_DEMO_URL},
-            )
-        )
-    return {"heading": b["eg_heading_next_steps"], "paragraphs": paragraphs}

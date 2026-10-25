@@ -10,6 +10,7 @@ import os
 import traceback
 from dataclasses import replace
 from typing import Any
+from urllib.parse import urlsplit
 from rich.console import Console
 from rich.logging import RichHandler
 from datetime import datetime
@@ -98,6 +99,7 @@ from cloudexit.cli.prompts import (
     prompt_required_inputs,
     print_help_message,
 )
+from cloudexit.log_redaction import SecretRedactingFilter
 from cloudexit.private_files import restrict_tree
 from cloudexit.terminal import ask, print_step
 from cloudexit.runconfig.loader import (
@@ -130,9 +132,14 @@ _THIRD_PARTY_NOISY = ("botocore", "boto3", "azure", "urllib3")
 
 # Loggers with no diagnostic value ever — pinned to WARNING regardless of verbosity,
 #  so they never flood the -vv console or run.log. MSAL (behind the Azure
-#  credentials) writes the client ID in its debug output, and run.log is a file
-#  users share.
-_ALWAYS_QUIET = ("PIL", "msal")
+#  credentials) writes the client ID in its debug output, botocore's signing and
+#  credential-resolution internals carry the credentials themselves, and run.log
+#  is a file users share.
+_ALWAYS_QUIET = ("PIL", "msal", "botocore.auth", "botocore.credentials")
+
+# A last line of defence for the records that do stay on: both handlers drop
+# credentials out of whatever reaches them.
+_redacting_filter = SecretRedactingFilter()
 
 
 def configure_logging(verbose: int = 0) -> None:
@@ -156,6 +163,7 @@ def configure_logging(verbose: int = 0) -> None:
         console=console, show_path=False, rich_tracebacks=True
     )
     console_handler.setLevel(console_level)
+    console_handler.addFilter(_redacting_filter)
     root.addHandler(console_handler)
 
     third_party_level = logging.DEBUG if verbose >= 2 else logging.WARNING
@@ -191,6 +199,7 @@ def add_run_log_handler(report_path: str) -> None:
         file_handler.setFormatter(
             logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         )
+        file_handler.addFilter(_redacting_filter)
         logging.getLogger().addHandler(file_handler)
         _run_log_handler = file_handler
     except OSError as exc:
@@ -352,7 +361,7 @@ def handle_aws(args):
 
     if args.non_interactive:
         exit_strategy = require_env_int(
-            "ESC_EXIT_STRATEGY", "exit strategy (1 or 3)", {1, 3}
+            "ESC_EXIT_STRATEGY", "exit strategy (1, 2 or 3)", {1, 2, 3}
         )
         assessment_type = require_env_int(
             "ESC_ASSESSMENT_TYPE", "assessment type (1 or 2)", {1, 2}
@@ -364,13 +373,19 @@ def handle_aws(args):
         else:
             provider_details = _aws_provider_from_env()
     elif tfstate_path:
-        exit_strategy, assessment_type = prompt_required_inputs()
+        exit_strategy, assessment_type = prompt_required_inputs(
+            _asks_assessment_type(args)
+        )
         provider_details = {"tfstatePath": tfstate_path}
     elif args.profile:
         provider_details = _aws_provider_from_profile(args.profile)
-        exit_strategy, assessment_type = prompt_required_inputs()
+        exit_strategy, assessment_type = prompt_required_inputs(
+            _asks_assessment_type(args)
+        )
     else:
-        exit_strategy, assessment_type = prompt_required_inputs()
+        exit_strategy, assessment_type = prompt_required_inputs(
+            _asks_assessment_type(args)
+        )
         provider_details = _aws_provider_from_prompt()
 
     config = build_config(
@@ -596,7 +611,7 @@ def handle_azure(args):
 
     if args.non_interactive:
         exit_strategy = require_env_int(
-            "ESC_EXIT_STRATEGY", "exit strategy (1 or 3)", {1, 3}
+            "ESC_EXIT_STRATEGY", "exit strategy (1, 2 or 3)", {1, 2, 3}
         )
         assessment_type = require_env_int(
             "ESC_ASSESSMENT_TYPE", "assessment type (1 or 2)", {1, 2}
@@ -606,13 +621,19 @@ def handle_azure(args):
         else:
             provider_details = _azure_provider_noninteractive(args)
     elif tfstate_path:
-        exit_strategy, assessment_type = prompt_required_inputs()
+        exit_strategy, assessment_type = prompt_required_inputs(
+            _asks_assessment_type(args)
+        )
         provider_details = {"tfstatePath": tfstate_path}
     elif args.cli:
         provider_details = _azure_provider_from_cli()
-        exit_strategy, assessment_type = prompt_required_inputs()
+        exit_strategy, assessment_type = prompt_required_inputs(
+            _asks_assessment_type(args)
+        )
     else:
-        exit_strategy, assessment_type = prompt_required_inputs()
+        exit_strategy, assessment_type = prompt_required_inputs(
+            _asks_assessment_type(args)
+        )
         provider_details = _azure_provider_from_prompt()
 
     config = build_config(
@@ -656,6 +677,26 @@ def _missing_platform(host, key):
     if key and not host:
         return "An API key is configured, but no host."
     return "No host and no API key are configured."
+
+
+def _host_display(host):
+    # The origin only: a path, a query or credentials have no place in a status
+    # line the user reads on every run
+    parts = urlsplit(host or "")
+    if not parts.hostname:
+        return host
+    origin = parts.hostname if not parts.port else f"{parts.hostname}:{parts.port}"
+    return f"{parts.scheme}://{origin}" if parts.scheme else origin
+
+
+def _asks_assessment_type(args):
+    # Standard needs an upload, so the question is only real when one will happen
+    settings = getattr(args, "settings", None)
+    if settings is None or getattr(args, "dry_run", False):
+        return False
+    if settings.upload.value == "off":
+        return False
+    return bool(settings.host.value and settings.api_key.value)
 
 
 def _upload_mode(settings, dry_run):
@@ -782,7 +823,7 @@ def run_assessment(
             )
             sys.exit(codes.CONFIG)
 
-        # Detect ExitCloud Integration
+        # Detect a configured platform
         mode = _upload_mode(settings, dry_run)
         host = settings.host.value if settings else None
         key = settings.api_key.value if settings else None
@@ -813,9 +854,7 @@ def run_assessment(
             print_step("Upload is off – nothing is sent to a platform.", status="ok")
             # Without an upload only the Basic assessment is possible
             if config["assessmentType"] != 1:
-                print_step(
-                    "Forcing Basic Assessment: uploads are off.", status="warning"
-                )
+                print_step("Basic assessment: Standard needs an upload.", status="ok")
                 config["assessmentType"] = 1
         elif configured:
             # A key that cannot be right is a failed upload, found before the
@@ -823,24 +862,24 @@ def run_assessment(
             # the local report.
             try:
                 check_key(settings.api_key.value)
-                print_step("ExitCloud integration configured.", status="ok")
+                print_step(f"Platform configured: {_host_display(host)}.", status="ok")
                 if flush_spool:
                     _flush_earlier_syncs(settings)
             except ApiError as error:
                 signin_failure = error_failure(error)
                 print_step(
-                    "ExitCloud integration configured, but the API key is not usable.",
+                    "Platform configured, but the API key is not usable.",
                     status="warning",
                     logs=f"{error.message}. The report is still written locally; the upload counts as failed.",
                 )
         else:
-            print_step("ExitCloud integration not configured.", status="warning")
+            print_step(
+                "Offline run: no platform configured; the report is written locally.",
+                status="ok",
+            )
             # Without a platform only the Basic assessment is possible
             if config["assessmentType"] != 1:
-                print_step(
-                    "Forcing Basic Assessment: no platform is configured.",
-                    status="warning",
-                )
+                print_step("Basic assessment: Standard needs an upload.", status="ok")
                 config["assessmentType"] = 1
         RUN["skipped_reason"] = (
             "dry_run" if dry_run else "off" if mode == "off" else "offline"
@@ -1196,18 +1235,6 @@ def run_assessment(
             egress_failed = True
 
         # Output the report path after the separator
-        if not (dry_run or non_interactive):
-            console.print("-------------------------------------------")
-            console.print(
-                "Need to see how a regulatory-aligned report looks (DORA / FINMA / UK PRA evidence support)?"
-            )
-            console.print(
-                "We can generate one from your --dry-run output and share a sample with you -- or forward this to your risk or compliance team."
-            )
-            console.print(
-                "Point-in-time evidence only; not a compliance certification or a complete exit strategy."
-            )
-            console.print("Contact: request_report@escapecloud.io")
         console.print("-------------------------------------------")
         console.print("Outputs:", style="bold")
         if upload_result and upload_result.success:

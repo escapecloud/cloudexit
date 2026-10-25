@@ -13,6 +13,7 @@ ALLOWED = {
     "version": set(),
     "resources": set(),
     "private_files": set(),
+    "log_redaction": set(),
     "terminal": {"codes"},
     "settings": set(),
     "catalogue": {"settings"},

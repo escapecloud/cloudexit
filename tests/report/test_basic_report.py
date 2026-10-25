@@ -998,7 +998,6 @@ class WordingGuardTests(unittest.TestCase):
             "eg_heading_landscape",
             "eg_heading_costs",
             "eg_heading_pricing",
-            "eg_heading_next_steps",
             "eg_th_size_gib",
             "eg_st_largest",
         ):
@@ -1048,7 +1047,7 @@ class WordingTests(unittest.TestCase):
         for key, text in self.strings():
             # The pages that point to the platforms name what they add, and the
             # Scores row of the HTML report names the results they compute
-            if key.startswith(("fa_", "eg_next_", "html_scores_", "html_tour_")):
+            if key.startswith(("fa_", "html_scores_", "html_tour_")):
                 continue
             with self.subTest(key):
                 self.assertEqual(find_terms(text), [])
