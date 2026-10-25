@@ -1,0 +1,46 @@
+{
+  "name": "Sample – Field Service Scheduler",
+  "purpose": "Uploaded with an assessment ID and no link.",
+  "provider": "aws",
+  "exit_strategy": 2,
+  "scope": {
+    "accountId": "123456789012",
+    "region": "eu-central-1"
+  },
+  "resources": [
+    {
+      "type": "AWS.ec2.describe_instances.Reservations",
+      "region": "eu-central-1",
+      "count": 3
+    },
+    {
+      "type": "AWS.s3.list_buckets.Buckets",
+      "region": "eu-central-1",
+      "count": 2
+    },
+    {
+      "type": "AWS.lambda.list_functions.Functions",
+      "region": "eu-central-1",
+      "count": 4
+    }
+  ],
+  "costs": {
+    "currency": "USD",
+    "months": {
+      "2026-06": 310.2,
+      "2026-07": 295.85,
+      "2026-08": 322.4,
+      "2026-09": 301.1,
+      "2026-10": 318.65,
+      "2026-11": 140.3
+    }
+  },
+  "egress": null,
+  "upload": {
+    "status": "uploaded",
+    "assessment_id": "sample-assessment-0001",
+    "sync_id": "01939b8e-7c2a-7d41-9a51-3c8f0a6e0005"
+  },
+  "clock": "2026-11-12T09:30:00Z",
+  "run_id": "01939b8e-7c2a-7d41-9a51-3c8f0a6e0005"
+}

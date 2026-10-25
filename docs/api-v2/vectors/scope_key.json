@@ -1,0 +1,509 @@
+{
+  "function": "scope_key(scope) -> str",
+  "description": "The canonical scope key the host derives from a request's scope. Invalid input raises ValueError (optionally with a pointer attribute, a JSON pointer into scope).",
+  "rules": [
+    "Everything is lower case, without whitespace; a key is at most 255 characters.",
+    "AWS: aws:<account_id>:<region>. The account id is exactly 12 digits (kept as sent). Regions are lower case and distinct; one region gives that region, two or more regions or '*' give '*'.",
+    "Azure: azure:<tenant_id>:<subscription_id>:<resource_group>. Tenant and subscription are GUIDs (any case in, lower case out). A missing or null resource group means the whole subscription: '*'. Resource groups are 1 to 90 characters of letters, digits, '_', '(', ')', '-' and '.', cannot end with '.', and are lower-cased.",
+    "Terraform state: tfstate:<lineage>. The lineage is a UUID (lower-cased). A tfstate scope has no provider block; the provider is still required.",
+    "Fields that are not part of the scope are ignored."
+  ],
+  "cases": [
+    {
+      "name": "aws, one region",
+      "scope": {
+        "provider": "aws",
+        "aws": {
+          "account_id": "123456789012",
+          "regions": [
+            "eu-central-1"
+          ]
+        }
+      },
+      "expect": {
+        "scope_key": "aws:123456789012:eu-central-1"
+      }
+    },
+    {
+      "name": "aws, two regions are all regions",
+      "scope": {
+        "provider": "aws",
+        "aws": {
+          "account_id": "123456789012",
+          "regions": [
+            "us-east-1",
+            "eu-west-1"
+          ]
+        }
+      },
+      "expect": {
+        "scope_key": "aws:123456789012:*"
+      }
+    },
+    {
+      "name": "aws, explicit all regions",
+      "scope": {
+        "provider": "aws",
+        "aws": {
+          "account_id": "123456789012",
+          "regions": [
+            "*"
+          ]
+        }
+      },
+      "expect": {
+        "scope_key": "aws:123456789012:*"
+      }
+    },
+    {
+      "name": "aws, the same region twice",
+      "scope": {
+        "provider": "aws",
+        "aws": {
+          "account_id": "123456789012",
+          "regions": [
+            "eu-central-1",
+            "eu-central-1"
+          ]
+        }
+      },
+      "expect": {
+        "scope_key": "aws:123456789012:eu-central-1"
+      }
+    },
+    {
+      "name": "aws, gov-cloud region",
+      "scope": {
+        "provider": "aws",
+        "aws": {
+          "account_id": "210987654321",
+          "regions": [
+            "us-gov-west-1"
+          ]
+        }
+      },
+      "expect": {
+        "scope_key": "aws:210987654321:us-gov-west-1"
+      }
+    },
+    {
+      "name": "aws, leading zeros in the account id are kept",
+      "scope": {
+        "provider": "aws",
+        "aws": {
+          "account_id": "000123456789",
+          "regions": [
+            "ap-southeast-2"
+          ]
+        }
+      },
+      "expect": {
+        "scope_key": "aws:000123456789:ap-southeast-2"
+      }
+    },
+    {
+      "name": "aws, unknown fields are ignored",
+      "scope": {
+        "provider": "aws",
+        "aws": {
+          "account_id": "123456789012",
+          "regions": [
+            "eu-central-1"
+          ]
+        },
+        "note": "ignored"
+      },
+      "expect": {
+        "scope_key": "aws:123456789012:eu-central-1"
+      }
+    },
+    {
+      "name": "azure, resource group in mixed case",
+      "scope": {
+        "provider": "azure",
+        "azure": {
+          "tenant_id": "0b5f9a5e-7a64-4c0e-9a3a-5f5f1b8d2c11",
+          "subscription_id": "6f1c2f1e-92d1-4a6e-8c1e-0a3c1d2e4b5a",
+          "resource_group": "Prod-RG_Core"
+        }
+      },
+      "expect": {
+        "scope_key": "azure:0b5f9a5e-7a64-4c0e-9a3a-5f5f1b8d2c11:6f1c2f1e-92d1-4a6e-8c1e-0a3c1d2e4b5a:prod-rg_core"
+      }
+    },
+    {
+      "name": "azure, whole subscription (no resource group)",
+      "scope": {
+        "provider": "azure",
+        "azure": {
+          "tenant_id": "0b5f9a5e-7a64-4c0e-9a3a-5f5f1b8d2c11",
+          "subscription_id": "6f1c2f1e-92d1-4a6e-8c1e-0a3c1d2e4b5a"
+        }
+      },
+      "expect": {
+        "scope_key": "azure:0b5f9a5e-7a64-4c0e-9a3a-5f5f1b8d2c11:6f1c2f1e-92d1-4a6e-8c1e-0a3c1d2e4b5a:*"
+      }
+    },
+    {
+      "name": "azure, whole subscription (null resource group)",
+      "scope": {
+        "provider": "azure",
+        "azure": {
+          "tenant_id": "0b5f9a5e-7a64-4c0e-9a3a-5f5f1b8d2c11",
+          "subscription_id": "6f1c2f1e-92d1-4a6e-8c1e-0a3c1d2e4b5a",
+          "resource_group": null
+        }
+      },
+      "expect": {
+        "scope_key": "azure:0b5f9a5e-7a64-4c0e-9a3a-5f5f1b8d2c11:6f1c2f1e-92d1-4a6e-8c1e-0a3c1d2e4b5a:*"
+      }
+    },
+    {
+      "name": "azure, upper-case GUIDs are lowered",
+      "scope": {
+        "provider": "azure",
+        "azure": {
+          "tenant_id": "0B5F9A5E-7A64-4C0E-9A3A-5F5F1B8D2C11",
+          "subscription_id": "6F1C2F1E-92D1-4A6E-8C1E-0A3C1D2E4B5A",
+          "resource_group": "RG"
+        }
+      },
+      "expect": {
+        "scope_key": "azure:0b5f9a5e-7a64-4c0e-9a3a-5f5f1b8d2c11:6f1c2f1e-92d1-4a6e-8c1e-0a3c1d2e4b5a:rg"
+      }
+    },
+    {
+      "name": "azure, resource group with parentheses and a period",
+      "scope": {
+        "provider": "azure",
+        "azure": {
+          "tenant_id": "0b5f9a5e-7a64-4c0e-9a3a-5f5f1b8d2c11",
+          "subscription_id": "6f1c2f1e-92d1-4a6e-8c1e-0a3c1d2e4b5a",
+          "resource_group": "App.Rg(1)"
+        }
+      },
+      "expect": {
+        "scope_key": "azure:0b5f9a5e-7a64-4c0e-9a3a-5f5f1b8d2c11:6f1c2f1e-92d1-4a6e-8c1e-0a3c1d2e4b5a:app.rg(1)"
+      }
+    },
+    {
+      "name": "tfstate, lineage in upper case",
+      "scope": {
+        "provider": "aws",
+        "tfstate": {
+          "lineage": "7B1E5C0A-3D2F-4A8B-9C6D-1E2F3A4B5C6D",
+          "serial": 42
+        }
+      },
+      "expect": {
+        "scope_key": "tfstate:7b1e5c0a-3d2f-4a8b-9c6d-1e2f3a4b5c6d"
+      }
+    },
+    {
+      "name": "tfstate, azure provider",
+      "scope": {
+        "provider": "azure",
+        "tfstate": {
+          "lineage": "7b1e5c0a-3d2f-4a8b-9c6d-1e2f3a4b5c6d"
+        }
+      },
+      "expect": {
+        "scope_key": "tfstate:7b1e5c0a-3d2f-4a8b-9c6d-1e2f3a4b5c6d"
+      }
+    },
+    {
+      "name": "not an object",
+      "scope": "aws:123456789012:eu-central-1",
+      "expect": {
+        "error": {
+          "pointer": ""
+        }
+      }
+    },
+    {
+      "name": "missing provider",
+      "scope": {
+        "aws": {
+          "account_id": "123456789012",
+          "regions": [
+            "eu-central-1"
+          ]
+        }
+      },
+      "expect": {
+        "error": {
+          "pointer": "/provider"
+        }
+      }
+    },
+    {
+      "name": "unsupported provider",
+      "scope": {
+        "provider": "gcp",
+        "gcp": {}
+      },
+      "expect": {
+        "error": {
+          "pointer": "/provider"
+        }
+      }
+    },
+    {
+      "name": "aws, provider block missing",
+      "scope": {
+        "provider": "aws"
+      },
+      "expect": {
+        "error": {
+          "pointer": "/aws"
+        }
+      }
+    },
+    {
+      "name": "aws, block of the other provider",
+      "scope": {
+        "provider": "aws",
+        "azure": {
+          "tenant_id": "0b5f9a5e-7a64-4c0e-9a3a-5f5f1b8d2c11",
+          "subscription_id": "6f1c2f1e-92d1-4a6e-8c1e-0a3c1d2e4b5a"
+        }
+      },
+      "expect": {
+        "error": {
+          "pointer": "/aws"
+        }
+      }
+    },
+    {
+      "name": "aws, account id too short",
+      "scope": {
+        "provider": "aws",
+        "aws": {
+          "account_id": "12345678901",
+          "regions": [
+            "eu-central-1"
+          ]
+        }
+      },
+      "expect": {
+        "error": {
+          "pointer": "/aws/account_id"
+        }
+      }
+    },
+    {
+      "name": "aws, account id with letters",
+      "scope": {
+        "provider": "aws",
+        "aws": {
+          "account_id": "12345678901a",
+          "regions": [
+            "eu-central-1"
+          ]
+        }
+      },
+      "expect": {
+        "error": {
+          "pointer": "/aws/account_id"
+        }
+      }
+    },
+    {
+      "name": "aws, account id as a number",
+      "scope": {
+        "provider": "aws",
+        "aws": {
+          "account_id": 123456789012,
+          "regions": [
+            "eu-central-1"
+          ]
+        }
+      },
+      "expect": {
+        "error": {
+          "pointer": "/aws/account_id"
+        }
+      }
+    },
+    {
+      "name": "aws, no regions",
+      "scope": {
+        "provider": "aws",
+        "aws": {
+          "account_id": "123456789012",
+          "regions": []
+        }
+      },
+      "expect": {
+        "error": {
+          "pointer": "/aws/regions"
+        }
+      }
+    },
+    {
+      "name": "aws, region in upper case",
+      "scope": {
+        "provider": "aws",
+        "aws": {
+          "account_id": "123456789012",
+          "regions": [
+            "EU-CENTRAL-1"
+          ]
+        }
+      },
+      "expect": {
+        "error": {
+          "pointer": "/aws/regions/0"
+        }
+      }
+    },
+    {
+      "name": "aws, second region invalid",
+      "scope": {
+        "provider": "aws",
+        "aws": {
+          "account_id": "123456789012",
+          "regions": [
+            "eu-central-1",
+            "mars"
+          ]
+        }
+      },
+      "expect": {
+        "error": {
+          "pointer": "/aws/regions/1"
+        }
+      }
+    },
+    {
+      "name": "azure, tenant is not a GUID",
+      "scope": {
+        "provider": "azure",
+        "azure": {
+          "tenant_id": "not-a-guid",
+          "subscription_id": "6f1c2f1e-92d1-4a6e-8c1e-0a3c1d2e4b5a",
+          "resource_group": "rg"
+        }
+      },
+      "expect": {
+        "error": {
+          "pointer": "/azure/tenant_id"
+        }
+      }
+    },
+    {
+      "name": "azure, subscription is not a GUID",
+      "scope": {
+        "provider": "azure",
+        "azure": {
+          "tenant_id": "0b5f9a5e-7a64-4c0e-9a3a-5f5f1b8d2c11",
+          "subscription_id": "1234",
+          "resource_group": "rg"
+        }
+      },
+      "expect": {
+        "error": {
+          "pointer": "/azure/subscription_id"
+        }
+      }
+    },
+    {
+      "name": "azure, resource group with a space",
+      "scope": {
+        "provider": "azure",
+        "azure": {
+          "tenant_id": "0b5f9a5e-7a64-4c0e-9a3a-5f5f1b8d2c11",
+          "subscription_id": "6f1c2f1e-92d1-4a6e-8c1e-0a3c1d2e4b5a",
+          "resource_group": "my rg"
+        }
+      },
+      "expect": {
+        "error": {
+          "pointer": "/azure/resource_group"
+        }
+      }
+    },
+    {
+      "name": "azure, resource group ends with a period",
+      "scope": {
+        "provider": "azure",
+        "azure": {
+          "tenant_id": "0b5f9a5e-7a64-4c0e-9a3a-5f5f1b8d2c11",
+          "subscription_id": "6f1c2f1e-92d1-4a6e-8c1e-0a3c1d2e4b5a",
+          "resource_group": "rg."
+        }
+      },
+      "expect": {
+        "error": {
+          "pointer": "/azure/resource_group"
+        }
+      }
+    },
+    {
+      "name": "azure, resource group longer than 90 characters",
+      "scope": {
+        "provider": "azure",
+        "azure": {
+          "tenant_id": "0b5f9a5e-7a64-4c0e-9a3a-5f5f1b8d2c11",
+          "subscription_id": "6f1c2f1e-92d1-4a6e-8c1e-0a3c1d2e4b5a",
+          "resource_group": "rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr"
+        }
+      },
+      "expect": {
+        "error": {
+          "pointer": "/azure/resource_group"
+        }
+      }
+    },
+    {
+      "name": "azure, empty resource group",
+      "scope": {
+        "provider": "azure",
+        "azure": {
+          "tenant_id": "0b5f9a5e-7a64-4c0e-9a3a-5f5f1b8d2c11",
+          "subscription_id": "6f1c2f1e-92d1-4a6e-8c1e-0a3c1d2e4b5a",
+          "resource_group": ""
+        }
+      },
+      "expect": {
+        "error": {
+          "pointer": "/azure/resource_group"
+        }
+      }
+    },
+    {
+      "name": "tfstate, lineage is not a UUID",
+      "scope": {
+        "provider": "aws",
+        "tfstate": {
+          "lineage": "lineage-1"
+        }
+      },
+      "expect": {
+        "error": {
+          "pointer": "/tfstate/lineage"
+        }
+      }
+    },
+    {
+      "name": "tfstate together with a provider block",
+      "scope": {
+        "provider": "aws",
+        "aws": {
+          "account_id": "123456789012",
+          "regions": [
+            "eu-central-1"
+          ]
+        },
+        "tfstate": {
+          "lineage": "7b1e5c0a-3d2f-4a8b-9c6d-1e2f3a4b5c6d"
+        }
+      },
+      "expect": {
+        "error": {
+          "pointer": "/aws"
+        }
+      }
+    }
+  ]
+}

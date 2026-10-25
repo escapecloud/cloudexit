@@ -1,0 +1,573 @@
+{%- macro parts(items) -%}
+{%- for part in items -%}
+{%- if part is string -%}{{ part }}
+{%- elif part[1].startswith('#') -%}<a href="{{ part[1] }}">{{ part[0] }}</a>
+{%- else -%}<a href="{{ part[1] }}" target="_blank" rel="noopener noreferrer">{{ part[0] }}</a>
+{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{%- macro icon(src, initials) -%}
+{%- if src -%}<img src="{{ src }}" alt="">{%- else -%}<span class="ph" aria-hidden="true">{{ initials }}</span>{%- endif -%}
+{%- endmacro -%}
+{%- macro pill(id, s) -%}
+{%- if s.platform_url -%}
+<a class="lock-note platform-link" href="{{ s.platform_url }}" target="_blank" rel="noopener noreferrer">{{ s.open_platform }}<svg class="i sm"><use href="#i-external"/></svg></a>
+{%- else -%}
+<span class="hint"><button class="lock-note" type="button" aria-expanded="false" aria-controls="{{ id }}"><svg class="i sm"><use href="#i-lock"/></svg>{{ s.pill }}</button>
+<span class="hint-pop" id="{{ id }}" role="note" hidden><b>{{ s.hint.title }}</b><p>{{ s.hint.text }}</p><p class="foot">{% for label, url in s.hint.sites %}{% if not loop.first %} · {% endif %}<a href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ label }}</a>{% endfor %}</p></span>
+</span>
+{%- endif -%}
+{%- endmacro -%}
+{%- macro mark(on, yes, no) -%}
+<td class="{{ 'yes' if on else 'no' }}"><svg class="i mark" aria-hidden="true"><use href="#{{ 'i-check' if on else 'i-x' }}"/></svg><span class="visually-hidden">{{ yes if on else no }}</span></td>
+{%- endmacro -%}
+<!doctype html>
+<html lang="{{ page.language }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ page.title }}</title>
+<link rel="icon" type="image/png" href="assets/img/logo/favicon.png">
+<link rel="stylesheet" href="assets/css/report.css">
+<link rel="stylesheet" href="assets/css/driver.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-download" viewBox="0 0 16 16"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M3 13.5h10"/></symbol>
+  <symbol id="i-chev-down" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></symbol>
+  <symbol id="i-chev-right" viewBox="0 0 16 16"><path d="m6 4 4 4-4 4"/></symbol>
+  <symbol id="i-file" viewBox="0 0 16 16"><path d="M4 1.5h5l3 3v10H4zM9 1.5v3h3"/></symbol>
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="m3.5 8.5 3 3 6-6.5"/></symbol>
+  <symbol id="i-question" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5"/><path d="M6.3 6.3a1.8 1.8 0 1 1 2.4 1.7c-.5.2-.7.6-.7 1.1M8 11.3v.1"/></symbol>
+  <symbol id="i-warning" viewBox="0 0 16 16"><path d="M8 2 14.5 13.5h-13zM8 6.5v3M8 11.6v.1"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="m4.5 4.5 7 7M11.5 4.5l-7 7"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 16 16"><rect x="3.5" y="7" width="9" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></symbol>
+  <symbol id="i-help" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5"/><path d="M6.2 6.2a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.2M8 11.4v.1"/></symbol>
+  <symbol id="i-external" viewBox="0 0 16 16"><path d="M9.5 2.5H13.5V6.5M13.5 2.5 7.5 8.5M11.5 9.5v4h-9v-9h4"/></symbol>
+  <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3.5 3.5"/></symbol>
+</svg>
+
+<header class="app-header">
+  <div class="inner">
+    <span class="brand"><a href="https://escapecloud.io" target="_blank" rel="noopener noreferrer" aria-label="{{ page.header.logo_link }}"><img src="assets/img/logo/report_logo.png" alt="EscapeCloud"></a><span class="brand-tag">{{ page.header.tag }}</span></span>
+    <button class="help-btn" type="button" id="help" aria-label="{{ page.header.help_aria }}" data-next="{{ page.header.tour.next }}" data-back="{{ page.header.tour.back }}" data-done="{{ page.header.tour.done }}" data-progress="{{ page.header.tour.progress }}"><svg class="i"><use href="#i-help"/></svg>{{ page.header.help }}</button>
+  </div>
+</header>
+
+<div class="shell">
+  <div class="card titlebar">
+    <div>
+      <div class="name">
+        {% if page.titlebar.logo %}<img class="provider-logo" src="{{ page.titlebar.logo }}" alt="{{ page.titlebar.provider }}" title="{{ page.titlebar.provider }}">{% endif %}
+        <h1 class="t-title">{{ page.titlebar.name }}</h1>
+        <span class="chip {{ 'success' if page.titlebar.uploaded else 'offline' }}" title="{{ page.titlebar.chip_title }}">{{ page.titlebar.chip }}</span>
+      </div>
+    </div>
+    <div class="actions">
+      {% if page.titlebar.platform_url %}<a class="btn" href="{{ page.titlebar.platform_url }}" target="_blank" rel="noopener noreferrer">{{ page.open_platform }}<svg class="i"><use href="#i-external"/></svg></a>{% endif %}
+      <details class="menu">
+        <summary class="btn"><svg class="i"><use href="#i-download"/></svg>{{ page.download }}<svg class="i"><use href="#i-chev-down"/></svg></summary>
+        <div class="menu-list" role="menu">
+          {% for href, label in page.titlebar.downloads %}<a role="menuitem" href="{{ href }}"><svg class="i"><use href="#i-file"/></svg>{{ label }}</a>
+          {% endfor %}
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <nav class="secnav" aria-label="{{ page.nav_label }}">
+    <ul>
+      {% for item in page.nav %}<li><a href="#{{ item.id }}">{{ item.label }}{% if item.lock %}<svg class="i sm" aria-label="{{ item.lock }}"><use href="#i-lock"/></svg>{% endif %}{% if item.count is defined %}<span class="n">{{ item.count }}</span>{% endif %}</a></li>
+      {% endfor %}
+    </ul>
+  </nav>
+
+  <main>
+  <section class="block" id="overview" aria-labelledby="overview-h">
+    <h2 class="visually-hidden" id="overview-h">{{ page.nav[0].label }}</h2>
+    <div class="overview">
+      <div class="card">
+        <span class="t-label">{{ page.overview.scope.label }}</span>
+        <dl class="scope">
+          {% for row in page.overview.scope.rows %}<dt>{{ row.label }}</dt><dd>{{ row.value }}{% if row.small %}<small{% if row.small_mono %} class="mono"{% endif %}>{{ row.small }}</small>{% endif %}</dd>
+          {% endfor %}
+        </dl>
+      </div>
+
+      <div class="card">
+        {% set r = page.overview.risks %}
+        <span class="t-label">{{ r.label }}</span>
+        <div class="t-figure" style="margin-top:6px">{{ r.total }}</div>
+        {% if r.none %}<div class="t-caption">{{ r.none }}</div>{% endif %}
+        <div class="sevchart" role="img" aria-label="{{ r.aria }}">
+          {% for row in r.rows %}<div class="sevrow"><span class="sev {{ row.severity }}"><span class="pips" aria-hidden="true"><i></i><i></i><i></i><i></i></span>{{ row.label }}</span><span class="sevbar"><span class="{{ row.severity }}" style="width:{{ row.width }}%"></span></span><b>{{ row.count }}</b></div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="card costs">
+        {% set c = page.overview.costs %}
+        <span class="t-label">{{ c.label }}</span>
+        {% if c.kind == 'message' %}
+        <div class="no-costs">
+          <div class="t-figure muted">{{ c.figure }}</div>
+          <p>{{ c.message }}</p>
+          {% if c.hint %}<p class="t-caption">{{ c.hint }}</p>{% endif %}
+        </div>
+        {% else %}
+        <div class="kpis">
+          <div><div class="t-figure">{{ c.figure }}</div><div class="t-caption">{{ c.caption }}</div></div>
+          <div><div class="t-value" style="margin-top:6px">{{ c.change }}</div>{% if c.change_caption %}<div class="t-caption">{{ c.change_caption }}</div>{% endif %}</div>
+        </div>
+        <div class="bars" role="img" aria-label="{{ c.aria }}">
+          {% for bar in c.bars %}<div class="col"><div class="track"><div class="b{% if bar.zero %} zero{% endif %}{% if bar.provisional %} prov{% endif %}" style="height:{{ bar.height }}%"></div></div><span class="m">{{ bar.month }}</span></div>
+          {% endfor %}
+        </div>
+        <p class="t-caption" style="margin-top:10px">{{ c.footnote }}</p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="scores" aria-labelledby="scores-h">
+    <h2 class="visually-hidden" id="scores-h">{{ page.nav[1].label }}</h2>
+    {% set s = page.scores %}
+    <div class="scores">
+      <div class="card">
+        <div class="card-head"><h3 class="t-sub">{{ s.grade.title }}</h3>
+          {{ pill('hint-grade', s) }}
+        </div>
+        <div class="card-body grade">
+          <div class="grade-tile ghost"><div><div class="l">{{ s.grade.placeholder }}</div><div class="t-caption">{{ s.grade.scale }}</div></div></div>
+          <div>
+            <div class="bands ghost" aria-hidden="true">{% for band in s.grade.bands %}<span>{{ band }}</span>{% endfor %}</div>
+            <p style="margin-top:12px">{{ s.grade.text }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3 class="t-sub">{{ s.lock.title }}</h3>
+          {{ pill('hint-lock', s) }}
+        </div>
+        <div class="card-body">
+          <div class="dims ghost" aria-hidden="true">
+            {% for name, value in s.lock.dims %}<div class="dim"><span>{{ name }}</span><span class="track"></span><b>{{ value }}</b></div>
+            {% endfor %}
+          </div>
+          <p style="margin-top:12px">{{ s.lock.text }}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block card" id="risks" aria-labelledby="risks-h">
+    {% set r = page.risks %}
+    <div class="card-head">
+      <div><h2 class="t-section" id="risks-h">{{ r.heading }}</h2><p class="t-caption">{{ r.caption }}</p></div>
+    </div>
+    {% if r.empty %}
+    <div class="card-body">
+      <div class="empty-state"><b>{{ r.empty.title }}</b><span>{{ r.empty.text }}</span></div>
+    </div>
+    {% else %}
+    <div class="card-body table-wrap">
+      <table class="data risks">
+        <thead><tr><th style="width:72px">{{ r.headers[0] }}</th><th>{{ r.headers[1] }}</th><th style="width:130px">{{ r.headers[2] }}</th><th style="width:220px">{{ r.headers[3] }}</th></tr></thead>
+        <tbody>
+          {% for group in r.groups %}
+          <tr class="group"><td colspan="4">{{ group.heading }}</td></tr>
+          {% for row in group.rows %}
+          <tr class="r"><td class="code"><code>{{ row.code }}</code></td><td class="name"><button class="rowbtn" type="button" aria-expanded="{{ 'true' if r.open else 'false' }}" aria-controls="{{ row.id }}"><svg class="i sm chev"><use href="#i-chev-right"/></svg><span class="rname">{{ row.name }}</span></button></td><td class="sevc"><span class="sev {{ row.severity }}"><span class="pips" aria-hidden="true"><i></i><i></i><i></i><i></i></span>{{ row.label }}</span></td>{% if row.affected is none %}<td class="aff muted">{{ r.scope_wide }}</td>{% else %}<td class="aff">{{ row.affected }}</td>{% endif %}</tr>
+          <tr class="detail" id="{{ row.id }}"{% if not r.open %} hidden{% endif %}><td></td><td colspan="3">{{ row.description }}</td></tr>
+          {% endfor %}
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="t-caption" style="margin-top:12px">{{ parts(r.footnote) }}</p>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="block card" id="inventory" aria-labelledby="inv-h">
+    {% set inv = page.inventory %}
+    <div class="card-head">
+      <div><h2 class="t-section" id="inv-h">{{ inv.heading }}</h2><p class="t-caption">{{ inv.caption }}</p></div>
+    </div>
+    {% if inv.empty %}
+    <div class="card-body">
+      <div class="empty-state"><b>{{ inv.empty.title }}</b><span>{{ inv.empty.text }}</span></div>
+    </div>
+    {% else %}
+    <div class="card-body table-wrap">
+      <table class="data">
+        <thead><tr><th>{{ inv.headers[0] }}</th><th class="hide-sm">{{ inv.headers[1] }}</th><th class="hide-sm">{{ inv.headers[2] }}</th><th class="num">{{ inv.headers[3] }}</th></tr></thead>
+        <tbody>
+          {% for row in inv.rows %}<tr><td><div class="rt">{{ icon(row.icon, row.initials) }}{{ row.name }}</div></td><td class="hide-sm loc">{{ row.locations }}</td><td class="hide-sm"><span class="share"><span class="bar"><span style="width:{{ row.share_value }}%"></span></span><b>{{ row.share }}</b></span></td><td class="num">{{ row.count }}</td></tr>
+          {% endfor %}
+          <tr class="total"><td>{{ inv.total[0] }}</td><td class="hide-sm"></td><td class="hide-sm"></td><td class="num">{{ inv.total[1] }}</td></tr>
+        </tbody>
+      </table>
+      <p class="t-caption" style="margin-top:12px">{{ inv.footnote }}</p>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="block card" id="alternatives" aria-labelledby="alt-h">
+    {% set alt = page.alternatives %}
+    <div class="card-head">
+      <div><h2 class="t-section" id="alt-h">{{ alt.heading }}</h2><p class="t-caption">{{ alt.caption }}</p></div>
+      {% if alt.total %}
+      <div class="toolbar" data-filter>
+        <label class="searchbox"><svg class="i"><use href="#i-search"/></svg><input class="search" type="search" placeholder="{{ alt.search }}" aria-label="{{ alt.search }}"></label>
+        {% for key, label in alt.filters %}<button class="fchip" type="button" aria-pressed="false" data-f="{{ key }}">{{ label }}</button>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% if alt.empty %}
+    <div class="card-body">
+      <div class="empty-state"><b>{{ alt.empty.title }}</b><span>{{ alt.empty.text }}</span></div>
+    </div>
+    {% else %}
+    <div class="card-body">
+      {% for group in alt.groups %}
+      <details class="grp"{% if group.open %} open{% endif %}>
+        <summary><span class="t">{{ icon(group.icon, group.initials) }}{{ group.name }}</span><span class="m">{{ group.meta }}</span></summary>
+        {% if group.rows %}
+        <div class="table-wrap"><table class="data alts">
+          <thead><tr><th>{{ alt.headers[0] }}</th><th>{{ alt.headers[1] }}</th><th>{{ alt.headers[2] }}</th></tr></thead>
+          <tbody>
+            {% for row in group.rows %}<tr data-cc="{{ row.cc }}" data-sp="{{ 1 if row.sp else 0 }}" data-os="{{ 1 if row.os else 0 }}"{% if row.extra %} data-extra="1" hidden{% endif %}><td><span class="alt-name">{{ row.name }}</span><span class="alt-meta">{{ row.vendor }}{% if row.cc %} <span class="cc">{{ row.cc }}</span>{% endif %}</span></td>{{ mark(row.os, alt.yes, alt.no) }}{{ mark(row.sp, alt.yes, alt.no) }}</tr>
+            {% endfor %}
+          </tbody>
+        </table></div>
+        {% if group.more %}<div class="more"><a href="#" data-more>{{ group.more }}</a></div>{% endif %}
+        {% endif %}
+      </details>
+      {% endfor %}
+      <p class="alt-empty" hidden>{{ alt.no_match }}</p>
+      <p class="t-caption" style="margin-top:12px">{{ alt.footnote }}</p>
+    </div>
+    {% endif %}
+  </section>
+
+  {% if page.egress %}
+  {% set e = page.egress %}
+  <section class="block card" id="egress" aria-labelledby="egress-h">
+    <div class="card-head">
+      <div><h2 class="t-section" id="egress-h">{{ e.heading }}</h2><p class="t-caption">{{ e.caption }}</p></div>
+    </div>
+    <div class="card-body">
+      <div class="kpi-row">
+        {% for kpi in e.kpis %}<div class="kpi{% if kpi.primary %} primary{% endif %}"><span class="t-label">{{ kpi.label }}</span><div class="t-figure">{{ kpi.figure }}{% if kpi.unit %} <span style="font-size:14px">{{ kpi.unit }}</span>{% endif %}</div><div class="t-caption">{{ kpi.caption }}</div>{% if kpi.bar is defined %}<div class="headroom" role="img" aria-label="{{ kpi.aria }}"><span style="width:{{ kpi.bar }}%"></span></div>{% endif %}</div>
+        {% endfor %}
+      </div>
+
+      {% if e.empty %}
+      <p style="margin-top:var(--space-5)">{{ e.empty }}</p>
+      {% else %}
+      {% if e.volume %}
+      <div class="vol" role="img" aria-label="{{ e.volume.aria }}">
+        {% for segment in e.volume.segments %}<span style="flex:{{ segment.flex }};background:{{ segment.color }}"></span>
+        {% endfor %}
+      </div>
+      <div class="vol-legend">
+        {% for item in e.volume.legend %}<span><i style="background:{{ item.color }}"></i>{{ item.text }}</span>
+        {% endfor %}
+        {% if e.volume.unsized %}<span class="muted">{{ e.volume.unsized }}</span>{% endif %}
+      </div>
+      {% endif %}
+
+      <div class="table-wrap" style="margin-top: var(--space-5)">
+        <table class="data egress">
+          <thead><tr><th>{{ e.table.headers[0] }}</th><th class="num">{{ e.table.headers[1] }}</th><th class="hide-sm">{{ e.table.headers[2] }}</th><th class="num">{{ e.table.headers[3] }}</th></tr></thead>
+          <tbody>
+            {% for row in e.table.rows %}
+            {% if row.size is none %}<tr class="t"><td class="nm"><div class="rt">{{ icon(row.icon, row.initials) }}{{ row.label }}</div></td><td class="num"><span class="unsized"><svg class="i sm"><use href="#i-question"/></svg>{{ e.table.not_sized }}</span></td><td class="hide-sm muted">{{ page.dash }}</td><td class="num muted">{{ page.dash }}</td></tr>
+            {% else %}<tr class="t"><td class="nm"><div class="rt">{{ icon(row.icon, row.initials) }}{{ row.label }}</div></td><td class="num">{{ row.size }}</td><td class="hide-sm"><span class="share"><span class="bar"><span style="width:{{ row.share_value }}%"></span></span><b>{{ row.share }}</b></span></td><td class="num">{{ row.fee }}</td></tr>
+            {% endif %}
+            {% endfor %}
+            <tr class="total t"><td class="nm">{{ e.table.total[0] }}</td><td class="num">{{ e.table.total[1] }}</td><td class="hide-sm"></td><td class="num">{{ e.table.total[2] }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      <div class="fine t-caption">
+        {% for note in e.notes %}<p>{{ note }}</p>
+        {% endfor %}
+      </div>
+
+      {% if e.sized.facts %}
+      <details class="prices">
+        <summary>{{ e.sized.summary }}</summary>
+        <div class="inner table-wrap">
+          <table class="data">
+            <thead><tr><th>{{ e.sized.facts.headers[0] }}</th><th>{{ e.sized.facts.headers[1] }}</th></tr></thead>
+            <tbody>
+              {% for name, note in e.sized.facts.rows %}<tr><td>{{ name }}</td><td>{{ note }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </details>
+      {% endif %}
+      {% if e.prices %}
+      <details class="prices">
+        <summary>{{ e.prices.summary }}</summary>
+        <div class="inner table-wrap">
+          <table class="data">
+            <thead><tr>{% for header in e.prices.facts.headers %}<th{% if loop.index == 3 %} class="num"{% endif %}>{{ header }}</th>{% endfor %}</tr></thead>
+            <tbody>
+              {% for row in e.prices.facts.rows %}<tr>{% for cell in row %}<td{% if loop.index == 3 %} class="num"{% endif %}>{{ cell }}</td>{% endfor %}</tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% if e.prices.facts.units %}<p class="t-caption" style="margin-top:8px">{{ e.prices.facts.units }}</p>{% endif %}
+          {% for template, url in e.prices.facts.sources %}{% set pieces = template.split('{link}') %}<p class="t-caption" style="margin-top:4px">{{ pieces[0] }}<a href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ url }}</a>{{ pieces[1] }}</p>
+          {% endfor %}
+          {% if e.prices.facts.no_archive %}<p class="t-caption" style="margin-top:4px">{{ e.prices.facts.no_archive }}</p>{% endif %}
+          <p class="t-caption" style="margin-top:4px">{{ e.prices.facts.note }}</p>
+        </div>
+      </details>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="block card" id="about" aria-labelledby="about-h">
+    {% set a = page.about %}
+    <div class="card-head">
+      <div><h2 class="t-section" id="about-h">{{ a.heading }}</h2><p class="t-caption">{{ a.caption }}</p></div>
+    </div>
+    <div class="card-body">
+      <div class="kv-grid">
+        <div>
+          <h3 class="t-label">{{ a.document.heading }}</h3>
+          <table class="kv">
+            {% for label, value, mono in a.document.rows %}<tr><th>{{ label }}</th><td{% if mono %} class="mono"{% endif %}>{{ value }}</td></tr>
+            {% endfor %}
+          </table>
+        </div>
+        <div>
+          <h3 class="t-label">{{ a.scope.heading }}</h3>
+          <table class="kv">
+            {% for label, value, mono in a.scope.rows %}<tr><th>{{ label }}</th><td{% if mono %} class="mono"{% endif %}>{{ value }}</td></tr>
+            {% endfor %}
+          </table>
+        </div>
+        <div>
+          <h3 class="t-label">{{ a.provenance.heading }}</h3>
+          <table class="kv">
+            {% if a.provenance.run_id %}<tr><th>{{ a.provenance.run_id[0] }}</th><td class="mono">{{ a.provenance.run_id[1] }}</td></tr>{% endif %}
+            <tr><th>{{ a.provenance.catalogue[0] }}</th><td>{{ a.provenance.catalogue[1] }}{% if a.provenance.catalogue[2] %} · <span class="mono">{{ a.provenance.catalogue[2] }}</span>{% endif %}</td></tr>
+            <tr><th>{{ a.provenance.platform[0] }}</th><td>{{ parts(a.provenance.platform[1]) }}</td></tr>
+          </table>
+        </div>
+      </div>
+      <p class="t-caption" style="margin:12px 0 var(--space-5)">{{ a.stored }}</p>
+
+      <details class="disc">
+        <summary>{{ a.purpose.summary }}<span class="m">{{ a.purpose.meta }}</span></summary>
+        <div class="inner">
+          {% for paragraph in a.purpose.paragraphs %}<p>{{ paragraph }}</p>
+          {% endfor %}
+          <ul>
+            {% for name, text in a.purpose.phases %}<li><b>{{ name }}</b> {{ text }}</li>
+            {% endfor %}
+          </ul>
+          <p>{{ a.purpose.closing }}</p>
+        </div>
+      </details>
+      <details class="disc">
+        <summary>{{ a.limitations.summary }}</summary>
+        <div class="inner">
+          {% for paragraph in a.limitations.paragraphs %}<p>{{ paragraph }}</p>
+          {% endfor %}
+        </div>
+      </details>
+      <details class="disc">
+        <summary>{{ a.severity.summary }}<span class="m">{{ a.severity.meta }}</span></summary>
+        <div class="inner">
+          <table class="data">
+            <thead><tr><th style="width:140px">{{ a.severity.headers[0] }}</th><th>{{ a.severity.headers[1] }}</th></tr></thead>
+            <tbody>
+              {% for level, label, meaning in a.severity.rows %}<tr><td><span class="sev {{ level }}"><span class="pips" aria-hidden="true"><i></i><i></i><i></i><i></i></span>{{ label }}</span></td><td>{{ meaning }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <p class="t-caption">{{ a.severity.note }}</p>
+        </div>
+      </details>
+      <details class="disc">
+        <summary>{{ a.glossary.summary }}<span class="m">{{ a.glossary.meta }}</span></summary>
+        <div class="inner">
+          <table class="kv">
+            {% for term, definition in a.glossary.entries %}<tr><th>{{ term }}</th><td>{{ definition }}</td></tr>
+            {% endfor %}
+          </table>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  {% set n = page.notices %}
+  <aside class="disclaimer" aria-labelledby="disclaimer-h">
+    <svg class="i"><use href="#i-warning"/></svg>
+    <div>
+      <h2 id="disclaimer-h">{{ n.disclaimer.heading }}</h2>
+      {% for paragraph in n.disclaimer.paragraphs %}<p>{{ parts(paragraph) }}</p>
+      {% endfor %}
+    </div>
+  </aside>
+  <footer class="notices" aria-label="{{ n.disclaimer.heading }}">
+    {% for block in n.blocks %}<div>
+      <h2>{{ block.heading }}</h2>
+      <p>{{ parts(block.parts) }}</p>
+    </div>
+    {% endfor %}
+    <div class="copyright"><span>{{ n.copyright }}</span><span class="mono">{{ n.ids }}</span></div>
+  </footer>
+  </main>
+</div>
+
+<script>
+  // Everything below is plain JavaScript in the page: no library, works offline.
+  // Expandable rows
+  document.querySelectorAll('.rowbtn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var row = document.getElementById(btn.getAttribute('aria-controls'));
+      var open = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', String(!open));
+      if (row) row.hidden = open;
+    });
+  });
+  // Alternatives: search and filters. Every alternative is in the page; the
+  // rows beyond the first few are only collapsed, so the filters reach them.
+  (function () {
+    var bar = document.querySelector('[data-filter]');
+    var groups = document.querySelectorAll('details.grp');
+    var empty = document.querySelector('.alt-empty');
+    var europe = ['AT','BE','BG','CH','CY','CZ','DE','DK','EE','ES','FI','FR','GB','GR','HR','HU','IE','IS','IT','LI','LT','LU','LV','MT','NL','NO','PL','PT','RO','SE','SI','SK'];
+    var input = bar && bar.querySelector('.search');
+    function pressed(name) { return bar.querySelector('[data-f="' + name + '"]').getAttribute('aria-pressed') === 'true'; }
+    function apply() {
+      var q = bar ? input.value.trim().toLowerCase() : '';
+      var os = bar && pressed('os'), sp = bar && pressed('sp'), eu = bar && pressed('eu');
+      var active = Boolean(q || os || sp || eu), shown = 0;
+      groups.forEach(function (grp) {
+        var visible = 0, expanded = grp.hasAttribute('data-expanded');
+        grp.querySelectorAll('table.alts tbody tr').forEach(function (tr) {
+          var ok = (!q || tr.textContent.toLowerCase().indexOf(q) > -1) && (!os || tr.dataset.os === '1') && (!sp || tr.dataset.sp === '1') && (!eu || europe.indexOf(tr.dataset.cc) > -1);
+          tr.hidden = active ? !ok : (tr.hasAttribute('data-extra') && !expanded);
+          if (ok) visible++;
+        });
+        // A resource type without a match disappears while a filter is on
+        grp.hidden = active && visible === 0;
+        if (active && visible) grp.open = true;
+        var more = grp.querySelector('.more');
+        if (more) more.hidden = active || expanded;
+        shown += visible;
+      });
+      if (empty) empty.hidden = !active || shown > 0;
+    }
+    groups.forEach(function (grp) {
+      var more = grp.querySelector('[data-more]');
+      if (more) more.addEventListener('click', function (e) { e.preventDefault(); grp.setAttribute('data-expanded', ''); apply(); });
+    });
+    if (!bar) return;
+    input.addEventListener('input', apply);
+    bar.querySelectorAll('.fchip').forEach(function (chip) {
+      chip.addEventListener('click', function () { chip.setAttribute('aria-pressed', String(chip.getAttribute('aria-pressed') !== 'true')); apply(); });
+    });
+  })();
+  // Section nav: mark the section in view
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('.secnav a'));
+    if (!window.IntersectionObserver) return;
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        links.forEach(function (a) { a.setAttribute('aria-current', String(a.getAttribute('href') === '#' + e.target.id)); });
+      });
+    }, { rootMargin: '-45% 0px -50% 0px' });
+    document.querySelectorAll('section.block').forEach(function (s) { io.observe(s); });
+  })();
+  // Menus: close on outside click and Escape
+  document.addEventListener('click', function (e) {
+    document.querySelectorAll('details.menu[open]').forEach(function (d) { if (!d.contains(e.target)) d.removeAttribute('open'); });
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    document.querySelectorAll('details.menu[open]').forEach(function (d) { d.removeAttribute('open'); d.querySelector('summary').focus(); });
+  });
+  // Print: the collapsible blocks are open on paper
+  (function () {
+    var opened = [];
+    window.addEventListener('beforeprint', function () {
+      document.querySelectorAll('details:not([open])').forEach(function (d) { d.setAttribute('open', ''); opened.push(d); });
+    });
+    window.addEventListener('afterprint', function () {
+      opened.forEach(function (d) { d.removeAttribute('open'); });
+      opened = [];
+    });
+  })();
+  // Light & Enterprise hints: open on hover, keyboard focus or tap; close on leave, Escape or a click outside
+  (function () {
+    var buttons = Array.prototype.slice.call(document.querySelectorAll('.hint > button'));
+    function set(btn, open) {
+      var pop = document.getElementById(btn.getAttribute('aria-controls'));
+      btn.setAttribute('aria-expanded', String(open));
+      pop.hidden = !open;
+      if (open) {
+        pop.classList.remove('flip');
+        if (pop.getBoundingClientRect().left < 8) pop.classList.add('flip');
+      }
+    }
+    function closeAll(except) { buttons.forEach(function (b) { if (b !== except) set(b, false); }); }
+    buttons.forEach(function (btn) {
+      var hint = btn.parentNode, timer;
+      hint.addEventListener('mouseenter', function () { clearTimeout(timer); closeAll(btn); set(btn, true); });
+      hint.addEventListener('mouseleave', function () { timer = setTimeout(function () { set(btn, false); }, 150); });
+      btn.addEventListener('focus', function () { closeAll(btn); set(btn, true); });
+      btn.addEventListener('click', function (e) { e.stopPropagation(); closeAll(btn); set(btn, btn.getAttribute('aria-expanded') !== 'true'); });
+    });
+    document.addEventListener('click', function (e) { if (!e.target.closest('.hint')) closeAll(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeAll(); });
+  })();
+</script>
+
+<script type="application/json" id="tour-steps">{{ page.tour | tojson }}</script>
+<script src="assets/js/driver.js.iife.js"></script>
+<script>
+  // Help: starts the tour on click only, never by itself. Below 992 px it jumps to About This Report.
+  (function () {
+    var button = document.getElementById('help');
+    var steps = JSON.parse(document.getElementById('tour-steps').textContent);
+    button.addEventListener('click', function () {
+      if (window.innerWidth < 992 || !window.driver || !window.driver.js) {
+        location.hash = 'about';
+        return;
+      }
+      var tour = window.driver.js.driver({
+        showProgress: true,
+        progressText: button.dataset.progress,
+        nextBtnText: button.dataset.next,
+        prevBtnText: button.dataset.back,
+        doneBtnText: button.dataset.done,
+        popoverClass: 'cx-tour',
+        stagePadding: 6,
+        stageRadius: 12,
+        overlayOpacity: 0.45,
+        smoothScroll: true,
+        onDestroyed: function () { button.focus(); },
+        steps: steps.map(function (s) {
+          return { element: s.element, popover: { title: s.title, description: s.description, side: s.side, align: 'start' } };
+        })
+      });
+      tour.drive();
+    });
+  })();
+</script>
+</body>
+</html>

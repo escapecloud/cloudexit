@@ -1,0 +1,125 @@
+{
+  "name": "validation errors",
+  "description": "Every problem is listed with a JSON pointer, and nothing is stored.",
+  "fixtures": {
+    "catalogue": "standard",
+    "assessments": [
+      {
+        "name": "main",
+        "provider": "aws",
+        "exit_strategy": "repatriation",
+        "assessment_type": 2,
+        "scope_key": null
+      }
+    ],
+    "keys": [
+      {
+        "name": "assessment_key",
+        "kind": "assessment",
+        "assessment": "main"
+      }
+    ]
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v2/syncs",
+    "headers": {
+      "Authorization": "Bearer {{assessment_key}}",
+      "Idempotency-Key": "01933b9e-7c2a-7d41-9a51-3c8f0a6e001e",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "schema_version": "2.0",
+      "sync": {
+        "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e001e",
+        "started_at": "{{now-300}}",
+        "completed_at": "{{now-600}}",
+        "collector": {
+          "name": "cloudexit",
+          "version": "2.0.0",
+          "mode": "api",
+          "catalogue": {
+            "version": "2026-11-02",
+            "sequence": 41,
+            "sha256": "9f1c5b7a3e2d4c6b8a0f1e2d3c4b5a69788796a5b4c3d2e1f0a9b8c7d6e5f4a3",
+            "resource_type_ids": [
+              12,
+              40,
+              41,
+              55
+            ]
+          }
+        }
+      },
+      "assessment_type": 4,
+      "scope": {
+        "provider": "aws",
+        "aws": {
+          "account_id": "1234",
+          "regions": [
+            "eu-central-1"
+          ]
+        }
+      },
+      "inventory": {
+        "resources": [
+          {
+            "type_id": 12,
+            "type_code": "AWS::S3::Bucket",
+            "location": "eu-central-1",
+            "count": -1
+          },
+          {
+            "type_id": 40,
+            "type_code": "AWS::EC2::Instance",
+            "location": "eu-central-1",
+            "count": 8
+          }
+        ],
+        "costs": [
+          {
+            "month": "2026-10",
+            "amount": "1234.56",
+            "currency": "USD",
+            "final": true
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "status": 422,
+    "headers_present": [
+      "X-Request-ID"
+    ],
+    "body_subset": {
+      "object": "error",
+      "api_version": "2",
+      "error": {
+        "code": "validation_failed",
+        "details": [
+          {
+            "pointer": "/inventory/resources/0/count",
+            "code": "out_of_range"
+          },
+          {
+            "pointer": "/sync/completed_at",
+            "code": "before_started_at"
+          },
+          {
+            "pointer": "/assessment_type",
+            "code": "out_of_range"
+          },
+          {
+            "pointer": "/scope/aws/account_id",
+            "code": "invalid_format"
+          }
+        ]
+      }
+    },
+    "exists": [
+      "/error/message",
+      "/error/request_id"
+    ]
+  }
+}

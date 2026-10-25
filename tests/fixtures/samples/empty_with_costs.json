@@ -1,0 +1,27 @@
+{
+  "name": "Sample – Decommissioned Test Environment",
+  "purpose": "An empty resource group that still shows six months of small costs: empty states next to real figures.",
+  "provider": "azure",
+  "exit_strategy": 1,
+  "scope": {
+    "tenantId": "00000000-0000-4000-8000-0000000000a1",
+    "subscriptionId": "00000000-0000-4000-8000-0000000000a2",
+    "resourceGroupName": "rg-sample-decommissioned"
+  },
+  "resources": [],
+  "costs": {
+    "currency": "EUR",
+    "months": {
+      "2026-06": 38.2,
+      "2026-07": 31.75,
+      "2026-08": 24.4,
+      "2026-09": 12.9,
+      "2026-10": 6.35,
+      "2026-11": 1.8
+    }
+  },
+  "egress": null,
+  "upload": null,
+  "clock": "2026-11-12T09:30:00Z",
+  "run_id": "01939b8e-7c2a-7d41-9a51-3c8f0a6e0015"
+}

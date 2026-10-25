@@ -1,0 +1,48 @@
+{
+  "name": "standard",
+  "version": "2026-11-02",
+  "sequence": 41,
+  "sha256": "9f1c5b7a3e2d4c6b8a0f1e2d3c4b5a69788796a5b4c3d2e1f0a9b8c7d6e5f4a3",
+  "loaded_at": 1762070400,
+  "resource_types": {
+    "aws": [
+      {
+        "id": 12,
+        "code": "AWS::S3::Bucket",
+        "active": true
+      },
+      {
+        "id": 40,
+        "code": "AWS::EC2::Instance",
+        "active": true
+      },
+      {
+        "id": 41,
+        "code": "AWS::Lambda::Function",
+        "active": true
+      },
+      {
+        "id": 55,
+        "code": "AWS::RDS::DBInstance",
+        "active": true
+      },
+      {
+        "id": 77,
+        "code": "AWS::SimpleDB::Domain",
+        "active": false
+      }
+    ],
+    "azure": [
+      {
+        "id": 201,
+        "code": "Microsoft.Storage/storageAccounts",
+        "active": true
+      },
+      {
+        "id": 202,
+        "code": "Microsoft.Compute/virtualMachines",
+        "active": true
+      }
+    ]
+  }
+}

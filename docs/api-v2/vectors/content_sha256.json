@@ -1,0 +1,1234 @@
+{
+  "function": "content_sha256(body) -> str",
+  "description": "SHA-256 (lower-case hex) of the UTF-8 bytes of the RFC 8785 canonical JSON of the content form below. It identifies what was collected: it ignores the sync id, the timestamps, the collector, the catalogue block and anything else outside scope, inventory and assessment_type. 'body' is the request body of POST /syncs; only the fields used here need to be present.",
+  "content_form": {
+    "assessment_type": "the requested depth as sent",
+    "scope": "provider plus the provider block as in the request, with these normalisations: AWS regions sorted and de-duplicated; Azure ids and resource group lower-cased, a null resource group left out; the Terraform lineage lower-cased. Unknown fields are left out.",
+    "inventory.resources": "{count, location, type_id} only (type_code is a label and is left out). Items with the same type_id and location are merged by summing counts. Sorted by type_id, then location.",
+    "inventory.costs": "{amount, currency, final, month}. amount is normalised as a decimal (no trailing zeros, no exponent, '0' for zero), currency is upper-cased, final defaults to false. Sorted by month, then currency. Omitted costs equal an empty list.",
+    "inventory.egress": "{collected, items, names, truncated}. A missing egress block equals {collected: false, items: [], names: 'plain', truncated: false}. Items are {flags, name, notes, size_bytes, tiers, type_id}, with flags and notes sorted, tiers {is_archive, size_bytes, tier} sorted by tier, and the items sorted by type_id, then name."
+  },
+  "serialisation": [
+    "Object keys sorted, no whitespace, strings in UTF-8 without escaping beyond RFC 8785 (non-ASCII characters are written as they are).",
+    "Numbers are integers in the I-JSON safe range (at most 9007199254740991 in absolute value). Floats are not allowed."
+  ],
+  "cases": [
+    {
+      "name": "minimal inventory",
+      "body": {
+        "schema_version": "2.0",
+        "sync": {
+          "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e21d4",
+          "started_at": 1762149604,
+          "completed_at": 1762149831,
+          "collector": {
+            "name": "cloudexit",
+            "version": "2.0.0",
+            "mode": "api"
+          }
+        },
+        "assessment_type": 2,
+        "scope": {
+          "provider": "aws",
+          "aws": {
+            "account_id": "123456789012",
+            "regions": [
+              "eu-central-1"
+            ]
+          }
+        },
+        "inventory": {
+          "resources": [
+            {
+              "type_id": 12,
+              "type_code": "AWS::S3::Bucket",
+              "location": "eu-central-1",
+              "count": 36
+            },
+            {
+              "type_id": 40,
+              "type_code": "AWS::EC2::Instance",
+              "location": "eu-central-1",
+              "count": 8
+            }
+          ],
+          "costs": [
+            {
+              "month": "2026-10",
+              "amount": "1234.56",
+              "currency": "USD",
+              "final": true
+            }
+          ]
+        }
+      },
+      "canonical_json": "{\"assessment_type\":2,\"inventory\":{\"costs\":[{\"amount\":\"1234.56\",\"currency\":\"USD\",\"final\":true,\"month\":\"2026-10\"}],\"egress\":{\"collected\":false,\"items\":[],\"names\":\"plain\",\"truncated\":false},\"resources\":[{\"count\":36,\"location\":\"eu-central-1\",\"type_id\":12},{\"count\":8,\"location\":\"eu-central-1\",\"type_id\":40}]},\"scope\":{\"aws\":{\"account_id\":\"123456789012\",\"regions\":[\"eu-central-1\"]},\"provider\":\"aws\"}}",
+      "sha256": "27ab581110b19cf629481e644386ded634aa3238e243eddb169e1763246562b8"
+    },
+    {
+      "name": "resources in another order",
+      "body": {
+        "schema_version": "2.0",
+        "sync": {
+          "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e21d4",
+          "started_at": 1762149604,
+          "completed_at": 1762149831,
+          "collector": {
+            "name": "cloudexit",
+            "version": "2.0.0",
+            "mode": "api"
+          }
+        },
+        "assessment_type": 2,
+        "scope": {
+          "provider": "aws",
+          "aws": {
+            "account_id": "123456789012",
+            "regions": [
+              "eu-central-1"
+            ]
+          }
+        },
+        "inventory": {
+          "resources": [
+            {
+              "type_id": 40,
+              "type_code": "AWS::EC2::Instance",
+              "location": "eu-central-1",
+              "count": 8
+            },
+            {
+              "type_id": 12,
+              "type_code": "AWS::S3::Bucket",
+              "location": "eu-central-1",
+              "count": 36
+            }
+          ],
+          "costs": [
+            {
+              "month": "2026-10",
+              "amount": "1234.56",
+              "currency": "USD",
+              "final": true
+            }
+          ]
+        }
+      },
+      "same_as": "minimal inventory"
+    },
+    {
+      "name": "another sync id, timestamps, collector, catalogue and CI context",
+      "body": {
+        "schema_version": "2.0",
+        "sync": {
+          "id": "01933bff-0000-7000-8000-000000000001",
+          "started_at": 1762500000,
+          "completed_at": 1762500100,
+          "collector": {
+            "name": "cloudexit",
+            "version": "2.3.1",
+            "mode": "api",
+            "catalogue": {
+              "version": "2026-11-02",
+              "sequence": 41,
+              "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "resource_type_ids": [
+                12,
+                40
+              ]
+            }
+          },
+          "ci": {
+            "provider": "github",
+            "run_url": "https://github.com/acme/infra/actions/runs/1"
+          }
+        },
+        "assessment_type": 2,
+        "scope": {
+          "provider": "aws",
+          "aws": {
+            "account_id": "123456789012",
+            "regions": [
+              "eu-central-1"
+            ]
+          }
+        },
+        "inventory": {
+          "resources": [
+            {
+              "type_id": 12,
+              "type_code": "AWS::S3::Bucket",
+              "location": "eu-central-1",
+              "count": 36
+            },
+            {
+              "type_id": 40,
+              "type_code": "AWS::EC2::Instance",
+              "location": "eu-central-1",
+              "count": 8
+            }
+          ],
+          "costs": [
+            {
+              "month": "2026-10",
+              "amount": "1234.56",
+              "currency": "USD",
+              "final": true
+            }
+          ]
+        }
+      },
+      "same_as": "minimal inventory"
+    },
+    {
+      "name": "cost amount with a trailing zero and a lower-case currency",
+      "body": {
+        "schema_version": "2.0",
+        "sync": {
+          "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e21d4",
+          "started_at": 1762149604,
+          "completed_at": 1762149831,
+          "collector": {
+            "name": "cloudexit",
+            "version": "2.0.0",
+            "mode": "api"
+          }
+        },
+        "assessment_type": 2,
+        "scope": {
+          "provider": "aws",
+          "aws": {
+            "account_id": "123456789012",
+            "regions": [
+              "eu-central-1"
+            ]
+          }
+        },
+        "inventory": {
+          "resources": [
+            {
+              "type_id": 12,
+              "type_code": "AWS::S3::Bucket",
+              "location": "eu-central-1",
+              "count": 36
+            },
+            {
+              "type_id": 40,
+              "type_code": "AWS::EC2::Instance",
+              "location": "eu-central-1",
+              "count": 8
+            }
+          ],
+          "costs": [
+            {
+              "month": "2026-10",
+              "amount": "1234.560",
+              "currency": "usd",
+              "final": true
+            }
+          ]
+        }
+      },
+      "same_as": "minimal inventory"
+    },
+    {
+      "name": "costs omitted equal costs empty",
+      "body": {
+        "schema_version": "2.0",
+        "sync": {
+          "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e21d4",
+          "started_at": 1762149604,
+          "completed_at": 1762149831,
+          "collector": {
+            "name": "cloudexit",
+            "version": "2.0.0",
+            "mode": "api"
+          }
+        },
+        "assessment_type": 2,
+        "scope": {
+          "provider": "aws",
+          "aws": {
+            "account_id": "123456789012",
+            "regions": [
+              "eu-central-1"
+            ]
+          }
+        },
+        "inventory": {
+          "resources": [
+            {
+              "type_id": 12,
+              "type_code": "AWS::S3::Bucket",
+              "location": "eu-central-1",
+              "count": 36
+            },
+            {
+              "type_id": 40,
+              "type_code": "AWS::EC2::Instance",
+              "location": "eu-central-1",
+              "count": 8
+            }
+          ]
+        }
+      },
+      "same_as": "empty costs"
+    },
+    {
+      "name": "empty costs",
+      "body": {
+        "schema_version": "2.0",
+        "sync": {
+          "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e21d4",
+          "started_at": 1762149604,
+          "completed_at": 1762149831,
+          "collector": {
+            "name": "cloudexit",
+            "version": "2.0.0",
+            "mode": "api"
+          }
+        },
+        "assessment_type": 2,
+        "scope": {
+          "provider": "aws",
+          "aws": {
+            "account_id": "123456789012",
+            "regions": [
+              "eu-central-1"
+            ]
+          }
+        },
+        "inventory": {
+          "resources": [
+            {
+              "type_id": 12,
+              "type_code": "AWS::S3::Bucket",
+              "location": "eu-central-1",
+              "count": 36
+            },
+            {
+              "type_id": 40,
+              "type_code": "AWS::EC2::Instance",
+              "location": "eu-central-1",
+              "count": 8
+            }
+          ],
+          "costs": []
+        }
+      },
+      "canonical_json": "{\"assessment_type\":2,\"inventory\":{\"costs\":[],\"egress\":{\"collected\":false,\"items\":[],\"names\":\"plain\",\"truncated\":false},\"resources\":[{\"count\":36,\"location\":\"eu-central-1\",\"type_id\":12},{\"count\":8,\"location\":\"eu-central-1\",\"type_id\":40}]},\"scope\":{\"aws\":{\"account_id\":\"123456789012\",\"regions\":[\"eu-central-1\"]},\"provider\":\"aws\"}}",
+      "sha256": "104f1ac96760970a2b0363e7e745b111fae92627bdb93cd95b7e8df042b36d8d"
+    },
+    {
+      "name": "egress omitted equals egress not collected",
+      "body": {
+        "schema_version": "2.0",
+        "sync": {
+          "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e21d4",
+          "started_at": 1762149604,
+          "completed_at": 1762149831,
+          "collector": {
+            "name": "cloudexit",
+            "version": "2.0.0",
+            "mode": "api"
+          }
+        },
+        "assessment_type": 2,
+        "scope": {
+          "provider": "aws",
+          "aws": {
+            "account_id": "123456789012",
+            "regions": [
+              "eu-central-1"
+            ]
+          }
+        },
+        "inventory": {
+          "resources": [
+            {
+              "type_id": 12,
+              "type_code": "AWS::S3::Bucket",
+              "location": "eu-central-1",
+              "count": 36
+            },
+            {
+              "type_id": 40,
+              "type_code": "AWS::EC2::Instance",
+              "location": "eu-central-1",
+              "count": 8
+            }
+          ],
+          "costs": [
+            {
+              "month": "2026-10",
+              "amount": "1234.56",
+              "currency": "USD",
+              "final": true
+            }
+          ],
+          "egress": {
+            "collected": false
+          }
+        }
+      },
+      "same_as": "egress omitted"
+    },
+    {
+      "name": "egress omitted",
+      "body": {
+        "schema_version": "2.0",
+        "sync": {
+          "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e21d4",
+          "started_at": 1762149604,
+          "completed_at": 1762149831,
+          "collector": {
+            "name": "cloudexit",
+            "version": "2.0.0",
+            "mode": "api"
+          }
+        },
+        "assessment_type": 2,
+        "scope": {
+          "provider": "aws",
+          "aws": {
+            "account_id": "123456789012",
+            "regions": [
+              "eu-central-1"
+            ]
+          }
+        },
+        "inventory": {
+          "resources": [
+            {
+              "type_id": 12,
+              "type_code": "AWS::S3::Bucket",
+              "location": "eu-central-1",
+              "count": 36
+            },
+            {
+              "type_id": 40,
+              "type_code": "AWS::EC2::Instance",
+              "location": "eu-central-1",
+              "count": 8
+            }
+          ],
+          "costs": [
+            {
+              "month": "2026-10",
+              "amount": "1234.56",
+              "currency": "USD",
+              "final": true
+            }
+          ]
+        }
+      },
+      "canonical_json": "{\"assessment_type\":2,\"inventory\":{\"costs\":[{\"amount\":\"1234.56\",\"currency\":\"USD\",\"final\":true,\"month\":\"2026-10\"}],\"egress\":{\"collected\":false,\"items\":[],\"names\":\"plain\",\"truncated\":false},\"resources\":[{\"count\":36,\"location\":\"eu-central-1\",\"type_id\":12},{\"count\":8,\"location\":\"eu-central-1\",\"type_id\":40}]},\"scope\":{\"aws\":{\"account_id\":\"123456789012\",\"regions\":[\"eu-central-1\"]},\"provider\":\"aws\"}}",
+      "sha256": "27ab581110b19cf629481e644386ded634aa3238e243eddb169e1763246562b8"
+    },
+    {
+      "name": "duplicate resource items are merged",
+      "body": {
+        "schema_version": "2.0",
+        "sync": {
+          "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e21d4",
+          "started_at": 1762149604,
+          "completed_at": 1762149831,
+          "collector": {
+            "name": "cloudexit",
+            "version": "2.0.0",
+            "mode": "api"
+          }
+        },
+        "assessment_type": 2,
+        "scope": {
+          "provider": "aws",
+          "aws": {
+            "account_id": "123456789012",
+            "regions": [
+              "eu-central-1"
+            ]
+          }
+        },
+        "inventory": {
+          "resources": [
+            {
+              "type_id": 40,
+              "location": "eu-central-1",
+              "count": 3
+            },
+            {
+              "type_id": 12,
+              "location": "eu-central-1",
+              "count": 30
+            },
+            {
+              "type_id": 40,
+              "type_code": "AWS::EC2::Instance",
+              "location": "eu-central-1",
+              "count": 5
+            },
+            {
+              "type_id": 12,
+              "location": "eu-central-1",
+              "count": 6
+            }
+          ],
+          "costs": [
+            {
+              "month": "2026-10",
+              "amount": "1234.56",
+              "currency": "USD",
+              "final": true
+            }
+          ]
+        }
+      },
+      "same_as": "merged resources"
+    },
+    {
+      "name": "merged resources",
+      "body": {
+        "schema_version": "2.0",
+        "sync": {
+          "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e21d4",
+          "started_at": 1762149604,
+          "completed_at": 1762149831,
+          "collector": {
+            "name": "cloudexit",
+            "version": "2.0.0",
+            "mode": "api"
+          }
+        },
+        "assessment_type": 2,
+        "scope": {
+          "provider": "aws",
+          "aws": {
+            "account_id": "123456789012",
+            "regions": [
+              "eu-central-1"
+            ]
+          }
+        },
+        "inventory": {
+          "resources": [
+            {
+              "type_id": 12,
+              "location": "eu-central-1",
+              "count": 36
+            },
+            {
+              "type_id": 40,
+              "location": "eu-central-1",
+              "count": 8
+            }
+          ],
+          "costs": [
+            {
+              "month": "2026-10",
+              "amount": "1234.56",
+              "currency": "USD",
+              "final": true
+            }
+          ]
+        }
+      },
+      "canonical_json": "{\"assessment_type\":2,\"inventory\":{\"costs\":[{\"amount\":\"1234.56\",\"currency\":\"USD\",\"final\":true,\"month\":\"2026-10\"}],\"egress\":{\"collected\":false,\"items\":[],\"names\":\"plain\",\"truncated\":false},\"resources\":[{\"count\":36,\"location\":\"eu-central-1\",\"type_id\":12},{\"count\":8,\"location\":\"eu-central-1\",\"type_id\":40}]},\"scope\":{\"aws\":{\"account_id\":\"123456789012\",\"regions\":[\"eu-central-1\"]},\"provider\":\"aws\"}}",
+      "sha256": "27ab581110b19cf629481e644386ded634aa3238e243eddb169e1763246562b8"
+    },
+    {
+      "name": "unknown fields are ignored",
+      "body": {
+        "schema_version": "2.0",
+        "sync": {
+          "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e21d4",
+          "started_at": 1762149604,
+          "completed_at": 1762149831,
+          "collector": {
+            "name": "cloudexit",
+            "version": "2.0.0",
+            "mode": "api"
+          }
+        },
+        "assessment_type": 2,
+        "scope": {
+          "provider": "aws",
+          "aws": {
+            "account_id": "123456789012",
+            "regions": [
+              "eu-central-1"
+            ],
+            "profile": "ci"
+          }
+        },
+        "inventory": {
+          "resources": [
+            {
+              "type_id": 12,
+              "type_code": "AWS::S3::Bucket",
+              "location": "eu-central-1",
+              "count": 36,
+              "note": "ignored"
+            },
+            {
+              "type_id": 40,
+              "type_code": "AWS::EC2::Instance",
+              "location": "eu-central-1",
+              "count": 8
+            }
+          ],
+          "costs": [
+            {
+              "month": "2026-10",
+              "amount": "1234.56",
+              "currency": "USD",
+              "final": true
+            }
+          ],
+          "extra": 1
+        }
+      },
+      "same_as": "minimal inventory"
+    },
+    {
+      "name": "regions in another order and repeated",
+      "body": {
+        "schema_version": "2.0",
+        "sync": {
+          "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e21d4",
+          "started_at": 1762149604,
+          "completed_at": 1762149831,
+          "collector": {
+            "name": "cloudexit",
+            "version": "2.0.0",
+            "mode": "api"
+          }
+        },
+        "assessment_type": 2,
+        "scope": {
+          "provider": "aws",
+          "aws": {
+            "account_id": "123456789012",
+            "regions": [
+              "us-east-1",
+              "eu-west-1",
+              "us-east-1"
+            ]
+          }
+        },
+        "inventory": {
+          "resources": [
+            {
+              "type_id": 12,
+              "type_code": "AWS::S3::Bucket",
+              "location": "eu-central-1",
+              "count": 36
+            },
+            {
+              "type_id": 40,
+              "type_code": "AWS::EC2::Instance",
+              "location": "eu-central-1",
+              "count": 8
+            }
+          ],
+          "costs": [
+            {
+              "month": "2026-10",
+              "amount": "1234.56",
+              "currency": "USD",
+              "final": true
+            }
+          ]
+        }
+      },
+      "same_as": "regions sorted"
+    },
+    {
+      "name": "regions sorted",
+      "body": {
+        "schema_version": "2.0",
+        "sync": {
+          "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e21d4",
+          "started_at": 1762149604,
+          "completed_at": 1762149831,
+          "collector": {
+            "name": "cloudexit",
+            "version": "2.0.0",
+            "mode": "api"
+          }
+        },
+        "assessment_type": 2,
+        "scope": {
+          "provider": "aws",
+          "aws": {
+            "account_id": "123456789012",
+            "regions": [
+              "eu-west-1",
+              "us-east-1"
+            ]
+          }
+        },
+        "inventory": {
+          "resources": [
+            {
+              "type_id": 12,
+              "type_code": "AWS::S3::Bucket",
+              "location": "eu-central-1",
+              "count": 36
+            },
+            {
+              "type_id": 40,
+              "type_code": "AWS::EC2::Instance",
+              "location": "eu-central-1",
+              "count": 8
+            }
+          ],
+          "costs": [
+            {
+              "month": "2026-10",
+              "amount": "1234.56",
+              "currency": "USD",
+              "final": true
+            }
+          ]
+        }
+      },
+      "canonical_json": "{\"assessment_type\":2,\"inventory\":{\"costs\":[{\"amount\":\"1234.56\",\"currency\":\"USD\",\"final\":true,\"month\":\"2026-10\"}],\"egress\":{\"collected\":false,\"items\":[],\"names\":\"plain\",\"truncated\":false},\"resources\":[{\"count\":36,\"location\":\"eu-central-1\",\"type_id\":12},{\"count\":8,\"location\":\"eu-central-1\",\"type_id\":40}]},\"scope\":{\"aws\":{\"account_id\":\"123456789012\",\"regions\":[\"eu-west-1\",\"us-east-1\"]},\"provider\":\"aws\"}}",
+      "sha256": "a30728218d49aa16271a64dcfd8a10b51bfa5491b63fa8490f667a5984f3fdba"
+    },
+    {
+      "name": "azure ids and resource group in another case",
+      "body": {
+        "schema_version": "2.0",
+        "sync": {
+          "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e21d4",
+          "started_at": 1762149604,
+          "completed_at": 1762149831,
+          "collector": {
+            "name": "cloudexit",
+            "version": "2.0.0",
+            "mode": "api"
+          }
+        },
+        "assessment_type": 2,
+        "scope": {
+          "provider": "azure",
+          "azure": {
+            "tenant_id": "0B5F9A5E-7A64-4C0E-9A3A-5F5F1B8D2C11",
+            "subscription_id": "6F1C2F1E-92D1-4A6E-8C1E-0A3C1D2E4B5A",
+            "resource_group": "Prod-RG"
+          }
+        },
+        "inventory": {
+          "resources": [
+            {
+              "type_id": 12,
+              "type_code": "AWS::S3::Bucket",
+              "location": "eu-central-1",
+              "count": 36
+            },
+            {
+              "type_id": 40,
+              "type_code": "AWS::EC2::Instance",
+              "location": "eu-central-1",
+              "count": 8
+            }
+          ],
+          "costs": [
+            {
+              "month": "2026-10",
+              "amount": "1234.56",
+              "currency": "USD",
+              "final": true
+            }
+          ]
+        }
+      },
+      "same_as": "azure lower case"
+    },
+    {
+      "name": "azure lower case",
+      "body": {
+        "schema_version": "2.0",
+        "sync": {
+          "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e21d4",
+          "started_at": 1762149604,
+          "completed_at": 1762149831,
+          "collector": {
+            "name": "cloudexit",
+            "version": "2.0.0",
+            "mode": "api"
+          }
+        },
+        "assessment_type": 2,
+        "scope": {
+          "provider": "azure",
+          "azure": {
+            "tenant_id": "0b5f9a5e-7a64-4c0e-9a3a-5f5f1b8d2c11",
+            "subscription_id": "6f1c2f1e-92d1-4a6e-8c1e-0a3c1d2e4b5a",
+            "resource_group": "prod-rg"
+          }
+        },
+        "inventory": {
+          "resources": [
+            {
+              "type_id": 12,
+              "type_code": "AWS::S3::Bucket",
+              "location": "eu-central-1",
+              "count": 36
+            },
+            {
+              "type_id": 40,
+              "type_code": "AWS::EC2::Instance",
+              "location": "eu-central-1",
+              "count": 8
+            }
+          ],
+          "costs": [
+            {
+              "month": "2026-10",
+              "amount": "1234.56",
+              "currency": "USD",
+              "final": true
+            }
+          ]
+        }
+      },
+      "canonical_json": "{\"assessment_type\":2,\"inventory\":{\"costs\":[{\"amount\":\"1234.56\",\"currency\":\"USD\",\"final\":true,\"month\":\"2026-10\"}],\"egress\":{\"collected\":false,\"items\":[],\"names\":\"plain\",\"truncated\":false},\"resources\":[{\"count\":36,\"location\":\"eu-central-1\",\"type_id\":12},{\"count\":8,\"location\":\"eu-central-1\",\"type_id\":40}]},\"scope\":{\"azure\":{\"resource_group\":\"prod-rg\",\"subscription_id\":\"6f1c2f1e-92d1-4a6e-8c1e-0a3c1d2e4b5a\",\"tenant_id\":\"0b5f9a5e-7a64-4c0e-9a3a-5f5f1b8d2c11\"},\"provider\":\"azure\"}}",
+      "sha256": "5298b115143a7790880726569bcc8bc7eb03a4752c9f29a6b1d16eb7ca900af4"
+    },
+    {
+      "name": "egress with names, tiers and unicode",
+      "body": {
+        "schema_version": "2.0",
+        "sync": {
+          "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e21d4",
+          "started_at": 1762149604,
+          "completed_at": 1762149831,
+          "collector": {
+            "name": "cloudexit",
+            "version": "2.0.0",
+            "mode": "api"
+          }
+        },
+        "assessment_type": 3,
+        "scope": {
+          "provider": "aws",
+          "aws": {
+            "account_id": "123456789012",
+            "regions": [
+              "eu-central-1"
+            ]
+          }
+        },
+        "inventory": {
+          "resources": [
+            {
+              "type_id": 12,
+              "type_code": "AWS::S3::Bucket",
+              "location": "eu-central-1",
+              "count": 36
+            },
+            {
+              "type_id": 40,
+              "type_code": "AWS::EC2::Instance",
+              "location": "eu-central-1",
+              "count": 8
+            }
+          ],
+          "costs": [
+            {
+              "month": "2026-10",
+              "amount": "1234.56",
+              "currency": "USD",
+              "final": true
+            }
+          ],
+          "egress": {
+            "collected": true,
+            "truncated": false,
+            "names": "plain",
+            "items": [
+              {
+                "type_id": 12,
+                "name": "acme-logs",
+                "size_bytes": 5368709120,
+                "flags": [
+                  "b-flag",
+                  "a-flag"
+                ],
+                "notes": [],
+                "tiers": [
+                  {
+                    "tier": "STANDARD",
+                    "size_bytes": 5368709000,
+                    "is_archive": false
+                  },
+                  {
+                    "tier": "GLACIER",
+                    "size_bytes": 120,
+                    "is_archive": true
+                  }
+                ]
+              },
+              {
+                "type_id": 12,
+                "name": "Ärchiv 日本 🙂",
+                "size_bytes": null,
+                "flags": [],
+                "notes": [
+                  "shared blocks"
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "canonical_json": "{\"assessment_type\":3,\"inventory\":{\"costs\":[{\"amount\":\"1234.56\",\"currency\":\"USD\",\"final\":true,\"month\":\"2026-10\"}],\"egress\":{\"collected\":true,\"items\":[{\"flags\":[\"a-flag\",\"b-flag\"],\"name\":\"acme-logs\",\"notes\":[],\"size_bytes\":5368709120,\"tiers\":[{\"is_archive\":true,\"size_bytes\":120,\"tier\":\"GLACIER\"},{\"is_archive\":false,\"size_bytes\":5368709000,\"tier\":\"STANDARD\"}],\"type_id\":12},{\"flags\":[],\"name\":\"Ärchiv 日本 🙂\",\"notes\":[\"shared blocks\"],\"size_bytes\":null,\"tiers\":[],\"type_id\":12}],\"names\":\"plain\",\"truncated\":false},\"resources\":[{\"count\":36,\"location\":\"eu-central-1\",\"type_id\":12},{\"count\":8,\"location\":\"eu-central-1\",\"type_id\":40}]},\"scope\":{\"aws\":{\"account_id\":\"123456789012\",\"regions\":[\"eu-central-1\"]},\"provider\":\"aws\"}}",
+      "sha256": "c016a343affea33e1fb77e91082949d6436dc29155ee5c245775215d3717d211"
+    },
+    {
+      "name": "egress items, flags and tiers in another order",
+      "body": {
+        "schema_version": "2.0",
+        "sync": {
+          "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e21d4",
+          "started_at": 1762149604,
+          "completed_at": 1762149831,
+          "collector": {
+            "name": "cloudexit",
+            "version": "2.0.0",
+            "mode": "api"
+          }
+        },
+        "assessment_type": 3,
+        "scope": {
+          "provider": "aws",
+          "aws": {
+            "account_id": "123456789012",
+            "regions": [
+              "eu-central-1"
+            ]
+          }
+        },
+        "inventory": {
+          "resources": [
+            {
+              "type_id": 12,
+              "type_code": "AWS::S3::Bucket",
+              "location": "eu-central-1",
+              "count": 36
+            },
+            {
+              "type_id": 40,
+              "type_code": "AWS::EC2::Instance",
+              "location": "eu-central-1",
+              "count": 8
+            }
+          ],
+          "costs": [
+            {
+              "month": "2026-10",
+              "amount": "1234.56",
+              "currency": "USD",
+              "final": true
+            }
+          ],
+          "egress": {
+            "collected": true,
+            "truncated": false,
+            "names": "plain",
+            "items": [
+              {
+                "type_id": 12,
+                "name": "Ärchiv 日本 🙂",
+                "size_bytes": null,
+                "flags": [],
+                "notes": [
+                  "shared blocks"
+                ]
+              },
+              {
+                "type_id": 12,
+                "name": "acme-logs",
+                "size_bytes": 5368709120,
+                "flags": [
+                  "a-flag",
+                  "b-flag"
+                ],
+                "notes": [],
+                "tiers": [
+                  {
+                    "tier": "GLACIER",
+                    "size_bytes": 120,
+                    "is_archive": true
+                  },
+                  {
+                    "tier": "STANDARD",
+                    "size_bytes": 5368709000,
+                    "is_archive": false
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "same_as": "egress with names, tiers and unicode"
+    },
+    {
+      "name": "a different count",
+      "body": {
+        "schema_version": "2.0",
+        "sync": {
+          "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e21d4",
+          "started_at": 1762149604,
+          "completed_at": 1762149831,
+          "collector": {
+            "name": "cloudexit",
+            "version": "2.0.0",
+            "mode": "api"
+          }
+        },
+        "assessment_type": 2,
+        "scope": {
+          "provider": "aws",
+          "aws": {
+            "account_id": "123456789012",
+            "regions": [
+              "eu-central-1"
+            ]
+          }
+        },
+        "inventory": {
+          "resources": [
+            {
+              "type_id": 12,
+              "type_code": "AWS::S3::Bucket",
+              "location": "eu-central-1",
+              "count": 37
+            },
+            {
+              "type_id": 40,
+              "type_code": "AWS::EC2::Instance",
+              "location": "eu-central-1",
+              "count": 8
+            }
+          ],
+          "costs": [
+            {
+              "month": "2026-10",
+              "amount": "1234.56",
+              "currency": "USD",
+              "final": true
+            }
+          ]
+        }
+      },
+      "differs_from": "minimal inventory"
+    },
+    {
+      "name": "a different assessment type",
+      "body": {
+        "schema_version": "2.0",
+        "sync": {
+          "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e21d4",
+          "started_at": 1762149604,
+          "completed_at": 1762149831,
+          "collector": {
+            "name": "cloudexit",
+            "version": "2.0.0",
+            "mode": "api"
+          }
+        },
+        "assessment_type": 3,
+        "scope": {
+          "provider": "aws",
+          "aws": {
+            "account_id": "123456789012",
+            "regions": [
+              "eu-central-1"
+            ]
+          }
+        },
+        "inventory": {
+          "resources": [
+            {
+              "type_id": 12,
+              "type_code": "AWS::S3::Bucket",
+              "location": "eu-central-1",
+              "count": 36
+            },
+            {
+              "type_id": 40,
+              "type_code": "AWS::EC2::Instance",
+              "location": "eu-central-1",
+              "count": 8
+            }
+          ],
+          "costs": [
+            {
+              "month": "2026-10",
+              "amount": "1234.56",
+              "currency": "USD",
+              "final": true
+            }
+          ]
+        }
+      },
+      "differs_from": "minimal inventory"
+    },
+    {
+      "name": "a different scope",
+      "body": {
+        "schema_version": "2.0",
+        "sync": {
+          "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e21d4",
+          "started_at": 1762149604,
+          "completed_at": 1762149831,
+          "collector": {
+            "name": "cloudexit",
+            "version": "2.0.0",
+            "mode": "api"
+          }
+        },
+        "assessment_type": 2,
+        "scope": {
+          "provider": "aws",
+          "aws": {
+            "account_id": "123456789012",
+            "regions": [
+              "eu-west-1"
+            ]
+          }
+        },
+        "inventory": {
+          "resources": [
+            {
+              "type_id": 12,
+              "type_code": "AWS::S3::Bucket",
+              "location": "eu-central-1",
+              "count": 36
+            },
+            {
+              "type_id": 40,
+              "type_code": "AWS::EC2::Instance",
+              "location": "eu-central-1",
+              "count": 8
+            }
+          ],
+          "costs": [
+            {
+              "month": "2026-10",
+              "amount": "1234.56",
+              "currency": "USD",
+              "final": true
+            }
+          ]
+        }
+      },
+      "differs_from": "minimal inventory"
+    },
+    {
+      "name": "a different cost amount",
+      "body": {
+        "schema_version": "2.0",
+        "sync": {
+          "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e21d4",
+          "started_at": 1762149604,
+          "completed_at": 1762149831,
+          "collector": {
+            "name": "cloudexit",
+            "version": "2.0.0",
+            "mode": "api"
+          }
+        },
+        "assessment_type": 2,
+        "scope": {
+          "provider": "aws",
+          "aws": {
+            "account_id": "123456789012",
+            "regions": [
+              "eu-central-1"
+            ]
+          }
+        },
+        "inventory": {
+          "resources": [
+            {
+              "type_id": 12,
+              "type_code": "AWS::S3::Bucket",
+              "location": "eu-central-1",
+              "count": 36
+            },
+            {
+              "type_id": 40,
+              "type_code": "AWS::EC2::Instance",
+              "location": "eu-central-1",
+              "count": 8
+            }
+          ],
+          "costs": [
+            {
+              "month": "2026-10",
+              "amount": "1234.57",
+              "currency": "USD",
+              "final": true
+            }
+          ]
+        }
+      },
+      "differs_from": "minimal inventory"
+    },
+    {
+      "name": "an estimated instead of a final cost",
+      "body": {
+        "schema_version": "2.0",
+        "sync": {
+          "id": "01933b9e-7c2a-7d41-9a51-3c8f0a6e21d4",
+          "started_at": 1762149604,
+          "completed_at": 1762149831,
+          "collector": {
+            "name": "cloudexit",
+            "version": "2.0.0",
+            "mode": "api"
+          }
+        },
+        "assessment_type": 2,
+        "scope": {
+          "provider": "aws",
+          "aws": {
+            "account_id": "123456789012",
+            "regions": [
+              "eu-central-1"
+            ]
+          }
+        },
+        "inventory": {
+          "resources": [
+            {
+              "type_id": 12,
+              "type_code": "AWS::S3::Bucket",
+              "location": "eu-central-1",
+              "count": 36
+            },
+            {
+              "type_id": 40,
+              "type_code": "AWS::EC2::Instance",
+              "location": "eu-central-1",
+              "count": 8
+            }
+          ],
+          "costs": [
+            {
+              "month": "2026-10",
+              "amount": "1234.56",
+              "currency": "USD",
+              "final": false
+            }
+          ]
+        }
+      },
+      "differs_from": "minimal inventory"
+    }
+  ]
+}

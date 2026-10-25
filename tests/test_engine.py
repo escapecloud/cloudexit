@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from core.engine import _load_tfstate_scope, sync_assessment, test_permissions
+from cloudexit.engine import _load_tfstate_scope, test_permissions
 
 
 class TestPermissionsAwsHybridMode(unittest.TestCase):
@@ -16,7 +16,7 @@ class TestPermissionsAwsHybridMode(unittest.TestCase):
             "region": "eu-central-1",
         }
 
-    @patch("core.engine.boto3.client")
+    @patch("cloudexit.engine.boto3.client")
     def test_iam_user_keeps_policy_based_validation(self, mock_boto_client):
         sts_client = MagicMock()
         sts_client.get_caller_identity.return_value = {
@@ -48,7 +48,7 @@ class TestPermissionsAwsHybridMode(unittest.TestCase):
         self.assertTrue(permission_cost)
         self.assertIn("policies validated", logs)
 
-    @patch("core.engine.boto3.client")
+    @patch("cloudexit.engine.boto3.client")
     def test_assumed_role_uses_capability_checks(self, mock_boto_client):
         sts_client = MagicMock()
         sts_client.get_caller_identity.return_value = {
@@ -77,7 +77,7 @@ class TestPermissionsAwsHybridMode(unittest.TestCase):
         self.assertTrue(permission_cost)
         self.assertIn("capability checks validated", logs)
 
-    @patch("core.engine.boto3.client")
+    @patch("cloudexit.engine.boto3.client")
     def test_assumed_role_cost_capability_failure(self, mock_boto_client):
         sts_client = MagicMock()
         sts_client.get_caller_identity.return_value = {
@@ -108,60 +108,6 @@ class TestPermissionsAwsHybridMode(unittest.TestCase):
         self.assertIn("ce:GetCostAndUsage failed", logs)
 
 
-class SyncAssessmentContractTests(unittest.TestCase):
-    def test_offline_returns_success_without_calling_the_api(self):
-        with patch("core.engine.post_assessment") as mock_post:
-            result = sync_assessment(
-                report_path="/tmp",
-                name="n",
-                started_at=0,
-                metadata={},
-                mode="offline",
-                token=None,
-            )
-        self.assertTrue(result["success"])
-        self.assertFalse(result["online"])
-        mock_post.assert_not_called()
-
-    def test_server_failure_returns_dict_not_raises(self):
-        with patch(
-            "core.engine.post_assessment",
-            return_value={"success": False, "payload": None, "logs": "401"},
-        ):
-            result = sync_assessment(
-                report_path="/tmp",
-                name="n",
-                started_at=0,
-                metadata={},
-                mode="online",
-                token="tok",
-            )
-        self.assertFalse(result["success"])
-        self.assertIn("401", result["logs"])
-
-    def test_local_db_failure_returns_dict_not_raises(self):
-        good = {
-            "success": True,
-            "payload": {
-                "data": {"risk_inventory": [{"id": 1, "impacted_resources": []}]}
-            },
-        }
-        with (
-            patch("core.engine.post_assessment", return_value=good),
-            patch("core.engine.connect", side_effect=Exception("db down")),
-        ):
-            result = sync_assessment(
-                report_path="/tmp",
-                name="n",
-                started_at=0,
-                metadata={},
-                mode="online",
-                token="tok",
-            )
-        self.assertFalse(result["success"])
-        self.assertIn("store server risks", result["logs"])
-
-
 class LoadTfstateScopeTests(unittest.TestCase):
     def _write_manifest(self, directory, payload):
         path = Path(directory) / "tfstate_manifest.json"
@@ -172,24 +118,37 @@ class LoadTfstateScopeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             self._write_manifest(tmp_dir, {"scope": scope, "counted": []})
 
-            self.assertEqual(_load_tfstate_scope(tmp_dir), scope)
+            self.assertEqual(_load_tfstate_scope(tmp_dir), (scope, None))
 
-    def test_missing_manifest_returns_none_without_raising(self):
+    def test_returns_the_coverage_block_with_the_scope(self):
+        scope = {"file": "infra.tfstate"}
+        coverage = {
+            "instances_total": 9,
+            "instances_counted": 5,
+            "instances_excluded_other_provider": 3,
+            "instances_excluded_unmapped": 1,
+        }
         with tempfile.TemporaryDirectory() as tmp_dir:
-            self.assertIsNone(_load_tfstate_scope(tmp_dir))
+            self._write_manifest(tmp_dir, {"scope": scope, "coverage": coverage})
 
-    def test_corrupt_manifest_returns_none_without_raising(self):
+            self.assertEqual(_load_tfstate_scope(tmp_dir), (scope, coverage))
+
+    def test_missing_manifest_returns_nothing_without_raising(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            self.assertEqual(_load_tfstate_scope(tmp_dir), (None, None))
+
+    def test_corrupt_manifest_returns_nothing_without_raising(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             path = Path(tmp_dir) / "tfstate_manifest.json"
             path.write_text("{not json", encoding="utf-8")
 
-            self.assertIsNone(_load_tfstate_scope(tmp_dir))
+            self.assertEqual(_load_tfstate_scope(tmp_dir), (None, None))
 
-    def test_manifest_without_scope_returns_none(self):
+    def test_manifest_without_scope_returns_nothing(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             self._write_manifest(tmp_dir, {"counted": []})
 
-            self.assertIsNone(_load_tfstate_scope(tmp_dir))
+            self.assertEqual(_load_tfstate_scope(tmp_dir), (None, None))
 
 
 if __name__ == "__main__":

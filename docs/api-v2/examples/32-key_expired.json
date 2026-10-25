@@ -1,0 +1,50 @@
+{
+  "name": "key expired",
+  "description": "An expired key is refused.",
+  "fixtures": {
+    "catalogue": "standard",
+    "assessments": [
+      {
+        "name": "main",
+        "provider": "aws",
+        "exit_strategy": "repatriation",
+        "assessment_type": 2,
+        "scope_key": null
+      }
+    ],
+    "keys": [
+      {
+        "name": "expired_key",
+        "kind": "account",
+        "scopes": [
+          "assessments:read"
+        ],
+        "state": "expired"
+      }
+    ]
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v2/whoami",
+    "headers": {
+      "Authorization": "Bearer {{expired_key}}"
+    }
+  },
+  "expect": {
+    "status": 401,
+    "headers_present": [
+      "X-Request-ID"
+    ],
+    "body_subset": {
+      "object": "error",
+      "api_version": "2",
+      "error": {
+        "code": "api_key_expired"
+      }
+    },
+    "exists": [
+      "/error/message",
+      "/error/request_id"
+    ]
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "name": "get sync not found",
+  "description": "An unknown sync id is not found.",
+  "fixtures": {
+    "catalogue": "standard",
+    "assessments": [
+      {
+        "name": "main",
+        "provider": "aws",
+        "exit_strategy": "repatriation",
+        "assessment_type": 2,
+        "scope_key": null
+      }
+    ],
+    "keys": [
+      {
+        "name": "assessment_key",
+        "kind": "assessment",
+        "assessment": "main"
+      }
+    ]
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v2/syncs/00000000-0000-4000-8000-000000000000",
+    "headers": {
+      "Authorization": "Bearer {{assessment_key}}"
+    }
+  },
+  "expect": {
+    "status": 404,
+    "headers_present": [
+      "X-Request-ID"
+    ],
+    "body_subset": {
+      "object": "error",
+      "api_version": "2",
+      "error": {
+        "code": "sync_not_found"
+      }
+    },
+    "exists": [
+      "/error/message",
+      "/error/request_id"
+    ]
+  }
+}

@@ -1,0 +1,138 @@
+{
+  "name": "Sample – Document Archive",
+  "purpose": "Uploaded with a link: the link on page 2 of both PDFs and in the HTML.",
+  "provider": "azure",
+  "exit_strategy": 1,
+  "scope": {
+    "tenantId": "00000000-0000-4000-8000-0000000000a1",
+    "subscriptionId": "00000000-0000-4000-8000-0000000000a2",
+    "resourceGroupName": "rg-sample-archive"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "region": "westeurope",
+      "count": 12
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "region": "northeurope",
+      "count": 4
+    },
+    {
+      "type": "Microsoft.ContainerService/managedClusters",
+      "region": "westeurope",
+      "count": 2
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "region": "westeurope",
+      "count": 6
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "region": "northeurope",
+      "count": 2
+    },
+    {
+      "type": "Microsoft.Sql/servers/databases",
+      "region": "westeurope",
+      "count": 5
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts",
+      "region": "westeurope",
+      "count": 1
+    },
+    {
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers",
+      "region": "northeurope",
+      "count": 2
+    },
+    {
+      "type": "Microsoft.RecoveryServices/vaults",
+      "region": "westeurope",
+      "count": 1
+    },
+    {
+      "type": "Microsoft.ContainerRegistry/registries",
+      "region": "westeurope",
+      "count": 1
+    }
+  ],
+  "costs": {
+    "currency": "EUR",
+    "months": {
+      "2026-06": 5120.4,
+      "2026-07": 5388.15,
+      "2026-08": 5290.0,
+      "2026-09": 5602.75,
+      "2026-10": 5711.3,
+      "2026-11": 2204.9
+    }
+  },
+  "egress": {
+    "archive_tiers": [
+      "Archive"
+    ],
+    "resources": [
+      {
+        "type": "Microsoft.Storage/storageAccounts",
+        "name": "sampledocsprod",
+        "size_gib": 2048,
+        "tiers": {
+          "Hot": 1500,
+          "Cool": 300,
+          "Archive": 248
+        }
+      },
+      {
+        "type": "Microsoft.Storage/storageAccounts",
+        "name": "sampledocsbackup",
+        "size_gib": 900,
+        "tiers": {
+          "Cool": 400,
+          "Archive": 500
+        }
+      },
+      {
+        "type": "Microsoft.Compute/disks",
+        "name": "sample-docs-vm-osdisk",
+        "size_gib": 256,
+        "flags": [
+          "allocated (upper bound)"
+        ]
+      },
+      {
+        "type": "Microsoft.Sql/servers/databases",
+        "name": "sample-docs-metadata",
+        "size_gib": 140
+      },
+      {
+        "type": "Microsoft.Sql/servers/databases",
+        "name": "sample-docs-reporting",
+        "size_gib": null,
+        "unknown": true
+      },
+      {
+        "type": "Microsoft.DocumentDB/databaseAccounts",
+        "name": "sample-docs-search",
+        "size_gib": null,
+        "unknown": true
+      },
+      {
+        "type": "Microsoft.RecoveryServices/vaults",
+        "name": "sample-docs-vault",
+        "size_gib": null
+      }
+    ]
+  },
+  "upload": {
+    "status": "uploaded",
+    "url": "https://platform.example.test/assessments/00000000-0000-4000-8000-0000000000b1",
+    "assessment_id": "00000000-0000-4000-8000-0000000000b1",
+    "sync_id": "01939b8e-7c2a-7d41-9a51-3c8f0a6e0004"
+  },
+  "clock": "2026-11-12T09:30:00Z",
+  "run_id": "01939b8e-7c2a-7d41-9a51-3c8f0a6e0004"
+}

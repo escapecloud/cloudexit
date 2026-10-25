@@ -1,0 +1,56 @@
+{
+  "name": "list assessments needs read scope",
+  "description": "Listing needs assessments:read.",
+  "fixtures": {
+    "catalogue": "standard",
+    "assessments": [
+      {
+        "name": "main",
+        "provider": "aws",
+        "exit_strategy": "repatriation",
+        "assessment_type": 2,
+        "scope_key": null
+      }
+    ],
+    "keys": [
+      {
+        "name": "account_key",
+        "kind": "account",
+        "scopes": [
+          "assessments:create"
+        ]
+      }
+    ]
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v2/assessments",
+    "headers": {
+      "Authorization": "Bearer {{account_key}}"
+    }
+  },
+  "expect": {
+    "status": 403,
+    "headers_present": [
+      "X-Request-ID"
+    ],
+    "body_subset": {
+      "object": "error",
+      "api_version": "2",
+      "error": {
+        "code": "insufficient_scope",
+        "details": [
+          {
+            "required": [
+              "assessments:read"
+            ]
+          }
+        ]
+      }
+    },
+    "exists": [
+      "/error/message",
+      "/error/request_id"
+    ]
+  }
+}

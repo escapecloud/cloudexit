@@ -1,0 +1,50 @@
+{
+  "name": "unsupported media type",
+  "description": "Only application/json is accepted.",
+  "fixtures": {
+    "catalogue": "standard",
+    "assessments": [
+      {
+        "name": "main",
+        "provider": "aws",
+        "exit_strategy": "repatriation",
+        "assessment_type": 2,
+        "scope_key": null
+      }
+    ],
+    "keys": [
+      {
+        "name": "assessment_key",
+        "kind": "assessment",
+        "assessment": "main"
+      }
+    ]
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v2/syncs",
+    "headers": {
+      "Authorization": "Bearer {{assessment_key}}",
+      "Idempotency-Key": "01933b9e-7c2a-7d41-9a51-3c8f0a6e0021",
+      "Content-Type": "text/plain"
+    },
+    "raw_body": "hello"
+  },
+  "expect": {
+    "status": 415,
+    "headers_present": [
+      "X-Request-ID"
+    ],
+    "body_subset": {
+      "object": "error",
+      "api_version": "2",
+      "error": {
+        "code": "unsupported_media_type"
+      }
+    },
+    "exists": [
+      "/error/message",
+      "/error/request_id"
+    ]
+  }
+}

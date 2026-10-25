@@ -1,0 +1,53 @@
+{
+  "name": "list assessments by provider",
+  "description": "The list can be filtered by provider.",
+  "fixtures": {
+    "catalogue": "standard",
+    "assessments": [
+      {
+        "name": "on_aws",
+        "provider": "aws",
+        "exit_strategy": "repatriation",
+        "assessment_type": 2,
+        "scope_key": null
+      },
+      {
+        "name": "on_azure",
+        "provider": "azure",
+        "exit_strategy": "repatriation",
+        "assessment_type": 2,
+        "scope_key": null
+      }
+    ],
+    "keys": [
+      {
+        "name": "reader_key",
+        "kind": "account",
+        "scopes": [
+          "assessments:read"
+        ]
+      }
+    ]
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v2/assessments?provider=azure",
+    "headers": {
+      "Authorization": "Bearer {{reader_key}}"
+    }
+  },
+  "expect": {
+    "status": 200,
+    "body_subset": {
+      "data": [
+        {
+          "id": "{{on_azure_id}}",
+          "provider": "azure"
+        }
+      ]
+    },
+    "lengths": {
+      "/data": 1
+    }
+  }
+}

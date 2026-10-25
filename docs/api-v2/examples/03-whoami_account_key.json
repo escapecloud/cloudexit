@@ -1,0 +1,44 @@
+{
+  "name": "whoami account key",
+  "description": "An account key belongs to the whole tenant and has no binding.",
+  "fixtures": {
+    "catalogue": "standard",
+    "assessments": [],
+    "keys": [
+      {
+        "name": "account_key",
+        "kind": "account",
+        "scopes": [
+          "assessments:create",
+          "assessments:read"
+        ]
+      }
+    ]
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v2/whoami",
+    "headers": {
+      "Authorization": "Bearer {{account_key}}"
+    }
+  },
+  "expect": {
+    "status": 200,
+    "body_subset": {
+      "object": "whoami",
+      "key": {
+        "kind": "account",
+        "scopes": [
+          "assessments:create",
+          "assessments:read"
+        ],
+        "assessment_id": null
+      }
+    },
+    "exists": [
+      "/tenant/id",
+      "/key/display",
+      "/key/expires_at"
+    ]
+  }
+}

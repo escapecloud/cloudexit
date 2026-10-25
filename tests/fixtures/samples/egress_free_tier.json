@@ -1,0 +1,66 @@
+{
+  "name": "Sample – Small Data Platform",
+  "purpose": "Egress below the free tier: a fee of $0.00 and the headroom sentence.",
+  "provider": "aws",
+  "exit_strategy": 3,
+  "scope": {
+    "accountId": "123456789012",
+    "region": "eu-central-1"
+  },
+  "resources": [
+    {
+      "type": "AWS.s3.list_buckets.Buckets",
+      "region": "eu-central-1",
+      "count": 3
+    },
+    {
+      "type": "AWS.ec2.describe_instances.Reservations",
+      "region": "eu-central-1",
+      "count": 2
+    },
+    {
+      "type": "AWS.rds.describe_db_instances.DBInstances",
+      "region": "eu-central-1",
+      "count": 1
+    }
+  ],
+  "costs": {
+    "currency": "USD",
+    "months": {
+      "2026-06": 220.45,
+      "2026-07": 231.1,
+      "2026-08": 228.6,
+      "2026-09": 240.05,
+      "2026-10": 236.9,
+      "2026-11": 98.4
+    }
+  },
+  "egress": {
+    "archive_tiers": [
+      "Archive",
+      "Glacier",
+      "Deep Archive"
+    ],
+    "resources": [
+      {
+        "type": "AWS.s3.list_buckets.Buckets",
+        "name": "sample-data-landing",
+        "size_gib": 14,
+        "tiers": {
+          "Standard": 14
+        }
+      },
+      {
+        "type": "AWS.rds.describe_db_instances.DBInstances",
+        "name": "sample-data-db",
+        "size_gib": 6,
+        "flags": [
+          "allocated (upper bound)"
+        ]
+      }
+    ]
+  },
+  "upload": null,
+  "clock": "2026-11-12T09:30:00Z",
+  "run_id": "01939b8e-7c2a-7d41-9a51-3c8f0a6e0010"
+}

@@ -1,0 +1,83 @@
+{
+  "name": "Sample – Archive Migration Staging",
+  "purpose": "Egress where no data store has a size: fee and totals without a figure, every type not sized, no free-tier headroom.",
+  "provider": "azure",
+  "exit_strategy": 1,
+  "scope": {
+    "tenantId": "00000000-0000-4000-8000-0000000000a1",
+    "subscriptionId": "00000000-0000-4000-8000-0000000000a2",
+    "resourceGroupName": "rg-sample-staging"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "region": "westeurope",
+      "count": 3
+    },
+    {
+      "type": "Microsoft.Sql/servers/databases",
+      "region": "westeurope",
+      "count": 2
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts",
+      "region": "westeurope",
+      "count": 1
+    },
+    {
+      "type": "Microsoft.RecoveryServices/vaults",
+      "region": "westeurope",
+      "count": 1
+    }
+  ],
+  "costs": {
+    "currency": "EUR",
+    "months": {
+      "2026-06": 830.4,
+      "2026-07": 842.15,
+      "2026-08": 851.0,
+      "2026-09": 860.3,
+      "2026-10": 855.75,
+      "2026-11": 351.2
+    }
+  },
+  "egress": {
+    "archive_tiers": [
+      "Archive"
+    ],
+    "resources": [
+      {
+        "type": "Microsoft.Storage/storageAccounts",
+        "name": "samplestagingblobs",
+        "size_gib": null,
+        "unknown": true
+      },
+      {
+        "type": "Microsoft.Storage/storageAccounts",
+        "name": "samplestagingexports",
+        "size_gib": null,
+        "unknown": true
+      },
+      {
+        "type": "Microsoft.Sql/servers/databases",
+        "name": "sample-staging-orders",
+        "size_gib": null,
+        "unknown": true
+      },
+      {
+        "type": "Microsoft.DocumentDB/databaseAccounts",
+        "name": "sample-staging-search",
+        "size_gib": null,
+        "unknown": true
+      },
+      {
+        "type": "Microsoft.RecoveryServices/vaults",
+        "name": "sample-staging-vault",
+        "size_gib": null
+      }
+    ]
+  },
+  "upload": null,
+  "clock": "2026-11-12T09:30:00Z",
+  "run_id": "01939b8e-7c2a-7d41-9a51-3c8f0a6e0014"
+}

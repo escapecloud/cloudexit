@@ -1,0 +1,77 @@
+{
+  "name": "meta",
+  "description": "Capabilities need no key. In 2.0 processing is inline, upsert by scope is off and no tenant policy rejects old catalogues.",
+  "fixtures": {
+    "catalogue": "standard",
+    "assessments": [],
+    "keys": []
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v2/meta",
+    "headers": {}
+  },
+  "expect": {
+    "status": 200,
+    "headers_present": [
+      "X-Request-ID"
+    ],
+    "body_subset": {
+      "object": "meta",
+      "api_version": "2",
+      "contract": {
+        "schema_versions": [
+          "2.0"
+        ],
+        "current": "2.0"
+      },
+      "catalogue": {
+        "version": "2026-11-02",
+        "sha256": "9f1c5b7a3e2d4c6b8a0f1e2d3c4b5a69788796a5b4c3d2e1f0a9b8c7d6e5f4a3",
+        "collector_min_version": null
+      },
+      "limits": {
+        "max_body_bytes": 1000000,
+        "max_resource_items": 1000,
+        "max_count_per_item": 10000,
+        "max_cost_items": 12,
+        "max_egress_items": 1000,
+        "clock_skew_seconds": 86400,
+        "max_collection_age_days": 30,
+        "idempotency_replay_hours": 168
+      },
+      "processing": {
+        "modes": [
+          "inline"
+        ]
+      },
+      "features": {
+        "upsert_by_scope_key": false,
+        "content_dedupe": false,
+        "oidc": {
+          "enabled": false
+        }
+      },
+      "assessment_types": [
+        {
+          "id": 1,
+          "code": "basic"
+        },
+        {
+          "id": 2,
+          "code": "standard"
+        },
+        {
+          "id": 3,
+          "code": "premium"
+        }
+      ]
+    },
+    "exists": [
+      "/host/product",
+      "/host/base_url",
+      "/host/app_version",
+      "/rate_limits/per_key/requests_per_minute"
+    ]
+  }
+}
