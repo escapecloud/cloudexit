@@ -4,7 +4,11 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from cloudexit.engine import _load_tfstate_scope, test_permissions
+from cloudexit.engine import (
+    _load_tfstate_scope,
+    test_permissions,
+    verify_credentials,
+)
 
 
 class TestPermissionsAwsHybridMode(unittest.TestCase):
@@ -106,6 +110,56 @@ class TestPermissionsAwsHybridMode(unittest.TestCase):
         self.assertTrue(permission_reader)
         self.assertFalse(permission_cost)
         self.assertIn("ce:GetCostAndUsage failed", logs)
+
+
+class _DummyAuthError(Exception):
+    pass
+
+
+class TestVerifyCredentialsAzure(unittest.TestCase):
+    def setUp(self):
+        self.provider_details = {
+            "subscriptionId": "00000000-0000-0000-0000-000000000000",
+            "resourceGroupName": "rg-demo",
+            "tenantId": "11111111-1111-1111-1111-111111111111",
+            "clientId": "22222222-2222-2222-2222-222222222222",
+            "clientSecret": "secret-example",
+        }
+
+    @patch("cloudexit.engine.create_resource_client")
+    @patch("cloudexit.engine.create_credential")
+    @patch("cloudexit.engine.azure_import")
+    def test_connection_check_targets_only_the_configured_group(
+        self, mock_azure_import, mock_create_credential, mock_create_resource_client
+    ):
+        mock_azure_import.return_value = _DummyAuthError
+        resource_client = MagicMock()
+        mock_create_resource_client.return_value = resource_client
+
+        success, logs = verify_credentials(1, self.provider_details)
+
+        self.assertTrue(success)
+        resource_client.resource_groups.get.assert_called_once_with("rg-demo")
+        resource_client.resource_groups.list.assert_not_called()
+
+    @patch("cloudexit.engine.create_resource_client")
+    @patch("cloudexit.engine.create_credential")
+    @patch("cloudexit.engine.azure_import")
+    def test_missing_group_fails_without_listing_the_subscription(
+        self, mock_azure_import, mock_create_credential, mock_create_resource_client
+    ):
+        mock_azure_import.return_value = _DummyAuthError
+        resource_client = MagicMock()
+        resource_client.resource_groups.get.side_effect = Exception(
+            "Resource group 'rg-demo' could not be found."
+        )
+        mock_create_resource_client.return_value = resource_client
+
+        success, logs = verify_credentials(1, self.provider_details)
+
+        self.assertFalse(success)
+        self.assertIn("rg-demo", logs)
+        resource_client.resource_groups.list.assert_not_called()
 
 
 class LoadTfstateScopeTests(unittest.TestCase):

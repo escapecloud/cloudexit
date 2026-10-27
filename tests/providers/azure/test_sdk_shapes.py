@@ -131,6 +131,7 @@ class ClientSurfaceTests(ShapeTestCase):
         self.assertTrue(callable(resource_client.resources.list_by_resource_group))
         self.assertTrue(callable(resource_client.resources.get_by_id))
         self.assertTrue(callable(resource_client.resource_groups.list))
+        self.assertTrue(callable(resource_client.resource_groups.get))
 
         subscription_client = create_subscription_client(self.credential)
         self.assertTrue(callable(subscription_client.subscriptions.list))

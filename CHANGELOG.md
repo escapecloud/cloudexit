@@ -8,7 +8,19 @@ The public contract is the `cloudexit` command, `python -m cloudexit` and
 `cloudexit.cli:main`. Everything under `cloudexit.*` is internal and may move in
 any 2.x release.
 
-## [2.0.0] - unreleased
+## [2.0.1] - 2026-10-27
+
+### Fixed
+
+- Azure: the credential check now reads only the configured resource group
+  instead of listing every resource group in the subscription, so a run needs
+  only Reader on that resource group rather than a subscription-level
+  assignment. A missing or misspelled group now fails with a clear "resource
+  group not found" error instead of a confusing authorisation error. The
+  non-interactive run is unaffected in behaviour; the interactive subscription
+  and resource-group pickers are unchanged.
+
+## [2.0.0] - 2026-10-25
 
 Upgrading from 1.x? Follow the [migration guide](./docs/migration-2.0.md).
 

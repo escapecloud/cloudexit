@@ -56,8 +56,8 @@ def verify_credentials(
             resource_client = create_resource_client(
                 credential, provider_details["subscriptionId"]
             )
-            list(
-                resource_client.resource_groups.list()
+            resource_client.resource_groups.get(
+                provider_details["resourceGroupName"]
             )  # Benign call to verify credentials
             connection_success = True
             logs = "Azure connection successful."
